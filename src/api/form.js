@@ -31,11 +31,18 @@ export function asyncEditFormDesign(data) {
     data,
   });
 }
-// 根据id查询表单设计
-export function asyncGetFormDesignById(data) {
+// 查询表单详情 
+export function asyncGetFormDesignById(formId) {
   return request({
     url: `/formDesignInfo/get/${formId}`,
-    method: 'get',
-    params: data,
+    method: 'get'
+  });
+}
+
+// 删除表单
+export function asyncDeleteFormDesign(formIds) {
+  return request({
+    url: `/formDesignInfo/delete/${formIds}`,
+    method: 'delete'
   });
 }

@@ -1,59 +1,40 @@
 <template>
-  <div class="app-container flex flex-col">
-    <el-page-header @back="handleBack" class="mb-4">
+  <div class="app-container flex flex-col w-full">
+    <el-page-header @back="handleBack">
       <template #title>
-        <span>返回表单列表</span>
+        <div class="w-full h-full flex items-center">返回表单列表</div>
       </template>
       <template #content>
-        <div class="flex items-center justify-between w-full">
-          <span class="text-large font-600 mr-3">
+        <div class="flex items-center space-x-4 justify-between w-full">
+          <span class="text-lg font-semibold mr-3">
             {{ pageTitle }}
           </span>
+          <div>
+            <el-button type="primary" @click="handleSave" class="mr-2">保存</el-button>
+            <el-button v-if="!$route.query.copyData" @click="handleReset">重置</el-button>
+          </div>
         </div>
       </template>
-      <template #extra>
-        <el-space>
-          <el-button type="primary" @click="handleSave" class="mr-2"
-            >保存</el-button
-          >
-          <el-button v-if="!$route.query.copyData" @click="handleReset"
-            >重置</el-button
-          >
-        </el-space>
-      </template>
     </el-page-header>
-
+    <el-divider></el-divider>
     <div class="">
       <el-form :model="formInfo" :rules="rules" ref="formInfoRef" inline>
         <el-form-item label="表单名称" prop="formName">
           <el-input v-model="formInfo.formName" placeholder="请输入表单名称" />
         </el-form-item>
         <el-form-item label="表单类型" prop="formType">
-          <el-select
-            style="width: 200px"
-            v-model="formInfo.formType"
-            placeholder="请选择表单类型"
-            :disabled="!!formId"
-          >
-            <el-option
-              v-for="dict in dict.type.form_type_option"
-              :key="dict.value"
-              :label="dict.label"
-              :value="dict.value"
-            />
+          <el-select style="width: 200px" v-model="formInfo.formType" placeholder="请选择表单类型" :disabled="!!formId">
+            <el-option v-for="dict in dict.type.form_type_option" :key="dict.value" :label="dict.label"
+              :value="dict.value" />
           </el-select>
         </el-form-item>
       </el-form>
     </div>
     <div class="designer">
-      <vm-form-designer 
-        ref="designerRef"
-        :designer-config="designerConfig"
-        @save="handleSave"
-      >
-        <template #toolButton>
+      <vm-form-designer ref="designerRef" :designer-config="designerConfig" @save="handleSave">
+        <template #customToolButtons>
           <el-button type="primary" size="small" @click="handleSave">
-            <i class="el-icon-finished"></i>保存
+            <i class="el-icon-finished"></i>{{ formId ? '保存' : '添加' }}
           </el-button>
         </template>
       </vm-form-designer>
@@ -65,7 +46,7 @@
 import {
   asyncAddFormDesign,
   asyncEditFormDesign,
-  asyncGetFormDesignById
+  asyncGetFormDesignById,
 } from '@/api/form';
 
 export default {
@@ -80,22 +61,33 @@ export default {
         formType: undefined,
         formId: '',
         formVersionId: '',
-        formJson: null
+        formJson: null,
       },
       rules: {
-        formName: [{ required: true, message: '请输入表单名称', trigger: 'blur' }],
-        formType: [{ required: true, message: '请选择表单类型', trigger: 'change' }]
+        formName: [
+          { required: true, message: '请输入表单名称', trigger: 'blur' },
+        ],
+        formType: [
+          { required: true, message: '请选择表单类型', trigger: 'change' },
+        ],
       },
       designerConfig: {
-        // VForm Mobile配置
-        showLayoutButton: false,
-        showSwitchDeviceButton: false, 
-        layoutType: 'H5',
-        deviceType: 'mobile',
-        // 保留部分原有配置
+        // 扩展设计器配置
+        languageMenu: false,
+        externalLink: false,
+        formTemplates: false,
+        eventCollapse: false,
+        generateSFCButton: false,
+        importJsonButton: false,
+        exportJsonButton: false,
+        exportCodeButton: false,
         previewFormButton: true,
         clearDesignerButton: true,
-        toolbarMaxWidth: 320
+        // 移动端配置
+        showLayoutButton: false,
+        showSwitchDeviceButton: false,
+        layoutType: 'H5',
+        deviceType: 'mobile',
       },
       defaultFormJson: {
         widgetList: [],
@@ -114,9 +106,9 @@ export default {
           onFormCreated: '',
           onFormMounted: '',
           onFormDataChange: '',
-        }
-      }
-    }
+        },
+      },
+    };
   },
   mounted() {
     // 使用 nextTick 确保组件已完全挂载
@@ -126,12 +118,11 @@ export default {
   },
   computed: {
     pageTitle() {
-      return this.formId ? `编辑表单-${this.formInfo.formName}` : '新增表单'
-    }
+      return this.formId ? `编辑表单-${this.formInfo.formName}` : '新增表单';
+    },
   },
   methods: {
     async initPage() {
-      // 添加refs检查
       if (!this.$refs.designerRef) {
         console.error('表单设计器组件未初始化');
         return;
@@ -139,19 +130,25 @@ export default {
 
       if (this.formId) {
         try {
-          const res = await asyncGetFormDesignById({ formId: this.formId });
-          if (res.code === 0) {
+          const res = await asyncGetFormDesignById(this.formId);
+          if (res.code === 200) {
             this.formInfo = {
               formName: res.data.formName,
               formType: res.data.formType,
               formId: res.data.formId,
-              formVersionId: res.data.formVersionId
+              formVersionId: res.data.formVersionId,
             };
-            // 添加检查
-            if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+
+            const formConfig = JSON.parse(res.data.formConfig);
+            const widgetList = JSON.parse(res.data.widgetList);
+
+            if (this.$refs.designerRef?.setFormJson) {
               this.$refs.designerRef.setFormJson({
-                widgetList: JSON.parse(res.data.widgetList),
-                formConfig: JSON.parse(res.data.formConfig)
+                widgetList,
+                formConfig: {
+                  ...formConfig,
+                  layoutType: 'H5'
+                }
               });
             }
           }
@@ -165,26 +162,36 @@ export default {
           const data = JSON.parse(copyData);
           this.handleCopyData(data);
         } else {
-          // 添加检查
-          if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+          if (
+            this.$refs.designerRef &&
+            typeof this.$refs.designerRef.setFormJson === 'function'
+          ) {
             this.$refs.designerRef.setFormJson(this.defaultFormJson);
           }
         }
       }
+
+      if (!this.formId && !this.$route.query.copyData) {
+        this.$refs.designerRef?.setFormJson({
+          ...this.defaultFormJson,
+          formConfig: {
+            ...this.defaultFormJson.formConfig,
+            layoutType: 'H5',
+          },
+        });
+      }
     },
     handleCopyData(data) {
       this.formInfo = {
-        formName: data.formName,
+        ...this.formInfo,
+        formName: `${data.formName}_copy`,
         formType: data.formType,
-        formId: data.formId,
-        formVersionId: data.formVersionId
       };
-      
-      // 添加检查
-      if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+
+      if (this.$refs.designerRef) {
         const formJson = {
           widgetList: JSON.parse(data.widgetList),
-          formConfig: JSON.parse(data.formConfig)
+          formConfig: JSON.parse(data.formConfig),
         };
         this.$refs.designerRef.setFormJson(formJson);
       }
@@ -226,7 +233,6 @@ export default {
       const valid = await this.$refs.formInfoRef.validate();
       if (!valid) return false;
 
-      // 获取VForm Mobile设计器的表单数据
       const formJson = this.$refs.designerRef.getFormJson();
       if (!formJson.widgetList?.length) {
         this.$modal.msgError('请添加表单组件');
@@ -250,14 +256,14 @@ export default {
 
           this.$modal.msgSuccess('表单信息已重置');
         })
-        .catch(() => {});
+        .catch(() => { });
     },
     handleBack() {
       this.$tab.closeOpenPage({ path: '/form/index', title: '表单管理' });
     },
     handleCancel() {
       this.handleBack();
-    }
-  }
-}
+    },
+  },
+};
 </script>

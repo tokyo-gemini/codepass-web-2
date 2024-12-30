@@ -327,6 +327,7 @@ export default {
         .then(() => {
           this.getList();
           this.$modal.msgSuccess('删除成功');
+          this.$refs.formTable?.clearSelection();
         })
         .catch(() => {});
     },
@@ -335,21 +336,17 @@ export default {
         const res = await asyncCopyFormDesign({ formId: row.formId });
         if (res.code === 0) {
           this.$modal.msgSuccess('复制成功,请编辑复制的表单！');
-          this.$tab.openPage(`复制表单-${res.data.formName}`, '/form/designer').then(() => {
-            const obj = Object.assign({}, this.$route, {
-              title: `表单-${res.data.formName}`,
-              query: {
-                copyData: JSON.stringify({
-                  formId: res.data.formId,
-                  formVersionId: res.data.formVersionId,
-                  formName: res.data.formName,
-                  formType: res.data.formType,
-                  widgetList: res.data.widgetList,
-                  formConfig: res.data.formConfig
-                })
-              }
-            });
-            this.$tab.updatePage(obj);
+          this.$tab.openPage(`复制表单-${res.data.formName}`, '/form/designer', {
+            query: {
+              copyData: JSON.stringify({
+                formId: res.data.formId,
+                formVersionId: res.data.formVersionId,
+                formName: res.data.formName,
+                formType: res.data.formType,
+                widgetList: res.data.widgetList,
+                formConfig: res.data.formConfig
+              })
+            }
           });
         }
       } catch (error) {
@@ -357,7 +354,6 @@ export default {
         this.$modal.msgError('复制失败');
       }
     },
-    // 添加缺失的方法
     handleUpdate(row) {
       const formId = row.formId || this.ids[0];
       this.$tab.openPage(`编辑表单-${row.formName}`, `/form/designer/${formId}`);
