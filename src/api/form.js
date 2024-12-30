@@ -31,18 +31,19 @@ export function asyncEditFormDesign(data) {
     data,
   });
 }
-// 查询表单详情 
+// 查询表单详情
 export function asyncGetFormDesignById(formId) {
   return request({
     url: `/formDesignInfo/get/${formId}`,
-    method: 'get'
+    method: 'get',
   });
 }
 
 // 删除表单
-export function asyncDeleteFormDesign(formIds) {
+export function asyncDeleteFormDesign(params) {
   return request({
-    url: `/formDesignInfo/delete/${formIds}`,
-    method: 'delete'
+    url: '/formDesignInfo/del',
+    method: 'delete',
+    params,
   });
 }

@@ -32,11 +32,6 @@
     </div>
     <div class="designer">
       <vm-form-designer ref="designerRef" :designer-config="designerConfig" @save="handleSave">
-        <template #customToolButtons>
-          <el-button type="primary" size="small" @click="handleSave">
-            <i class="el-icon-finished"></i>{{ formId ? '保存' : '添加' }}
-          </el-button>
-        </template>
       </vm-form-designer>
     </div>
   </div>
@@ -128,7 +123,37 @@ export default {
         return;
       }
 
-      if (this.formId) {
+      const copyData = this.$route.query.copyData;
+      if (copyData) {
+        try {
+          // 解析复制的数据
+          const data = JSON.parse(copyData);
+          console.log('复制的表单数据:', data); // 调试用
+
+          // 设置基本信息
+          this.formInfo = {
+            formName: data.formName,
+            formType: data.formType,
+            formId: data.formId,
+            formVersionId: data.formVersionId
+          };
+
+          // 设置表单设计数据
+          if (this.$refs.designerRef?.setFormJson) {
+            const formJson = {
+              widgetList: JSON.parse(data.widgetList),
+              formConfig: {
+                ...JSON.parse(data.formConfig),
+                layoutType: 'H5'  // 确保使用H5布局
+              }
+            };
+            this.$refs.designerRef.setFormJson(formJson);
+          }
+        } catch (error) {
+          console.error('解析复制数据失败:', error);
+          this.$modal.msgError('解析复制数据失败');
+        }
+      } else if (this.formId) {
         try {
           const res = await asyncGetFormDesignById(this.formId);
           if (res.code === 200) {
@@ -183,15 +208,16 @@ export default {
     },
     handleCopyData(data) {
       this.formInfo = {
-        ...this.formInfo,
-        formName: `${data.formName}_copy`,
+        formName: data.formName,
         formType: data.formType,
+        formId: data.formId,
+        formVersionId: '', // 新表单不需要版本ID
       };
 
       if (this.$refs.designerRef) {
         const formJson = {
           widgetList: JSON.parse(data.widgetList),
-          formConfig: JSON.parse(data.formConfig),
+          formConfig: JSON.parse(data.formConfig)
         };
         this.$refs.designerRef.setFormJson(formJson);
       }
