@@ -51,12 +51,16 @@
             <dict-tag :options="dict.type.plan_type_option" :value="scope.row.planType" />
           </template>
         </el-table-column>
-        <el-table-column label="描述" prop="description" align="center" />
-        <el-table-column label="循环次数" prop="loopCount" align="center" />
-        <el-table-column label="计划完成率" prop="completionRate" align="center" />
-        <el-table-column label="状态" prop="status" align="center">
+        <el-table-column label="描述" prop="planDesc" align="center" />
+        <el-table-column label="循环次数" prop="forCount" align="center" />
+        <el-table-column label="计划完成率" prop="completeRate" align="center">
           <template slot-scope="scope">
-            <dict-tag :options="dict.type.plan_status_option" :value="scope.row.status" />
+            {{ scope.row.completeRate }}%
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" prop="planStatus" align="center">
+          <template slot-scope="scope">
+            <dict-tag :options="dict.type.plan_status_option" :value="scope.row.planStatus" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" align="center">
@@ -131,11 +135,16 @@ export default {
     getList() {
       this.loading = true;
       asyncGetPlanList(this.queryParams).then(response => {
-        this.planList = response.data.records;
-        this.total = response.data.total;
+        if (response.code === 200) {
+          this.planList = response.rows;
+          this.total = response.total;
+        } else {
+          this.$message.error(response.msg || '获取计划列表失败');
+        }
         this.loading = false;
       }).catch(() => {
         this.loading = false;
+        this.$message.error('获取计划列表失败');
       });
     },
     /** 搜索按钮操作 */
@@ -150,9 +159,9 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(row) {
-      const planIds = row.planId || this.ids;
-      this.$modal.confirm('是否确认删除计划编号为"' + planIds + '"的数据项？').then(() => {
-        // return delPlan(planIds);
+      const planId = row.planId;
+      this.$modal.confirm('是否确认删除该计划？').then(() => {
+        // return delPlan(planId);
       }).then(() => {
         this.getList();
         this.$modal.msgSuccess("删除成功");

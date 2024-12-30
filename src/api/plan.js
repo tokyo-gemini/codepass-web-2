@@ -8,3 +8,18 @@ export function asyncGetPlanList(data) {
     params: data,
   });
 }
+// 获取计划表单的可选项
+export function asyncGetPlanOptions(type) {
+  return request({
+    url: `/plannedManage/get/form/info/by/plan/type/${type}`,
+    method: 'get',
+  });
+}
+// 获取台区列表
+export function asyncGetAreaList(data) {
+  return request({
+    url: '/plannedManage/page/to/custom',
+    method: 'get',
+    params: data,
+  });
+}
