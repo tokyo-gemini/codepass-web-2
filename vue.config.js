@@ -1,15 +1,14 @@
 'use strict'
 const path = require('path')
+const CompressionPlugin = require('compression-webpack-plugin')
+const UnoCSS = require('@unocss/webpack').default
 
 function resolve(dir) {
   return path.join(__dirname, dir)
 }
 
-const CompressionPlugin = require('compression-webpack-plugin')
-
-const name = process.env.VUE_APP_TITLE || '若依管理系统' // 网页标题
-
-const port = process.env.port || process.env.npm_config_port || 80 // 端口
+const name = process.env.VUE_APP_TITLE || '若依管理系统'
+const port = process.env.port || process.env.npm_config_port || 80
 
 // vue.config.js 配置说明
 //官方vue.config.js 参考文档 https://cli.vuejs.org/zh/config/#css-loaderoptions
@@ -36,7 +35,7 @@ module.exports = {
     proxy: {
       // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
-        target: `http://localhost:8080`,
+        target: `http://192.168.2.5:9876`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_API]: ''
@@ -68,7 +67,8 @@ module.exports = {
         algorithm: 'gzip',                             // 使用gzip压缩
         minRatio: 0.8,                                 // 压缩比例，小于 80% 的文件不会被压缩
         deleteOriginalAssets: false                    // 压缩后删除原文件
-      })
+      }),
+      UnoCSS()
     ],
   },
   chainWebpack(config) {

@@ -87,7 +87,21 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
-  }
+  }, 
+  {
+    path: '/form',
+    component: Layout,
+    hidden: true,
+    redirect: 'noredirect',
+    children: [
+      {
+        path: 'designer/:id?', // 修改路由参数为可选
+        component: () => import('@/views/form/designer'),
+        name: 'FormDesigner',
+        meta: { title: '表单设计器', icon: 'form' },
+      },
+    ],
+  },
 ]
 
 // 动态路由，基于用户权限动态去加载
