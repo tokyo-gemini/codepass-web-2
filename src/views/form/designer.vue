@@ -36,7 +36,7 @@
             :disabled="!!formId"
           >
             <el-option
-              v-for="dict in form_type_option"
+              v-for="dict in dict.type.form_type_option"
               :key="dict.value"
               :label="dict.label"
               :value="dict.value"
@@ -70,10 +70,11 @@ import {
 
 export default {
   name: 'FormDesigner',
+  // 声明需要使用的字典
+  dicts: ['form_type_option'],
   data() {
     return {
       formId: this.$route.params.id,
-      form_type_option: [], // 添加表单类型选项
       formInfo: {
         formName: '',
         formType: undefined,
@@ -117,23 +118,25 @@ export default {
       }
     }
   },
-  created() {
-    // 获取字典数据
-    this.getDicts('form_type_option').then(response => {
-      this.form_type_option = response.data;
+  mounted() {
+    // 使用 nextTick 确保组件已完全挂载
+    this.$nextTick(() => {
+      this.initPage();
     });
-    this.initPage();
   },
   computed: {
     pageTitle() {
       return this.formId ? `编辑表单-${this.formInfo.formName}` : '新增表单'
     }
   },
-  mounted() {
-    this.initPage()
-  },
   methods: {
     async initPage() {
+      // 添加refs检查
+      if (!this.$refs.designerRef) {
+        console.error('表单设计器组件未初始化');
+        return;
+      }
+
       if (this.formId) {
         try {
           const res = await asyncGetFormDesignById({ formId: this.formId });
@@ -144,23 +147,28 @@ export default {
               formId: res.data.formId,
               formVersionId: res.data.formVersionId
             };
-            this.$refs.designerRef.setFormJson({
-              widgetList: JSON.parse(res.data.widgetList),
-              formConfig: JSON.parse(res.data.formConfig)
-            });
+            // 添加检查
+            if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+              this.$refs.designerRef.setFormJson({
+                widgetList: JSON.parse(res.data.widgetList),
+                formConfig: JSON.parse(res.data.formConfig)
+              });
+            }
           }
         } catch (error) {
           console.error('获取表单详情失败:', error);
           this.$modal.msgError('获取表单详情失败');
         }
       } else {
-        // 检查复制操作
         const copyData = this.$route.query.copyData;
         if (copyData) {
           const data = JSON.parse(copyData);
           this.handleCopyData(data);
         } else {
-          this.$refs.designerRef.setFormJson(this.defaultFormJson);
+          // 添加检查
+          if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+            this.$refs.designerRef.setFormJson(this.defaultFormJson);
+          }
         }
       }
     },
@@ -171,11 +179,15 @@ export default {
         formId: data.formId,
         formVersionId: data.formVersionId
       };
-      const formJson = {
-        widgetList: JSON.parse(data.widgetList),
-        formConfig: JSON.parse(data.formConfig)
-      };
-      this.$refs.designerRef.setFormJson(formJson);
+      
+      // 添加检查
+      if (this.$refs.designerRef && typeof this.$refs.designerRef.setFormJson === 'function') {
+        const formJson = {
+          widgetList: JSON.parse(data.widgetList),
+          formConfig: JSON.parse(data.formConfig)
+        };
+        this.$refs.designerRef.setFormJson(formJson);
+      }
     },
     async handleSave() {
       try {
@@ -249,12 +261,3 @@ export default {
   }
 }
 </script>
-
-<style lang="scss">
-.designer {
-  height: calc(100vh - 200px);
-  .vm-form-designer {
-    height: 100%;
-  }
-}
-</style>

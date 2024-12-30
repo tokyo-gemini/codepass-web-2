@@ -23,7 +23,7 @@
           style="width: 200px"
         >
           <el-option
-            v-for="dict in form_type_option"
+            v-for="dict in dict.type.form_type_option"
             :key="dict.value"
             :label="dict.label"
             :value="dict.value"
@@ -102,7 +102,7 @@
         width="120"
       >
         <template #default="scope">
-          <dict-tag :options="form_type_option" :value="scope.row.formType" />
+          <dict-tag :options="dict.type.form_type_option" :value="scope.row.formType" />
         </template>
       </el-table-column>
       <el-table-column
@@ -182,7 +182,7 @@
             <el-form-item label="公告类型" prop="noticeType">
               <el-select v-model="form.noticeType" placeholder="请选择">
                 <el-option
-                  v-for="dict in sys_notice_type"
+                  v-for="dict in dict.type.sys_notice_type"
                   :key="dict.value"
                   :label="dict.label"
                   :value="dict.value"
@@ -194,7 +194,7 @@
             <el-form-item label="状态">
               <el-radio-group v-model="form.status">
                 <el-radio
-                  v-for="dict in sys_notice_status"
+                  v-for="dict in dict.type.sys_notice_status"
                   :key="dict.value"
                   :value="dict.value"
                   >{{ dict.label }}</el-radio
@@ -225,6 +225,8 @@ import { asyncGetFormDesignPage, asyncCopyFormDesign } from '@/api/form';
 
 export default {
   name: 'FormManage',
+  // 声明需要使用的字典
+  dicts: ['form_type_option', 'sys_notice_type', 'sys_notice_status'],
   data() {
     return {
       // 增加必要的数据属性
@@ -238,9 +240,6 @@ export default {
       multiple: true,
       total: 0,
       title: '',
-      form_type_option: [], // 表单类型选项
-      sys_notice_type: [], // 公告类型选项 
-      sys_notice_status: [], // 公告状态选项
       form: {},
       queryParams: {
         pageNum: 1,
@@ -260,16 +259,6 @@ export default {
   },
   created() {
     this.getList();
-    // 获取字典数据
-    this.getDicts('form_type_option').then(response => {
-      this.form_type_option = response.data;
-    });
-    this.getDicts('sys_notice_type').then(response => {
-      this.sys_notice_type = response.data;
-    });
-    this.getDicts('sys_notice_status').then(response => {
-      this.sys_notice_status = response.data;
-    });
   },
   methods: {
     getList() {
