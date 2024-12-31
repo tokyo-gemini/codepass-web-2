@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <div class="bg-white rounded p-4 shadow">
+
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="formName">
         <el-form-item label="表单名称/编号" prop="formName">
           <el-input v-model="queryParams.formName" placeholder="请输入表单名称/编号" clearable style="width: 200px"
@@ -33,7 +34,10 @@
         </el-col>
         <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
+      <div class="text-xs text-gray-500 my-4 font-bold">
+        可以管理或创建不用的表单类型,后续可以给计划管理或自动派单使用
 
+      </div>
       <el-table v-loading="loading" :data="formList" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="表单名称" align="center" prop="formName" :show-overflow-tooltip="true" />

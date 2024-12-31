@@ -20,8 +20,8 @@
 
         <el-form ref="form" :model="formData" label-width="120px" inline>
             <div class="flex flex-col gap-4">
-                <div class="rounded bg-white shadow w-full p-2">
-                    <div class="font-bold py-4 flex items-center">
+                <div class="rounded bg-white shadow w-full p-4">
+                    <div class="font-bold pb-4 flex items-center">
                         <div> 计划名称：</div>
                         <dict-tag :options="dict.type.plan_type_option" :value="planType" />
                     </div>
@@ -40,43 +40,48 @@
                         </el-form-item>
                     </div>
                 </div>
-                <div class="rounded bg-white shadow w-full p-2">
-                    <div class="font-bold py-4">
+                <div class="rounded bg-white shadow w-full p-4">
+                    <div class="font-bold pb-4">
                         对象选择
-                    </div>
-                    <div>
-                        <el-form-item label="客户标签" prop="tagId">
-                            <treeselect v-model="formData.tagId" :options="customerTagTree"
-                                :normalizer="normalizerCustomerTag" placeholder="请选择客户标签" multiple clearable
-                                :searchable="true" :async="true" :load-options="loadCustomerTagOptions"
-                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96" />
-                        </el-form-item>
-
                     </div>
                     <div>
                         <el-form-item label="所属供电所" prop="powerSupply">
                             <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
                                 :normalizer="normalizer" placeholder="请选择供电所" multiple clearable :searchable="true"
-                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96" />
+                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96"
+                                @input="handlePowerSupplyChange" />
                         </el-form-item>
                     </div>
                     <div v-if="isVisit">
-                        <el-form-item label="所属台区:" prop="towerIdList" v-if="isVisit">
+                        <el-form-item label="所属台区:" prop="towerIdList">
                             <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
                                 :normalizer="normalizerTower" placeholder="请选择台区" multiple clearable :searchable="true"
                                 :limit="1" :limitText="treeselectLimitText" class="w-96" />
                         </el-form-item>
                     </div>
-                    <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
-                        :pagination="true">
-                        <el-table-column v-for="column in tableColumns" :key="column.prop" :prop="column.prop"
-                            :label="column.label" :type="column.type" :width="column.width"></el-table-column>
+                    <div class="my-4">
+                        <el-alert type="info" :closable="false">
+                            <div class="flex items-center justify-between">
+                                <span>已选择 {{ formData.isSelectAll === 1 ? total : selectedCount }} 项</span>
+                                <el-button type="text" @click="handleToggleSelectAll">
+                                    {{ formData.isSelectAll === 1 ? '取消全选' : '全选' }}
+                                </el-button>
+                            </div>
+                        </el-alert>
+                    </div>
+                    <el-table v-if="!isVisit" :data="tableData" @selection-change="handleSelectionChange"
+                        ref="multipleTable">
+                        <el-table-column type="selection" width="55"></el-table-column>
+                        <el-table-column prop="towerName" label="台区名称"></el-table-column>
+                        <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                        <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                        <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
                     </el-table>
-                    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum"
-                        v-model:limit="queryParams.pageSize" @pagination="getObjectTable" />
+                    <pagination v-if="!isVisit" v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
+                        :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
                 </div>
-                <div class="rounded bg-white shadow w-full p-2">
-                    <div class="font-bold py-4">
+                <div class="rounded bg-white shadow w-full p-4">
+                    <div class="font-bold pb-4">
                         时间选择
                     </div>
                     <div>
@@ -194,7 +199,7 @@
                         <el-form-item label="告警时间" prop="alarmTimeList">
                             <div class="flex flex-col gap-4">
                                 <div v-for="(alarmTime, index) in formData.alarmTimeList" :key="index"
-                                    class="flex items-center gap-2">
+                                    class="flex items-center gap-4">
                                     <el-input v-model="formData.alarmTimeList[index]" type="number"
                                         placeholder="请输入告警时间（小时）"></el-input>
                                     <el-button type="primary" icon="el-icon-plus"
@@ -262,7 +267,8 @@ export default {
             },
             towerIdListOption: [], // 台区列表
             tableData: [], // 表格数据
-            powerSupplyTree: [] // 供电所树形数据
+            powerSupplyTree: [], // 供电所树形数据
+            selectedCount: 0
         }
     },
     computed: {
@@ -399,7 +405,29 @@ export default {
         },
         // 对象列表勾选事件
         handleSelectionChange(val) {
-            this.formData.towerIdList = val.map(item => item.towerId)
+            // 如果不是全选状态，才更新selectedCount
+            if (this.formData.isSelectAll !== 1) {
+                this.selectedCount = val.length;
+                this.formData.towerUserList = val.map(item => item.towerId);
+            }
+        },
+
+        // 处理全选/取消全选
+        handleToggleSelectAll() {
+            if (this.formData.isSelectAll === 1) {
+                // 当前是全选状态，需要取消全选
+                this.$refs.multipleTable.clearSelection();
+                this.formData.isSelectAll = 0;
+                this.selectedCount = 0;
+                this.formData.towerUserList = [];
+            } else {
+                // 当前不是全选状态，需要全选
+                this.formData.isSelectAll = 1;
+                this.selectedCount = this.total; // 更新选中数量为total
+                this.tableData.forEach(row => {
+                    this.$refs.multipleTable.toggleRowSelection(row, true);
+                });
+            }
         },
         // 增加告警时间
         addAlarmTime() {
@@ -475,14 +503,109 @@ export default {
         // 获取台区列表
         async getTowerList() {
             try {
-                const res = await asyncGetAreaList(this.filter);
-                // 将台区数据转换为 Treeselect 所需的格式
-                this.towerIdListOption = res.data.map(item => ({
-                    id: item.towerId,
-                    label: item.towerName,
-                })) || [];
+                const params = {
+                    pageNum: this.queryParams.pageNum,
+                    pageSize: this.queryParams.pageSize,
+                    areaIdList: '',
+                    deptIdList: this.formData.powerSupply ? this.formData.powerSupply.toString() : '', // 供电所ID
+                    towerIdList: '',
+                    customName: '',
+                    towerName: '',
+                    tagIdList: ''
+                }
+
+                // 从选中的供电所节点中获取公司ID
+                if (this.formData.powerSupply && this.formData.powerSupply.length > 0) {
+                    const findCompanyId = (tree, powerId) => {
+                        for (const node of tree) {
+                            if (node.children) {
+                                for (const child of node.children) {
+                                    if (child.children) {
+                                        for (const powerNode of child.children) {
+                                            if (powerNode.id === powerId) {
+                                                return child.id; // 返回公司层级的ID
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return '';
+                    };
+                }
+
+                const res = await asyncGetAreaList(params);
+
+                if (this.isVisit) {
+                    this.towerIdListOption = (res.data.records || []).map(item => ({
+                        id: item.towerId,
+                        label: item.towerName
+                    }));
+                } else {
+                    console.log(res);
+
+                    this.tableData = res.rows || [];
+                    this.total = res.total;
+                }
             } catch (error) {
                 console.error('获取台区列表失败:', error);
+            }
+        },
+        // 获取对象列表(分页查询)
+        async getObjectTable(pagination) {
+            if (!this.formData.powerSupply || !this.formData.powerSupply.length) {
+                this.$modal.msgWarning('请先选择供电所');
+                return;
+            }
+
+            // 如果传入了分页参数，更新分页信息
+            if (pagination) {
+                this.queryParams.pageNum = pagination.page;
+                this.queryParams.pageSize = pagination.limit;
+            }
+
+            try {
+                const params = {
+                    pageNum: this.queryParams.pageNum,
+                    pageSize: this.queryParams.pageSize,
+                    areaIdList: '',
+                    companyIdList: '',
+                    deptIdList: this.formData.powerSupply.toString(),  // 供电所ID
+                    towerIdList: '',
+                    customName: '',
+                    towerName: '',
+                    tagIdList: ''
+                };
+
+                // 调用API获取数据
+                const res = await asyncGetAreaList(params);
+
+                if (this.isVisit) {
+                    this.towerIdListOption = (res.rows || []).map(item => ({
+                        id: item.towerId,
+                        label: item.towerName
+                    }));
+                } else {
+                    // 确保返回的数据结构正确
+                    this.tableData = res.rows || [];
+                    this.total = parseInt(res.total) || 0;
+                }
+            } catch (error) {
+                console.error('获取对象列表失败:', error);
+                this.$modal.msgError('获取列表数据失败');
+            }
+        },
+
+        // 处理供电所选择变化
+        handlePowerSupplyChange(value) {
+            if (value && value.length > 0) {
+                // 重置分页参数
+                this.queryParams.pageNum = 1;
+                this.getObjectTable(); // 使用getObjectTable替换getTowerList
+            } else {
+                this.tableData = [];
+                this.towerIdListOption = [];
+                this.total = 0;
             }
         },
         // 获取客户标签可选项
@@ -493,10 +616,6 @@ export default {
             } catch (error) {
                 console.error('获取客户标签失败:', error)
             }
-        },
-        // 获取对象列表
-        getObjectTable() {
-
         },
     }
 }

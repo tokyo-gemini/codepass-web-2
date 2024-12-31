@@ -18,7 +18,7 @@ export function asyncGetPlanOptions(type) {
 // 获取台区列表
 export function asyncGetAreaList(data) {
   return request({
-    url: '/plannedManage/page/to/custom',
+    url: '/plannedManage/page/to/user',
     method: 'get',
     params: data,
   });
