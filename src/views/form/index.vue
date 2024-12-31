@@ -52,9 +52,9 @@
         </el-table-column>
         <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">编辑</el-button>
-            <el-button link type="primary" icon="DocumentCopy" @click="handleCopy(scope.row)">复制</el-button>
+            <el-button type="text" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" @click="handleUpdate(scope.row)">编辑</el-button>
+            <el-button type="text" @click="handleCopy(scope.row)">复制</el-button>
           </template>
         </el-table-column>
       </el-table>
