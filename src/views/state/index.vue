@@ -6,10 +6,15 @@
       </div>
       <el-table v-loading="loading" :data="stateList">
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column label="状态类" align="center" prop="noticeType" width="200" />
-        <el-table-column label="状态项" align="center" prop="noticeTitle">
+        <el-table-column label="状态类" align="center" prop="statusName" width="200" />
+        <el-table-column label="状态项" align="center">
           <template slot-scope="scope">
-            <el-tag>{{ scope.row.noticeTitle }}</el-tag>
+            <div class="flex flex-wrap gap-2">
+              <el-tag v-for="item in scope.row.statusDataList" :key="item.statusDataId"
+                :type="getTagType(item.statusValue)">
+                {{ item.statusDataName }}
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="创建时间" align="center" prop="createTime" width="180">
@@ -57,9 +62,12 @@ export default {
         this.loading = false;
       });
     },
+    getTagType(value) {
+      const types = ['', 'success', 'warning', 'danger', 'info'];
+      return types[value] || '';
+    },
     handleUpdate(row) {
-      console.log(row);
-      const routeUrl = `/state/edit/${row.id}`;
+      const routeUrl = `/state/edits/${row.statusTypeId}`;
       this.$tab.openPage("编辑状态", routeUrl);
     },
   }
