@@ -49,8 +49,7 @@
                             <treeselect v-model="formData.tagId" :options="customerTagTree"
                                 :normalizer="normalizerCustomerTag" placeholder="请选择客户标签" multiple clearable
                                 :searchable="true" :async="true" :load-options="loadCustomerTagOptions"
-                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText"
-                                class="w-auto max-w-xs" />
+                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96" />
                         </el-form-item>
 
                     </div>
@@ -58,15 +57,14 @@
                         <el-form-item label="所属供电所" prop="powerSupply">
                             <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
                                 :normalizer="normalizer" placeholder="请选择供电所" multiple clearable :searchable="true"
-                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText"
-                                class="w-auto max-w-xs" />
+                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96" />
                         </el-form-item>
                     </div>
                     <div v-if="isVisit">
                         <el-form-item label="所属台区:" prop="towerIdList" v-if="isVisit">
                             <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
                                 :normalizer="normalizerTower" placeholder="请选择台区" multiple clearable :searchable="true"
-                                :limit="1" :limitText="treeselectLimitText" class="w-auto max-w-xs" />
+                                :limit="1" :limitText="treeselectLimitText" class="w-96" />
                         </el-form-item>
                     </div>
                     <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
