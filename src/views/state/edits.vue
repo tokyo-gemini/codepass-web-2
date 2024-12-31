@@ -176,8 +176,26 @@ export default {
                     return;
                 }
 
-                // 过滤掉已绑定的表单
-                const unboundForms = res.data.filter(item => item.bindingStatus === 0 && item.optionData.length > 0);
+                // 处理并过滤表单数据
+                const availableForms = res.data.map(item => {
+                    const content = JSON.parse(item.optionData);
+                    // 检查是否有可用的控件（带选项的控件）
+                    const hasAvailableWidgets = content.some(
+                        widget => widget.options && widget.options.optionItems && widget.options.optionItems.length > 0
+                    );
+                    return {
+                        ...item,
+                        content,
+                        hasAvailableWidgets
+                    };
+                });
+
+                // 过滤掉已绑定的表单和没有可用控件的表单
+                const unboundForms = availableForms.filter(item =>
+                    item.bindingStatus === 0 &&
+                    item.hasAvailableWidgets
+                );
+
                 if (unboundForms.length === 0) {
                     this.$message.warning("暂无可关联的表单");
                     return;
@@ -188,17 +206,16 @@ export default {
                 this.optionArray = {};
 
                 unboundForms.forEach((item, index) => {
-                    const content = JSON.parse(item.optionData);
                     this.associatedForm.push({
                         label: item.formName,
                         formId: item.formId,
                         formNumber: item.formNumber,
                         bindingStatus: item.bindingStatus,
-                        widgetList: content,
+                        widgetList: item.content,
                     });
 
                     this.optionArray[`it${index}`] = {
-                        selectItems: content
+                        selectItems: item.content
                             .filter((widget) => widget.options && widget.options.optionItems)
                             .map((widget) => ({
                                 label: widget.options.label,
@@ -323,19 +340,19 @@ export default {
                 return;
             }
 
-            const dataDtoList = this.baseInfo
-                .filter((info) => info.rowCurrent)
-                .map((info) => ({
-                    optionId: selectedWidget.options.name,
-                    statusDataId: info.rowCurrent,
-                    valueId: info.valueId,
-                    valueLabel: info.valueLabel,
-                }));
-
-            if (dataDtoList.length === 0) {
-                this.$message.warning('请为所有选项选择一个状态');
+            // 检查是否所有选项都已选择状态
+            const unselectedItems = this.baseInfo.filter(info => !info.rowCurrent);
+            if (unselectedItems.length > 0) {
+                this.$message.warning(`请为所有选项选择状态，还有 ${unselectedItems.length} 个选项未选择`);
                 return;
             }
+
+            const dataDtoList = this.baseInfo.map((info) => ({
+                optionId: selectedWidget.options.name,
+                statusDataId: info.rowCurrent,
+                valueId: info.valueId,
+                valueLabel: info.valueLabel,
+            }));
 
             const params = {
                 dataDtoList,
