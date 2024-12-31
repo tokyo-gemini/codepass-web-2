@@ -27,7 +27,9 @@
                 <div v-for="form in bindingForms" :key="form.formId"
                     class="w-40 h-40 shadow rounded flex flex-col justify-between p-4">
                     <div class="flex flex-col gap-2">
-                        <div class="font-bold text-gray-800">{{ form.formName }}</div>
+                        <el-tooltip class="item" effect="dark" :content="form.formName" placement="top">
+                            <div class="font-bold text-gray-800 truncate">{{ form.formName }}</div>
+                        </el-tooltip>
                         <div class="text-sm text-gray-500">
                             已关联 {{ form.statusBindingOptions.length }} 个选项
                         </div>
@@ -397,43 +399,31 @@ export default {
                     // 等待表单数据加载完成
                     await this.fetchFormData();
 
-                    // 获取绑定信息中的 optionId
-                    const boundOptionId = res.data[0].statusBindingOptions[0]?.optionId;
+                    // 找到被选中的控件
+                    if (form.statusBindingOptions && form.statusBindingOptions.length > 0) {
+                        const firstBindingOption = form.statusBindingOptions[0];
+                        // 在返回的数据中找到对应的控件
+                        const selectedWidget = res.data.find(widget =>
+                            widget.options && widget.options.name === firstBindingOption.optionId
+                        );
 
-                    // 找到对应的控件数据
-                    const formData = await asyncGetFormAndFormItem({
-                        statusTypeId: this.currentId,
-                        formId: form.formId
-                    });
-
-                    // 在所有控件中找到匹配 optionId 的控件
-                    const widgetData = formData.data.find(item => {
-                        const content = JSON.parse(item.optionData);
-                        return content.some(widget => widget.options.name === boundOptionId);
-                    });
-
-                    if (widgetData) {
-                        const content = JSON.parse(widgetData.optionData);
-                        const matchedWidget = content.find(widget => widget.options.name === boundOptionId);
-
-                        this.selectForm(0); // 因为编辑时只有一个表单，所以index为0
-
-                        // 设置选中的控件
-                        this.optionArray['it0'].value = matchedWidget.id;
-
-                        // 触发选择事件来生成baseInfo
-                        this.handleSelectionChange(matchedWidget.id, 0);
-
-                        // 设置状态映射
-                        this.baseInfo = this.baseInfo.map(info => {
-                            const boundOption = res.data[0].statusBindingOptions.find(
-                                opt => opt.valueId.toString() === info.valueId.toString()
-                            );
-                            if (boundOption) {
-                                info.rowCurrent = boundOption.statusDataId;
-                            }
-                            return info;
-                        });
+                        if (selectedWidget) {
+                            this.selectForm(0);
+                            // 设置选中的控件
+                            this.optionArray['it0'].value = selectedWidget.id;
+                            // 触发选择事件来生成baseInfo
+                            this.handleSelectionChange(selectedWidget.id, 0);
+                            // 设置状态映射
+                            this.baseInfo = this.baseInfo.map(info => {
+                                const bindingOption = form.statusBindingOptions.find(
+                                    opt => opt.valueId.toString() === info.valueId.toString()
+                                );
+                                if (bindingOption) {
+                                    info.rowCurrent = bindingOption.statusDataId;
+                                }
+                                return info;
+                            });
+                        }
                     }
                 }
             } catch (error) {
