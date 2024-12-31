@@ -123,7 +123,7 @@ export const constantRoutes = [
     redirect: 'noredirect',
     children: [
       {
-        path: 'edits/:stateId?',
+        path: 'edits/:id?',
         component: () => import('@/views/state/edits'),
         name: 'VisitDesigner',
         meta: { title: '状态编辑', icon: 'form', dynamicTitle: true },

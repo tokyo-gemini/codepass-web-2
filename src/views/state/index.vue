@@ -17,26 +17,19 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" align="center" prop="createTime" width="180">
-          <template slot-scope="scope">
-            <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
           <template slot-scope="scope">
             <el-button size="mini" type="text" @click="handleUpdate(scope.row)">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
-        @pagination="getList" />
     </div>
   </div>
 </template>
 
 <script>
 import { getStateList } from "@/api/state";
-
+import { getTagType } from './index'
 export default {
   name: "StateIndex",
   data() {
@@ -54,6 +47,7 @@ export default {
     this.getList();
   },
   methods: {
+    getTagType,
     getList() {
       this.loading = true;
       getStateList(this.queryParams).then(response => {
@@ -61,10 +55,6 @@ export default {
         this.total = response.total;
         this.loading = false;
       });
-    },
-    getTagType(value) {
-      const types = ['', 'success', 'warning', 'danger', 'info'];
-      return types[value] || '';
     },
     handleUpdate(row) {
       const routeUrl = `/state/edits/${row.statusTypeId}`;

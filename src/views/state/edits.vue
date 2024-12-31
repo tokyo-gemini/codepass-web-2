@@ -7,11 +7,13 @@
             <template #content>
                 <div class="flex items-center space-x-4 justify-between w-full">
                     <span class="text-lg font-semibold mr-3">
-                        {{ pageTitle }}
+                        {{ currentState.statusName }}
                     </span>
-                    <div>
-                        <el-button type="primary" @click="handleSave" class="mr-2">保存</el-button>
-                        <el-button @click="handleReset">重置</el-button>
+                    <div class="flex flex-wrap gap-2">
+                        <el-tag v-for="item in currentState.statusDataList" :key="item.statusDataId"
+                            :type="getTagType(item.statusValue)">
+                            {{ item.statusDataName }}
+                        </el-tag>
                     </div>
                 </div>
             </template>
@@ -19,36 +21,50 @@
         <el-divider></el-divider>
 
         <div class="bg-white p-4 rounded shadow">
-            <!-- 这里放表单内容 -->
+            123
         </div>
     </div>
 </template>
 
 <script>
+import { getStateList } from "@/api/state";
+import { getTagType } from './index'
 export default {
     name: 'StateEdit',
     data() {
         return {
-            stateId: this.$route.params.id,
+            queryParams: {
+                pageNum: 1,
+                pageSize: 10,
+            },
+            currentState: '', // 新增状态名称存储
         }
     },
+    created() {
+        this.fetchStateData()
+    },
     computed: {
-        pageTitle() {
-            return this.stateId ? '编辑状态' : '新增状态'
+        currentId() {
+            return this.$route.params.id
         }
     },
     methods: {
+        getTagType,
         handleBack() {
             this.$tab.closeOpenPage({ path: '/state/index', title: '状态管理' })
         },
         handleSave() {
-            // TODO: 实现保存逻辑
         },
-        handleReset() {
-            this.$modal.confirm('确定要重置表单信息吗？').then(() => {
-                // TODO: 实现重置逻辑
-                this.$modal.msgSuccess('表单信息已重置')
-            }).catch(() => { })
+        // 根据当前的id筛选状态列表里的数据拿到名称
+        fetchStateData() {
+            getStateList(this.queryParams)
+                .then(response => {
+                    const id = this.$route.params.id;
+                    this.currentState = response.rows.find(item => item.statusTypeId === id);
+                })
+                .catch(error => {
+                    console.error('获取状态数据失败:', error);
+                });
         }
     }
 }
