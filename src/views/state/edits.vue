@@ -276,6 +276,7 @@ export default {
                 this.dialogVisible = false;
                 this.reset();
                 this.fetchStateData();
+                this.fetchBindingForms()
             } catch (error) {
                 console.error("保存失败:", error);
                 this.$message.error("保存失败");

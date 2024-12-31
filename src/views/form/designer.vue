@@ -83,6 +83,7 @@ export default {
         showSwitchDeviceButton: false,
         layoutType: 'H5',
         deviceType: 'mobile',
+        toolbarMaxWidth: 300
       },
       defaultFormJson: {
         widgetList: [],

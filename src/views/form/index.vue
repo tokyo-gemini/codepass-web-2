@@ -137,7 +137,11 @@ export default {
     },
     handleDelete(row) {
       const formIds = row.formId || this.ids.toString();
-      this.$modal.confirm('是否确认删除表单编号为"' + formIds + '"的数据项？')
+      const formNames = row.formName || this.formList.filter(item => this.ids.includes(item.formId))
+        .map(item => item.formName)
+        .join('、');
+
+      this.$modal.confirm('是否确认删除表单"' + formNames + '"？')
         .then(function () {
           return asyncDeleteFormDesign({ formIds });
         })
