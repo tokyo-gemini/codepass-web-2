@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import { getStateList } from "@/api/state";
+import { asyncGetStateList } from "@/api/state";
 import { getTagType } from './index'
 export default {
   name: "StateIndex",
@@ -50,7 +50,7 @@ export default {
     getTagType,
     getList() {
       this.loading = true;
-      getStateList(this.queryParams).then(response => {
+      asyncGetStateList(this.queryParams).then(response => {
         this.stateList = response.rows;
         this.total = response.total;
         this.loading = false;
