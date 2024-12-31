@@ -33,3 +33,12 @@ export const statusTypegetbindinginfo = (params) => {
     params,
   });
 };
+
+//删除绑定的表单
+export const statusTypeunbindingform = (params) => {
+  return request({
+    url: '/statusType/unbinding',
+    method: 'get',
+    params,
+  });
+};

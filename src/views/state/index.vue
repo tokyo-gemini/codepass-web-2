@@ -29,7 +29,7 @@
 
 <script>
 import { asyncGetStateList } from "@/api/state";
-import { getTagType } from './index'
+import { getTagType } from './utils'
 export default {
   name: "StateIndex",
   data() {

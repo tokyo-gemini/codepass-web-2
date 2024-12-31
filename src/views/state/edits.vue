@@ -22,7 +22,7 @@
 
         <div class="bg-white p-4 rounded shadow">
             <!-- 已绑定表单列表 -->
-            <div class="grid grid-cols-4 gap-4">
+            <div class="flex flex-wrap gap-4">
                 <!-- 已绑定的表单卡片 -->
                 <div v-for="form in bindingForms" :key="form.formId"
                     class="w-40 h-40 shadow rounded flex flex-col justify-between p-4">
@@ -113,9 +113,10 @@ import {
     asyncGetStateList,
     asyncGetFormAndFormItem,
     AsyncCodesstatusTypebindingform,
-    statusTypegetbindinginfo
+    statusTypegetbindinginfo,
+    statusTypeunbindingform
 } from "@/api/state";
-import { getTagType } from "./index";
+import { getTagType } from "./utils";
 
 export default {
     name: "StateEdit",
@@ -134,6 +135,8 @@ export default {
             formRender: false,
             currentFormIndex: null, // 替代原来的 tabIndex
             bindingForms: [], // 已绑定的表单列表
+            isEdit: false, // 新增编辑状态标记
+            editForm: null, // 存储编辑的表单信息
         };
     },
     computed: {
@@ -170,8 +173,38 @@ export default {
                     this.$message.warning("暂无可关联的表单");
                     return;
                 }
+
+                // 过滤掉已绑定的表单
+                const unboundForms = res.data.filter(item => item.bindingStatus === 0 && item.optionData.length > 0);
+                if (unboundForms.length === 0) {
+                    this.$message.warning("暂无可关联的表单");
+                    return;
+                }
+
                 this.dialogVisible = true;
-                this.fetchFormData();
+                this.associatedForm = [];
+                this.optionArray = {};
+
+                unboundForms.forEach((item, index) => {
+                    const content = JSON.parse(item.optionData);
+                    this.associatedForm.push({
+                        label: item.formName,
+                        formId: item.formId,
+                        formNumber: item.formNumber,
+                        bindingStatus: item.bindingStatus,
+                        widgetList: content,
+                    });
+
+                    this.optionArray[`it${index}`] = {
+                        selectItems: content
+                            .filter((widget) => widget.options && widget.options.optionItems)
+                            .map((widget) => ({
+                                label: widget.options.label,
+                                value: widget.id,
+                            })),
+                        value: null,
+                    };
+                });
             } catch (error) {
                 console.error("获取表单数据失败:", error);
                 this.$message.error("获取表单数据失败");
@@ -190,6 +223,33 @@ export default {
                     return;
                 }
 
+                // 如果是编辑状态，直接使用编辑表单的数据
+                if (this.isEdit && this.editForm) {
+                    const item = data.find(d => d.formId === this.editForm.formId);
+                    if (item) {
+                        const content = JSON.parse(item.optionData);
+                        this.associatedForm.push({
+                            label: item.formName,
+                            formId: item.formId,
+                            formNumber: item.formNumber,
+                            bindingStatus: item.bindingStatus,
+                            widgetList: content,
+                        });
+
+                        this.optionArray[`it0`] = {
+                            selectItems: content
+                                .filter((widget) => widget.options && widget.options.optionItems)
+                                .map((widget) => ({
+                                    label: widget.options.label,
+                                    value: widget.id,
+                                })),
+                            value: null,
+                        };
+                    }
+                    return;
+                }
+
+                // 非编辑状态的原有逻辑
                 data.forEach((item, index) => {
                     if (item.bindingStatus === 0) {
                         const content = JSON.parse(item.optionData);
@@ -203,7 +263,7 @@ export default {
 
                         this.optionArray[`it${index}`] = {
                             selectItems: content
-                                .filter((widget) => widget.type === "m-radio")
+                                .filter((widget) => widget.options && widget.options.optionItems) // 只过滤包含选项的控件
                                 .map((widget) => ({
                                     label: widget.options.label,
                                     value: widget.id,
@@ -247,6 +307,11 @@ export default {
             const selectedForm = this.associatedForm[this.currentFormIndex];
             const selectedOptionId = this.optionArray[`it${this.currentFormIndex}`].value;
 
+            if (!selectedOptionId) {
+                this.$message.warning('请选择一个表单控件');
+                return;
+            }
+
             const selectedWidget = selectedForm.widgetList.find(
                 (widget) => widget.id === selectedOptionId
             );
@@ -256,16 +321,23 @@ export default {
                 return;
             }
 
+            const dataDtoList = this.baseInfo
+                .filter((info) => info.rowCurrent)
+                .map((info) => ({
+                    optionId: selectedWidget.options.name,
+                    statusDataId: info.rowCurrent,
+                    valueId: info.valueId,
+                    valueLabel: info.valueLabel,
+                }));
+
+            if (dataDtoList.length === 0) {
+                this.$message.warning('请为所有选项选择一个状态');
+                return;
+            }
+
             const params = {
-                dataDtoList: this.baseInfo
-                    .filter((info) => info.rowCurrent)
-                    .map((info) => ({
-                        optionId: selectedWidget.options.name,
-                        statusDataId: info.rowCurrent,
-                        valueId: info.valueId,
-                        valueLabel: info.valueLabel,
-                    })),
-                formId: selectedForm.formId,
+                dataDtoList,
+                formId: this.isEdit ? this.editForm.formId : selectedForm.formId,
                 optionLabel: selectedWidget.options.label,
                 statusTypeId: this.currentId,
             };
@@ -287,6 +359,8 @@ export default {
             this.currentFormIndex = null;
             this.formRender = false;
             this.dialogVisible = false;
+            this.isEdit = false;
+            this.editForm = null;
         },
         selectForm(index) {
             this.currentFormIndex = index;
@@ -300,9 +374,7 @@ export default {
         async fetchBindingForms() {
             try {
                 const res = await statusTypegetbindinginfo({ statusTypeId: this.currentId });
-                if (res.code === 0 && res.data) {
-                    this.bindingForms = res.data;
-                }
+                this.bindingForms = res.data;
             } catch (error) {
                 console.error('获取已绑定表单失败:', error);
                 this.$message.error('获取已绑定表单失败');
@@ -310,9 +382,64 @@ export default {
         },
 
         // 编辑已绑定表单
-        handleEditBinding(form) {
-            // TODO: 实现编辑逻辑
-            console.log('编辑表单:', form);
+        async handleEditBinding(form) {
+            try {
+                const res = await statusTypegetbindinginfo({
+                    statusTypeId: this.currentId,
+                    formId: form.formId
+                });
+
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    this.isEdit = true;
+                    this.editForm = form;
+                    this.dialogVisible = true;
+
+                    // 等待表单数据加载完成
+                    await this.fetchFormData();
+
+                    // 获取绑定信息中的 optionId
+                    const boundOptionId = res.data[0].statusBindingOptions[0]?.optionId;
+
+                    // 找到对应的控件数据
+                    const formData = await asyncGetFormAndFormItem({
+                        statusTypeId: this.currentId,
+                        formId: form.formId
+                    });
+
+                    // 在所有控件中找到匹配 optionId 的控件
+                    const widgetData = formData.data.find(item => {
+                        const content = JSON.parse(item.optionData);
+                        return content.some(widget => widget.options.name === boundOptionId);
+                    });
+
+                    if (widgetData) {
+                        const content = JSON.parse(widgetData.optionData);
+                        const matchedWidget = content.find(widget => widget.options.name === boundOptionId);
+
+                        this.selectForm(0); // 因为编辑时只有一个表单，所以index为0
+
+                        // 设置选中的控件
+                        this.optionArray['it0'].value = matchedWidget.id;
+
+                        // 触发选择事件来生成baseInfo
+                        this.handleSelectionChange(matchedWidget.id, 0);
+
+                        // 设置状态映射
+                        this.baseInfo = this.baseInfo.map(info => {
+                            const boundOption = res.data[0].statusBindingOptions.find(
+                                opt => opt.valueId.toString() === info.valueId.toString()
+                            );
+                            if (boundOption) {
+                                info.rowCurrent = boundOption.statusDataId;
+                            }
+                            return info;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('获取编辑数据失败:', error);
+                this.$message.error('获取编辑数据失败');
+            }
         },
 
         // 删除已绑定表单
@@ -321,9 +448,18 @@ export default {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
-            }).then(() => {
-                // TODO: 实现删除逻辑
-                console.log('删除表单:', form);
+            }).then(async () => {
+                try {
+                    await statusTypeunbindingform({
+                        statusTypeId: this.currentId,
+                        formId: form.formId
+                    });
+                    this.$message.success('删除成功');
+                    this.fetchBindingForms(); // 重新获取绑定表单列表
+                } catch (error) {
+                    console.error('删除失败:', error);
+                    this.$message.error('删除失败');
+                }
             }).catch(() => { });
         },
     },
