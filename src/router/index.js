@@ -112,7 +112,21 @@ export const constantRoutes = [
         path: 'visit/:type?/:id?',
         component: () => import('@/views/plan/visit'),
         name: 'VisitDesigner',
-        meta: { title: '新建计划', icon: 'form', dynamicTitle: true },
+        meta: { title: '计划编辑', icon: 'form', dynamicTitle: true },
+      },
+    ],
+  },
+  {
+    path: '/state',
+    component: Layout,
+    hidden: true,
+    redirect: 'noredirect',
+    children: [
+      {
+        path: 'edits/:stateId?',
+        component: () => import('@/views/state/edits'),
+        name: 'VisitDesigner',
+        meta: { title: '状态编辑', icon: 'form', dynamicTitle: true },
       },
     ],
   },

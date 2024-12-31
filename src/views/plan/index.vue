@@ -1,24 +1,27 @@
 <template>
-  <div class="app-container flex flex-col h-screen gap-4">
+  <div class="app-container flex flex-col gap-4">
     <!-- 快速创建模块 -->
-    <div class="bg-white rounded p-4 h-2/6 shadow">
-      <div class="text-xl font-medium mb-1">快速创建</div>
-      <div class="text-gray-500 text-sm mb-5">可以点击下方不同计划类型,完成计划的创建</div>
-      <div class="flex justify-between items-center h-36">
+    <div class="bg-white rounded p-4 shadow flex flex-col gap-2 h-44">
+      <div class="text-lg font-medium flex items-center gap-4">
+        <div>
+          快速创建
+        </div>
+        <div class="text-gray-500 text-xs">可以点击下方不同计划类型,完成计划的创建</div>
+      </div>
+      <div class="flex justify-between items-center">
         <div v-for="(item, index) in planTypes" :key="index"
-          class="w-1/5 h-36 p-6 relative cursor-pointer rounded hover:opacity-95" @click="createPlan(item.type)">
-          <div class="absolute z-10 left-4 top-4 w-full h-full">
+          class="w-1/5 p-4 relative cursor-pointer rounded hover:opacity-95" @click="createPlan(item.type)">
+          <div class="absolute z-10 left-4 top-4 w-full">
             <div class="text-2xl text-white font-bold">{{ item.name }}</div>
             <div class="text-white text-base mt-2 font-bold">0项</div>
           </div>
-          <img :src="item.image" :alt="item.name"
-            class="absolute left-0 top-0 w-full h-full object-cover z-0 rounded" />
+          <img :src="item.image" :alt="item.name" class="absolute left-0 top-0 w-full h-24 object-cover z-0 rounded" />
         </div>
       </div>
     </div>
 
     <!-- 计划列表模块 -->
-    <div class="h-4/6 flex-1 p-4 shadow rounded">
+    <div class="p-4 shadow rounded">
       <div class="mb-4">
         <el-form :model="queryParams" ref="queryForm" size="small" :inline="true">
           <el-form-item label="计划名称" prop="planName">
