@@ -23,3 +23,18 @@ export function asyncGetAreaList(data) {
     params: data,
   });
 }
+// 根据id查询计划详情
+export function asyncGetPlanDetail(id) {
+  return request({
+    url: `/plannedManage/get/${id}`,
+    method: 'get',
+  });
+}
+// 获取客户标签可选项
+export function asyncGetCustomerTags(params) {
+  return request({
+    url: '/sys/tag/get/page',
+    method: 'get',
+    params,
+  });
+}
