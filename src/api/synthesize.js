@@ -30,3 +30,11 @@ export const asyncGetFormControls = (id) => {
     method: 'get',
   });
 };
+// 查看详情
+export const asyncGetDetail = (params) => {
+  return request({
+    url: '/search/get/form/info',
+    method: 'get',
+    params,
+  });
+};

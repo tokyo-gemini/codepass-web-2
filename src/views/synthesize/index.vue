@@ -105,38 +105,79 @@
       <template slot="empty">
         <el-empty :description="emptyText"></el-empty>
       </template>
-      <el-table-column label="工单编号" align="center" prop="orderId" />
-      <el-table-column label="工单类型" align="center" prop="orderType">
+      <!-- 固定列 -->
+      <el-table-column label="工单编号" align="center" prop="formDataId" width="100" />
+      <el-table-column label="申请编号" align="center" prop="appNo" width="120">
         <template slot-scope="scope">
-          <!-- <dict-tag :options="dict.type.order_type" :value="scope.row.orderType" /> -->
+          {{ scope.row.appNo || '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+      <el-table-column label="国网编号" align="center" prop="codeId" width="120" />
+      <el-table-column label="工单类型" align="center" prop="formType" width="120">
         <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime) }}</span>
+          <el-tooltip :content="getFormTypeText(scope.row.formType)" placement="top">
+            <span>{{ getFormTypeText(scope.row.formType) }}</span>
+          </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column label="处理时间" align="center" prop="handleTime" width="180">
+      <el-table-column label="业务类型" align="center" min-width="200">
         <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.handleTime) }}</span>
+          <div class="flex flex-col gap-1">
+            <el-tooltip v-if="scope.row.busiTypeName" :content="scope.row.busiTypeName" placement="top">
+              <span>{{ scope.row.busiTypeName }}</span>
+            </el-tooltip>
+            <el-tooltip v-if="scope.row.oneTypeName" :content="scope.row.oneTypeName" placement="top">
+              <span>{{ scope.row.oneTypeName }}</span>
+            </el-tooltip>
+            <el-tooltip v-if="scope.row.twoTypeName" :content="scope.row.twoTypeName" placement="top">
+              <span>{{ scope.row.twoTypeName }}</span>
+            </el-tooltip>
+            <el-tooltip v-if="scope.row.threeTypeName" :content="scope.row.threeTypeName" placement="top">
+              <span>{{ scope.row.threeTypeName }}</span>
+            </el-tooltip>
+            <span
+              v-if="!scope.row.busiTypeName && !scope.row.oneTypeName && !scope.row.twoTypeName && !scope.row.threeTypeName">-</span>
+          </div>
         </template>
       </el-table-column>
-      <el-table-column label="结果状态" align="center" prop="resultStatus">
+      <el-table-column label="标签名称" align="center" prop="tagName">
         <template slot-scope="scope">
-          <!-- <dict-tag :options="dict.type.result_status" :value="scope.row.resultStatus" /> -->
+          <el-tooltip v-if="scope.row.tagName" :content="scope.row.tagName" placement="top">
+            <span>{{ scope.row.tagName }}</span>
+          </el-tooltip>
+          <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="执行状态" align="center" prop="execStatus">
+      <el-table-column label="状态名称" align="center" prop="statusDataName">
         <template slot-scope="scope">
-          <!-- <dict-tag :options="dict.type.exec_status" :value="scope.row.execStatus" /> -->
+          {{ scope.row.statusDataName || '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="上报人" align="center" prop="reporter" />
+      <el-table-column label="表单状态" align="center" prop="formStatus">
+        <template slot-scope="scope">
+          <el-tag :type="getFormStatusType(scope.row.formStatus)">
+            {{ getFormStatusText(scope.row.formStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="开始时间" align="center" prop="startTime" width="160">
+        <template slot-scope="scope">
+          {{ scope.row.startTime ? parseTime(scope.row.startTime) : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="提交时间" align="center" prop="submitTime" width="160">
+        <template slot-scope="scope">
+          {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="处理人" align="center" prop="userName" />
+      <!-- 动态列 -->
       <template v-for="column in dynamicColumns">
         <el-table-column v-if="column.visible" :key="column.prop" :prop="column.prop" :label="column.label"
           align="center" />
       </template>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+      <!-- 操作列 -->
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100" fixed="right">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-view" @click="handleView(scope.row)">查看</el-button>
         </template>
@@ -171,11 +212,39 @@
 
     <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
       @pagination="getList" />
+
+    <!-- 查看详情弹窗 -->
+    <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
+        <el-descriptions-item label="客户ID">{{ detailInfo.customId }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ detailInfo.phoneNumber }}</el-descriptions-item>
+        <el-descriptions-item label="所属台区">{{ detailInfo.towerName }}</el-descriptions-item>
+        <el-descriptions-item label="台区容量">{{ detailInfo.towerVolume }}</el-descriptions-item>
+        <el-descriptions-item label="台区ID">{{ detailInfo.towerId }}</el-descriptions-item>
+        <el-descriptions-item :span="2" label="详细地址">{{ detailInfo.address }}</el-descriptions-item>
+        <el-descriptions-item label="设备用户名称">{{ detailInfo.deviceUserName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备用户电话">{{ detailInfo.deviceUserPhoneNumber || '-' }}</el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 动态表单数据展示 -->
+      <div class="mt-4" v-if="detailInfo.formWidgetList">
+        <div class="font-bold mb-2">表单数据</div>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item v-for="item in detailInfo.formWidgetList" :key="item.prop" :label="item.label">
+            <template v-if="item.type === 'm-input'">
+              {{ item.value || '-' }}
+            </template>
+            <!-- 可以根据不同的type添加不同的展示逻辑 -->
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { asyncGetVisitList, asyncGetWorkOrderType, asyncGetSourceForm, asyncGetFormControls } from "@/api/synthesize";
+import { asyncGetVisitList, asyncGetWorkOrderType, asyncGetSourceForm, asyncGetFormControls, asyncGetDetail } from "@/api/synthesize";
 import { deptTreeSelect } from "@/api/system/user";
 import Treeselect from "@riophae/vue-treeselect";
 import "@riophae/vue-treeselect/dist/vue-treeselect.css";
@@ -240,6 +309,16 @@ export default {
       columnSearchKeyword: '', // 列搜索关键字
       dynamicColumns: [], // 动态列配置
       selectedColumns: [], // 已选中的列
+      detailVisible: false, // 详情弹窗显示状态
+      detailInfo: {}, // 详情数据
+      formTypeMap: {
+        '1': '日常巡视',
+        '2': '特殊巡视',
+        '3': '定期走访',
+        '4': '临时走访',
+        '5': '应急巡视',
+        '6': '工单巡视'
+      },
     };
   },
   async created() {
@@ -411,10 +490,25 @@ export default {
       this.handleQuery();
     },
     /** 查看按钮操作 */
-    handleView(row) {
-      // getVisitDetail(row.orderId).then(response => {
-      //   // 处理查看详情的逻辑
-      // });
+    async handleView(row) {
+      try {
+        const params = {
+          formDataId: row.formDataId,
+          formType: row.formType,
+          type: this.queryParams.type
+        };
+
+        const res = await asyncGetDetail(params);
+        if (res.code === 0 && res.data) {
+          this.detailInfo = res.data;
+          this.detailVisible = true;
+        } else {
+          this.$modal.msgError('获取详情失败');
+        }
+      } catch (error) {
+        console.error('获取详情失败:', error);
+        this.$modal.msgError('获取详情失败');
+      }
     },
     /** 显示标签选择弹窗 */
     showTagDialog() {
@@ -500,6 +594,10 @@ export default {
             value: item.id,
             label: item.name
           }));
+          // 更新工单类型映射
+          res.data.forEach(item => {
+            this.formTypeMap[item.id] = item.name;
+          });
           // 默认选中第一个选项
           if (this.formTypeOptions.length > 0) {
             this.queryParams.formType = this.formTypeOptions[0].value;
@@ -661,13 +759,36 @@ export default {
         console.error('恢复列设置失败:', error);
       }
     },
+    /** 获取表单状态类型 */
+    getFormStatusType(status) {
+      const statusMap = {
+        '0': 'info',    // 待处理
+        '1': 'warning', // 处理中
+        '2': 'success', // 已完成
+        '3': 'danger'   // 已超时
+      };
+      return statusMap[status] || 'info';
+    },
+
+    /** 获取表单状态文本 */
+    getFormStatusText(status) {
+      const statusMap = {
+        '0': '待处理',
+        '1': '处理中',
+        '2': '已完成',
+        '3': '已超时'
+      };
+      return statusMap[status] || '未知状态';
+    },
+    /** 获取工单类型文本 */
+    getFormTypeText(type) {
+      return this.formTypeMap[type] || `未知类型(${type})`;
+    },
   }
 };
 </script>
 
 <style lang="scss" scoped>
-// ...existing styles...
-
 .column-settings-dialog {
   .column-settings-content {
     max-height: 400px;
@@ -689,6 +810,40 @@ export default {
 
     &:hover {
       background-color: #f5f7fa;
+    }
+  }
+}
+
+/* 详情弹窗样式 */
+:deep(.el-dialog__body) {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+:deep(.el-descriptions-item__label) {
+  width: 120px;
+  background-color: #fafafa;
+}
+
+/* 表格内容样式 */
+:deep(.el-table) {
+  .flex-col {
+    span {
+      line-height: 1.4;
+
+      &:not(:last-child) {
+        border-bottom: 1px dashed #ebeef5;
+      }
+    }
+  }
+
+  .flex-col {
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
     }
   }
 }
