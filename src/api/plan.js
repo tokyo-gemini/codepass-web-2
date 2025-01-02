@@ -38,3 +38,29 @@ export function asyncGetCustomerTags(params) {
     params,
   });
 }
+// 根据所属供电所和台区查询客户列表
+export function asyncGetCustomerList(data) {
+  return request({
+    url: '/plannedManage/page/to/custom',
+    method: 'get',
+    params: data,
+  });
+}
+
+// 新增计划保存
+export function asyncAddPlan(data) {
+  return request({
+    url: '/plannedManage/add',
+    method: 'post',
+    data,
+  });
+}
+
+// 编辑计划保存
+export function asyncEditPlan(data) {
+  return request({
+    url: '/plannedManage/update',
+    method: 'put',
+    data,
+  });
+}

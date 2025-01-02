@@ -10,8 +10,8 @@
                         {{ pageTitle }}
                     </span>
                     <div>
-                        <el-button type="primary" class="mr-2">保存</el-button>
-                        <el-button>重置</el-button>
+                        <el-button type="primary" class="mr-2" @click="handleSubmit">保存</el-button>
+                        <el-button @click="handleReset">重置</el-button>
                     </div>
                 </div>
             </template>
@@ -22,15 +22,18 @@
             <div class="flex flex-col gap-4">
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4 flex items-center">
-                        <div> 计划名称：</div>
+                        <div
+                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
+                            计划名称：
+                        </div>
                         <dict-tag :options="dict.type.plan_type_option" :value="planType" />
                     </div>
                     <div>
                         <el-form-item label="计划名称" prop="planName">
-                            <el-input v-model="formData.planName" placeholder="请输入计划名称"></el-input>
+                            <el-input v-model="formData.planName" clearable placeholder="请输入计划名称"></el-input>
                         </el-form-item>
                         <el-form-item label="计划描述" prop="planDesc">
-                            <el-input v-model="formData.planDesc" placeholder="请输入计划描述"></el-input>
+                            <el-input v-model="formData.planDesc" clearable placeholder="请输入计划描述"></el-input>
                         </el-form-item>
                         <el-form-item label="计划表单" prop="formId">
                             <el-select clearable v-model="formData.formId" placeholder="请选择计划表单">
@@ -42,7 +45,10 @@
                 </div>
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4">
-                        对象选择
+                        <div
+                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
+                            对象选择
+                        </div>
                     </div>
                     <div>
                         <el-form-item label="所属供电所" prop="powerSupply">
@@ -55,10 +61,22 @@
                     <div v-if="isVisit">
                         <el-form-item label="所属台区:" prop="towerIdList">
                             <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
-                                :normalizer="normalizerTower" placeholder="请选择台区" multiple clearable :searchable="true"
-                                :limit="1" :limitText="treeselectLimitText" class="w-96" />
+                                :normalizer="normalizerTower" :flat="true" :max-height="400" placeholder="请选择台区"
+                                multiple clearable :searchable="true" :limit="1" :limitText="treeselectLimitText"
+                                class="w-96" @input="handleTowerChange" />
                         </el-form-item>
                     </div>
+
+                    <!-- 添加搜索框 -->
+                    <div class="mb-4 flex items-center">
+                        <el-form-item label="客户名称:" prop="searchKeyword">
+                            <el-input v-model="searchKeyword" :placeholder="isVisit ? '请输入客户名称搜索' : '请输入台区名称搜索'"
+                                style="width: 400px" clearable @keyup.enter.native="handleSearch" @clear="handleSearch">
+                                <el-button slot="append" icon="el-icon-search" @click="handleSearch"></el-button>
+                            </el-input>
+                        </el-form-item>
+                    </div>
+
                     <div class="my-4">
                         <el-alert type="info" :closable="false">
                             <div class="flex items-center justify-between">
@@ -69,22 +87,35 @@
                             </div>
                         </el-alert>
                     </div>
-                    <el-table v-if="!isVisit" :data="tableData" @selection-change="handleSelectionChange"
-                        ref="multipleTable">
+                    <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable">
                         <el-table-column type="selection" width="55"></el-table-column>
-                        <el-table-column prop="towerName" label="台区名称"></el-table-column>
-                        <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
-                        <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
-                        <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
+                        <template v-if="isVisit">
+                            <el-table-column prop="customName" label="客户名称"></el-table-column>
+                            <el-table-column prop="towerName" label="所属台区"></el-table-column>
+                            <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                            <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                            <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
+                            <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
+                        </template>
+                        <template v-else>
+                            <el-table-column prop="towerName" label="台区名称"></el-table-column>
+                            <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                            <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                            <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
+                        </template>
                     </el-table>
-                    <pagination v-if="!isVisit" v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
+                    <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
                         :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
                 </div>
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4">
-                        时间选择
+                        <div
+                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
+                            时间选择
+                        </div>
                     </div>
-                    <div>
+                    <!-- 只在类型1和3显示循环启用 -->
+                    <div v-if="needFullTimeOptions">
                         <el-form-item label="循环启用" prop="cycled">
                             <div class="flex gap-4 items-center">
                                 <el-radio-group v-model="formData.cycled" @change="cycledChange">
@@ -95,7 +126,7 @@
                             </div>
                         </el-form-item>
                         <el-form-item v-if="formData.cycled === '1'" label="循环时间" prop="cycledTimeType">
-                            <el-select v-model="formData.cycledTimeType" placeholder="请选择循环时间">
+                            <el-select v-model="formData.cycledTimeType" clearable placeholder="请选择循环时间">
                                 <el-option label="每周" value="weekly"></el-option>
                                 <el-option label="每两周" value="biweekly"></el-option>
                                 <el-option label="每月" value="monthly"></el-option>
@@ -108,9 +139,11 @@
                         </el-form-item>
                         <el-form-item v-if="formData.cycled === '1' && formData.cycledTimeType === 'custom'"
                             label="自定义循环时间" prop="cycledTime">
-                            <el-input v-model="formData.cycledTime" type="number" placeholder="请输入天数"></el-input>
+                            <el-input v-model="formData.cycledTime" clearable type="number"
+                                placeholder="请输入天数"></el-input>
                         </el-form-item>
                     </div>
+                    <!-- 任务时间段所有类型都显示 -->
                     <div>
                         <el-form-item prop="taskTime">
                             <template #label>
@@ -123,41 +156,13 @@
                                     </div>
                                 </div>
                             </template>
-                            <el-date-picker v-model="formData.taskTime" type="datetimerange" range-separator="至"
-                                start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="{
-                                    shortcuts: [
-                                        {
-                                            text: '最近一周',
-                                            onClick(picker) {
-                                                const end = new Date();
-                                                const start = new Date();
-                                                start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-                                                picker.$emit('pick', [start, end]);
-                                            },
-                                        },
-                                        {
-                                            text: '最近一个月',
-                                            onClick(picker) {
-                                                const end = new Date();
-                                                const start = new Date();
-                                                start.setMonth(start.getMonth() - 1);
-                                                picker.$emit('pick', [start, end]);
-                                            },
-                                        },
-                                        {
-                                            text: '最近三个月',
-                                            onClick(picker) {
-                                                const end = new Date();
-                                                const start = new Date();
-                                                start.setMonth(start.getMonth() - 3);
-                                                picker.$emit('pick', [start, end]);
-                                            },
-                                        },
-                                    ],
-                                }"></el-date-picker>
+                            <el-date-picker v-model="formData.taskTime" clearable type="datetimerange"
+                                range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+                                :picker-options="pickerOptions"></el-date-picker>
                         </el-form-item>
                     </div>
-                    <div>
+                    <!-- 只在类型1和3显示到期计划 -->
+                    <div v-if="needFullTimeOptions">
                         <el-form-item prop="closed">
                             <template #label>
                                 <div class="flex flex-col">
@@ -175,10 +180,11 @@
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item v-if="formData.closed === '1'" prop="closedTime" label="自动关闭时间">
-                            <el-date-picker v-model="formData.closedTime" type="datetime"
+                            <el-date-picker v-model="formData.closedTime" clearable type="datetime"
                                 placeholder="选择日期时间"></el-date-picker>
                         </el-form-item>
                     </div>
+                    <!-- 预警启用所有类型都显示 -->
                     <div>
                         <el-form-item prop="deptId">
                             <template #label>
@@ -200,7 +206,7 @@
                             <div class="flex flex-col gap-4">
                                 <div v-for="(alarmTime, index) in formData.alarmTimeList" :key="index"
                                     class="flex items-center gap-4">
-                                    <el-input v-model="formData.alarmTimeList[index]" type="number"
+                                    <el-input v-model="formData.alarmTimeList[index]" clearable type="number"
                                         placeholder="请输入告警时间（小时）"></el-input>
                                     <el-button type="primary" icon="el-icon-plus"
                                         @click="addAlarmTime(index)"></el-button>
@@ -221,7 +227,10 @@ import {
     asyncGetPlanOptions,
     asyncGetAreaList,
     asyncGetPlanDetail,
-    asyncGetCustomerTags
+    asyncGetCustomerTags,
+    asyncGetCustomerList,
+    asyncAddPlan,
+    asyncEditPlan
 } from '@/api/plan'
 import { deptTreeSelect } from "@/api/system/user";
 import Treeselect from "@riophae/vue-treeselect";
@@ -249,7 +258,8 @@ export default {
                 alarmTimeList: [""], //告警时间
                 towerUserList: [], //台区用户入参信息集合
                 isSelectAll: 0, //是否全选标识 0：否 1：是
-                powerSupply: null // 供电所选择
+                powerSupply: null, // 供电所选择
+                towerIdList: null
             },
             // 查询参数
             queryParams: {
@@ -268,7 +278,42 @@ export default {
             towerIdListOption: [], // 台区列表
             tableData: [], // 表格数据
             powerSupplyTree: [], // 供电所树形数据
-            selectedCount: 0
+            selectedCount: 0,
+            searchKeyword: '', // 添加搜索关键字
+            pickerOptions: {
+                disabledDate(time) {
+                    return time.getTime() < Date.now() - 8.64e7; // 禁用今天之前的日期
+                },
+                shortcuts: [
+                    {
+                        text: '未来一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        },
+                    },
+                    {
+                        text: '未来一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setMonth(start.getMonth() + 1);
+                            picker.$emit('pick', [start, end]);
+                        },
+                    },
+                    {
+                        text: '未来三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setMonth(start.getMonth() + 3);
+                            picker.$emit('pick', [start, end]);
+                        },
+                    },
+                ],
+            }
         }
     },
     computed: {
@@ -283,27 +328,9 @@ export default {
         planType() {
             return this.$route.params.type
         },
-        tableColumns() {
-            if (this.planType === '1' || this.planType === '2') {
-                return [
-                    { type: 'selection', width: '55' },
-                    { prop: 'name', label: '台区名称' },
-                    { prop: 'powerUnit', label: '所属供电单位' },
-                    { prop: 'countyUnit', label: '所属单位区县' },
-                    { prop: 'cityManager', label: '所属城市网格经理' }
-                ];
-            } else if (this.planType === '3' || this.planType === '4') {
-                return [
-                    { prop: 'customerName', label: '客户名称' },
-                    { prop: 'customerTag', label: '客户标签' },
-                    { prop: 'name', label: '所属台区' },
-                    { prop: 'powerUnit', label: '所属供电单位' },
-                    { prop: 'countyUnit', label: '所属单位区县' },
-                    { prop: 'cityManager', label: '所属城市网格经理' },
-                    { prop: 'visitCount', label: '走访次数' }
-                ];
-            }
-            return [];
+        // 是否需要显示完整时间选项（循环启用和到期计划）
+        needFullTimeOptions() {
+            return this.planType === '1' || this.planType === '3'
         }
     },
     created() {
@@ -405,10 +432,26 @@ export default {
         },
         // 对象列表勾选事件
         handleSelectionChange(val) {
-            // 如果不是全选状态，才更新selectedCount
             if (this.formData.isSelectAll !== 1) {
                 this.selectedCount = val.length;
-                this.formData.towerUserList = val.map(item => item.towerId);
+                // 根据不同类型处理选中数据
+                if (this.isVisit) {
+                    // 走访类型，需要收集客户和台区信息
+                    this.formData.towerUserList = val.map(item => ({
+                        userId: item.userId,
+                        userName: item.userName,
+                        towerId: item.towerId,
+                        towerName: item.towerName
+                    }));
+                } else {
+                    // 非走访类型，只需要台区ID
+                    this.formData.towerIdList = val.map(item => item.towerId);
+                }
+
+                // 如果手动取消了某些选择，更新全选状态
+                if (val.length < this.tableData.length) {
+                    this.formData.isSelectAll = 0;
+                }
             }
         },
 
@@ -420,10 +463,12 @@ export default {
                 this.formData.isSelectAll = 0;
                 this.selectedCount = 0;
                 this.formData.towerUserList = [];
+                this.formData.towerIdList = [];
             } else {
                 // 当前不是全选状态，需要全选
                 this.formData.isSelectAll = 1;
-                this.selectedCount = this.total; // 更新选中数量为total
+                this.selectedCount = this.total;
+                // 选中当前页的所有行
                 this.tableData.forEach(row => {
                     this.$refs.multipleTable.toggleRowSelection(row, true);
                 });
@@ -498,58 +543,9 @@ export default {
             return {
                 id: node.id,
                 label: node.label,
+                // 添加一些额外的属性来帮助识别
+                title: node.label // 用于tooltip显示完整信息
             };
-        },
-        // 获取台区列表
-        async getTowerList() {
-            try {
-                const params = {
-                    pageNum: this.queryParams.pageNum,
-                    pageSize: this.queryParams.pageSize,
-                    areaIdList: '',
-                    deptIdList: this.formData.powerSupply ? this.formData.powerSupply.toString() : '', // 供电所ID
-                    towerIdList: '',
-                    customName: '',
-                    towerName: '',
-                    tagIdList: ''
-                }
-
-                // 从选中的供电所节点中获取公司ID
-                if (this.formData.powerSupply && this.formData.powerSupply.length > 0) {
-                    const findCompanyId = (tree, powerId) => {
-                        for (const node of tree) {
-                            if (node.children) {
-                                for (const child of node.children) {
-                                    if (child.children) {
-                                        for (const powerNode of child.children) {
-                                            if (powerNode.id === powerId) {
-                                                return child.id; // 返回公司层级的ID
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        return '';
-                    };
-                }
-
-                const res = await asyncGetAreaList(params);
-
-                if (this.isVisit) {
-                    this.towerIdListOption = (res.data.records || []).map(item => ({
-                        id: item.towerId,
-                        label: item.towerName
-                    }));
-                } else {
-                    console.log(res);
-
-                    this.tableData = res.rows || [];
-                    this.total = res.total;
-                }
-            } catch (error) {
-                console.error('获取台区列表失败:', error);
-            }
         },
         // 获取对象列表(分页查询)
         async getObjectTable(pagination) {
@@ -558,54 +554,102 @@ export default {
                 return;
             }
 
-            // 如果传入了分页参数，更新分页信息
-            if (pagination) {
-                this.queryParams.pageNum = pagination.page;
-                this.queryParams.pageSize = pagination.limit;
-            }
-
             try {
-                const params = {
-                    pageNum: this.queryParams.pageNum,
-                    pageSize: this.queryParams.pageSize,
-                    areaIdList: '',
-                    companyIdList: '',
-                    deptIdList: this.formData.powerSupply.toString(),  // 供电所ID
-                    towerIdList: '',
-                    customName: '',
-                    towerName: '',
-                    tagIdList: ''
-                };
-
-                // 调用API获取数据
-                const res = await asyncGetAreaList(params);
-
                 if (this.isVisit) {
-                    this.towerIdListOption = (res.rows || []).map(item => ({
-                        id: item.towerId,
-                        label: item.towerName
-                    }));
+                    // 走访类型，使用客户查询接口
+                    const customerParams = {
+                        pageNum: pagination?.page || this.queryParams.pageNum,
+                        pageSize: pagination?.limit || this.queryParams.pageSize,
+                        planId: this.$route.params.id || '', // 编辑时传入planId
+                        deptIdList: this.formData.powerSupply.toString(), // 供电所ID
+                        towerIdList: Array.isArray(this.formData.towerIdList) ? this.formData.towerIdList.join(',') : '', // 台区ID列表
+                        customName: this.searchKeyword // 添加客户名称搜索
+                    };
+
+                    const customerRes = await asyncGetCustomerList(customerParams);
+
+                    // 更新客户表格数据
+                    if (customerRes.code === 200) {
+                        this.tableData = customerRes.rows || [];
+                        this.total = parseInt(customerRes.total) || 0;
+                    }
                 } else {
-                    // 确保返回的数据结构正确
+                    // 非走访类型，使用原有的台区查询接口
+                    const params = {
+                        pageNum: this.queryParams.pageNum,
+                        pageSize: this.queryParams.pageSize,
+                        deptIdList: this.formData.powerSupply.toString(),
+                        towerName: this.searchKeyword // 添加台区名称搜索
+                    };
+                    const res = await asyncGetAreaList(params);
                     this.tableData = res.rows || [];
                     this.total = parseInt(res.total) || 0;
                 }
+
+                // 在数据加载完成后，如果是全选状态，则选中当前页所有数据
+                this.$nextTick(() => {
+                    if (this.formData.isSelectAll === 1) {
+                        this.tableData.forEach(row => {
+                            this.$refs.multipleTable.toggleRowSelection(row, true);
+                        });
+                    }
+                });
             } catch (error) {
-                console.error('获取对象列表失败:', error);
+                console.error('获取列表数据失败:', error);
                 this.$modal.msgError('获取列表数据失败');
             }
         },
 
         // 处理供电所选择变化
-        handlePowerSupplyChange(value) {
+        async handlePowerSupplyChange(value) {
             if (value && value.length > 0) {
                 // 重置分页参数
                 this.queryParams.pageNum = 1;
-                this.getObjectTable(); // 使用getObjectTable替换getTowerList
+                this.searchKeyword = ''; // 清空搜索关键字
+
+                if (this.isVisit) {
+                    // 获取台区列表数据用于treeselect
+                    const areaParams = {
+                        pageNum: 1,
+                        pageSize: 9999,
+                        deptIdList: value.toString()
+                    };
+                    const areaRes = await asyncGetAreaList(areaParams);
+
+                    if (areaRes.code === 200) {
+                        // 处理台区数据
+                        const seen = new Set();
+                        this.towerIdListOption = (areaRes.rows || [])
+                            .filter(item => {
+                                if (!item || !item.towerId || seen.has(item.towerId)) return false;
+                                seen.add(item.towerId);
+                                return true;
+                            })
+                            .map(item => ({
+                                id: item.towerId,
+                                label: item.towerName,
+                                isDisabled: false,
+                                isLeaf: true
+                            }));
+                    }
+                }
+
+                this.getObjectTable();
             } else {
                 this.tableData = [];
                 this.towerIdListOption = [];
                 this.total = 0;
+            }
+        },
+
+        // 处理台区选择变化
+        handleTowerChange(value) {
+            if (this.isVisit && this.formData.powerSupply) {
+                this.queryParams.pageNum = 1;
+                this.searchKeyword = ''; // 清空搜索关键字
+                this.formData.towerIdList = value || []; // 确保value为数组
+                // 只查询客户列表
+                this.getObjectTable();
             }
         },
         // 获取客户标签可选项
@@ -615,6 +659,91 @@ export default {
                 this.customerTagTree = res.data || []
             } catch (error) {
                 console.error('获取客户标签失败:', error)
+            }
+        },
+        // 添加搜索方法
+        handleSearch() {
+            this.queryParams.pageNum = 1;
+            this.getObjectTable();
+        },
+        // 添加日期格式化方法
+        formatDateTime(date) {
+            if (!date) return '';
+            const dt = new Date(date);
+            const year = dt.getFullYear();
+            const month = String(dt.getMonth() + 1).padStart(2, '0');
+            const day = String(dt.getDate()).padStart(2, '0');
+            const hours = String(dt.getHours()).padStart(2, '0');
+            const minutes = String(dt.getMinutes()).padStart(2, '0');
+            const seconds = String(dt.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        },
+        // 添加保存方法
+        async handleSubmit() {
+            try {
+                // 表单校验
+                await this.$refs.form.validate();
+
+                // 检查是否选择了台区或客户
+                if (!this.formData.isSelectAll &&
+                    (!this.formData.towerUserList?.length && !this.formData.towerIdList?.length)) {
+                    this.$modal.msgError('请选择勾选用户台区客户信息后再提交！');
+                    return;
+                }
+
+                // 处理提交数据
+                const submitData = {
+                    planName: this.formData.planName,
+                    formId: this.formData.formId,
+                    planDesc: this.formData.planDesc,
+                    planType: this.planType,
+                    enabled: 0,
+                    // 只在类型1和3时提交这些字段
+                    ...(this.needFullTimeOptions ? {
+                        cycled: this.formData.cycled,
+                        cycledTime: this.formData.cycledTimeType === 'custom' ? Number(this.formData.cycledTime) : null,
+                        cycledTimeType: this.formData.cycledTimeType,
+                        closed: this.formData.closed,
+                        closedTime: this.formatDateTime(this.formData.closedTime),
+                    } : {
+                        // 类型2和4时，设置默认值
+                        cycled: "0",
+                        cycledTime: null,
+                        cycledTimeType: null,
+                        closed: "0",
+                        closedTime: null
+                    }),
+                    // 所有类型都需要的字段
+                    startTime: this.formatDateTime(this.formData.taskTime?.[0]),
+                    endTime: this.formatDateTime(this.formData.taskTime?.[1]),
+                    earlyWarning: this.formData.earlyWarning,
+                    alarmTimeList: this.formData.earlyWarning === '1' ? this.formData.alarmTimeList : [],
+                    isSelectAll: this.formData.isSelectAll,
+                    powerIdList: this.formData.powerSupply || [],
+                    // 根据不同类型设置不同的字段
+                    ...(this.isVisit ? {
+                        towerUserList: this.formData.towerUserList // 走访类型使用 towerUserList
+                    } : {
+                        towerIdList: this.formData.towerIdList // 非走访类型使用 towerIdList
+                    })
+                };
+
+                // 判断是新增还是编辑
+                const { id } = this.$route.params;
+                if (id) {
+                    submitData.planId = id;
+                    await asyncEditPlan(submitData);
+                    this.$modal.msgSuccess('修改成功');
+                } else {
+                    await asyncAddPlan(submitData);
+                    this.$modal.msgSuccess('新增成功');
+                }
+
+                // 返回列表页
+                this.handleBack();
+            } catch (error) {
+                console.error('保存失败:', error);
+                this.$modal.msgError(error.msg || '保存失败');
             }
         },
     }

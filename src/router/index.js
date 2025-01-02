@@ -64,13 +64,31 @@ export const constantRoutes = [
   {
     path: '',
     component: Layout,
-    redirect: 'index',
+    redirect: '/kanban/performance/index',
+  },
+  {
+    path: '/kanban',
+    component: Layout,
+    redirect: 'noredirect',
+    meta: { title: '数据看板', icon: 'dashboard', affix: true },
     children: [
       {
-        path: 'index',
-        component: () => import('@/views/index'),
-        name: 'Index',
-        meta: { title: '首页', icon: 'dashboard', affix: true },
+        path: 'performance/index',
+        component: () => import('@/views/kanban/performance/index'),
+        name: 'Performance',
+        meta: { title: '成效看板', icon: 'dashboard', affix: true },
+      },
+      {
+        path: 'exception/index',
+        component: () => import('@/views/kanban/exception/index'),
+        name: 'Exception',
+        meta: { title: '异常看板', icon: 'dashboard', affix: true },
+      },
+      {
+        path: 'status/index',
+        component: () => import('@/views/kanban/status/index'),
+        name: 'Status',
+        meta: { title: '状态看板', icon: 'dashboard', affix: true },
       },
     ],
   },
