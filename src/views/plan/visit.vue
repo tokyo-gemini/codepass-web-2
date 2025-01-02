@@ -22,9 +22,8 @@
             <div class="flex flex-col gap-4">
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4 flex items-center">
-                        <div
-                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
-                            计划名称：
+                        <div class="section-title">
+                            计划名称
                         </div>
                         <dict-tag :options="dict.type.plan_type_option" :value="planType" />
                     </div>
@@ -45,8 +44,7 @@
                 </div>
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4">
-                        <div
-                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
+                        <div class="section-title">
                             对象选择
                         </div>
                     </div>
@@ -87,7 +85,11 @@
                             </div>
                         </el-alert>
                     </div>
-                    <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable">
+                    <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
+                        height="400" :header-cell-style="{
+                            background: '#f5f7fa',
+                            color: '#606266'
+                        }" class="mt-4">
                         <el-table-column type="selection" width="55"></el-table-column>
                         <template v-if="isVisit">
                             <el-table-column prop="customName" label="客户名称"></el-table-column>
@@ -109,8 +111,7 @@
                 </div>
                 <div class="rounded bg-white shadow w-full p-4">
                     <div class="font-bold pb-4">
-                        <div
-                            class="relative pl-3 inline-block before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-4 before:bg-blue-500 before:rounded">
+                        <div class="section-title">
                             时间选择
                         </div>
                     </div>
@@ -441,7 +442,8 @@ export default {
                         userId: item.userId,
                         userName: item.userName,
                         towerId: item.towerId,
-                        towerName: item.towerName
+                        towerName: item.towerName,
+                        customId: item.customId,
                     }));
                 } else {
                     // 非走访类型，只需要台区ID
@@ -596,7 +598,7 @@ export default {
                 });
             } catch (error) {
                 console.error('获取列表数据失败:', error);
-                this.$modal.msgError('获取列表数据失败');
+                // this.$modal.msgError('获取列表数据失败');
             }
         },
 
@@ -681,13 +683,11 @@ export default {
         // 添加保存方法
         async handleSubmit() {
             try {
-                // 表单校验
                 await this.$refs.form.validate();
 
-                // 检查是否选择了台区或客户
                 if (!this.formData.isSelectAll &&
                     (!this.formData.towerUserList?.length && !this.formData.towerIdList?.length)) {
-                    this.$modal.msgError('请选择勾选用户台区客户信息后再提交！');
+                    this.$modal.msgWarning('请选择勾选用户台区客户信息后再提交！');
                     return;
                 }
 
@@ -698,37 +698,58 @@ export default {
                     planDesc: this.formData.planDesc,
                     planType: this.planType,
                     enabled: 0,
-                    // 只在类型1和3时提交这些字段
-                    ...(this.needFullTimeOptions ? {
-                        cycled: this.formData.cycled,
-                        cycledTime: this.formData.cycledTimeType === 'custom' ? Number(this.formData.cycledTime) : null,
-                        cycledTimeType: this.formData.cycledTimeType,
-                        closed: this.formData.closed,
-                        closedTime: this.formatDateTime(this.formData.closedTime),
-                    } : {
-                        // 类型2和4时，设置默认值
-                        cycled: "0",
-                        cycledTime: null,
-                        cycledTimeType: null,
-                        closed: "0",
-                        closedTime: null
-                    }),
-                    // 所有类型都需要的字段
-                    startTime: this.formatDateTime(this.formData.taskTime?.[0]),
-                    endTime: this.formatDateTime(this.formData.taskTime?.[1]),
-                    earlyWarning: this.formData.earlyWarning,
-                    alarmTimeList: this.formData.earlyWarning === '1' ? this.formData.alarmTimeList : [],
-                    isSelectAll: this.formData.isSelectAll,
-                    powerIdList: this.formData.powerSupply || [],
-                    // 根据不同类型设置不同的字段
-                    ...(this.isVisit ? {
-                        towerUserList: this.formData.towerUserList // 走访类型使用 towerUserList
-                    } : {
-                        towerIdList: this.formData.towerIdList // 非走访类型使用 towerIdList
-                    })
                 };
 
-                // 判断是新增还是编辑
+                // 处理时间相关字段
+                if (this.needFullTimeOptions) {
+                    submitData.cycled = this.formData.cycled;
+
+                    // 只有在循环启用为"是"时才添加循环相关字段
+                    if (this.formData.cycled === '1') {
+                        submitData.cycledTimeType = this.formData.cycledTimeType;
+                        // 只有在自定义时才需要 cycledTime
+                        if (this.formData.cycledTimeType === 'custom') {
+                            submitData.cycledTime = Number(this.formData.cycledTime);
+                        }
+                    }
+
+                    submitData.closed = this.formData.closed;
+                    // 只有在自动关闭为"是"时才添加关闭时间
+                    if (this.formData.closed === '1') {
+                        submitData.closedTime = this.formatDateTime(this.formData.closedTime);
+                    }
+                }
+
+                // 任务时间段
+                if (this.formData.taskTime?.length === 2) {
+                    submitData.startTime = this.formatDateTime(this.formData.taskTime[0]);
+                    submitData.endTime = this.formatDateTime(this.formData.taskTime[1]);
+                }
+
+                // 预警相关
+                submitData.earlyWarning = this.formData.earlyWarning;
+                // 只有在预警启用为"是"时才添加告警时间列表
+                if (this.formData.earlyWarning === '1') {
+                    // 过滤掉空值
+                    submitData.alarmTimeList = this.formData.alarmTimeList.filter(time => time !== '');
+                }
+
+                // 对象选择相关
+                submitData.isSelectAll = this.formData.isSelectAll;
+                if (this.formData.powerSupply?.length) {
+                    submitData.powerIdList = this.formData.powerSupply;
+                }
+
+                // 根据不同类型设置不同的选择字段
+                if (this.isVisit) {
+                    if (this.formData.towerUserList?.length) {
+                        submitData.towerUserList = this.formData.towerUserList;
+                    }
+                } else if (this.formData.towerIdList?.length) {
+                    submitData.towerIdList = this.formData.towerIdList;
+                }
+
+                // 编辑时需要添加planId
                 const { id } = this.$route.params;
                 if (id) {
                     submitData.planId = id;
@@ -739,13 +760,68 @@ export default {
                     this.$modal.msgSuccess('新增成功');
                 }
 
-                // 返回列表页
                 this.handleBack();
             } catch (error) {
                 console.error('保存失败:', error);
-                this.$modal.msgError(error.msg || '保存失败');
+                // this.$modal.msgError(error.msg || '保存失败');
             }
         },
     }
 }
 </script>
+
+<style>
+.section-title {
+    position: relative;
+    padding-left: 12px;
+    display: inline-block;
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 16px;
+    background-color: #409eff;
+    border-radius: 2px;
+}
+
+/* 添加表格样式 */
+.el-table {
+    /* 设置边框和圆角 */
+    border: 1px solid #ebeef5;
+    border-radius: 4px;
+}
+
+/* 修改表格头部样式 */
+.el-table th {
+    background-color: #f5f7fa !important;
+    color: #606266;
+    font-weight: 500;
+    padding: 12px 0;
+}
+
+/* 去除表格外边框 */
+.el-table--border,
+.el-table--group {
+    border: none;
+}
+
+/* 修改表格内部滚动条样式 */
+.el-table .el-table__body-wrapper::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.el-table .el-table__body-wrapper::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 3px;
+}
+
+.el-table .el-table__body-wrapper::-webkit-scrollbar-track {
+    background: #f5f5f5;
+}
+</style>
