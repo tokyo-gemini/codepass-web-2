@@ -697,7 +697,7 @@ export default {
                     formId: this.formData.formId,
                     planDesc: this.formData.planDesc,
                     planType: this.planType,
-                    enabled: 0,
+                    enabled: 1,
                 };
 
                 // 处理时间相关字段
