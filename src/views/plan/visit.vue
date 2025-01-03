@@ -318,6 +318,14 @@ export default {
         }
     },
     computed: {
+        currentPageSelections() {
+            return this.tableData.filter(row => {
+                return this.formData.towerUserList.some(item =>
+                    item.customId === row.customId ||
+                    (item.towerId === row.towerId && item.userId === row.userId)
+                );
+            });
+        },
         // 走访
         isVisit() {
             return this.planType === '3' || this.planType === '4'
@@ -421,43 +429,106 @@ export default {
         },
         // 如果是编辑页面，获取计划详情
         async getPlanDetail() {
-            // 判断是否为编辑页面
             if (!this.$route.params.id) return
             try {
                 const { id } = this.$route.params
                 const res = await asyncGetPlanDetail(id)
-                this.formData = res.data || {}
+                if (res.code === 200 && res.data) {
+                    const data = res.data;
+
+                    // 保存原始的 towerUserList，供后续勾选使用
+                    const originalTowerUserList = data.towerUserList || [];
+
+                    // 处理时间区间
+                    if (data.startTime && data.endTime) {
+                        data.taskTime = [new Date(data.startTime), new Date(data.endTime)];
+                    }
+
+                    // 处理供电所数据
+                    if (data.powerIdList && data.powerIdList.length > 0) {
+                        data.powerSupply = data.powerIdList;
+                    }
+
+                    // 处理关闭时间
+                    if (data.closedTime) {
+                        data.closedTime = new Date(data.closedTime);
+                    }
+
+                    // 如果有告警时间列表，确保它是数组格式
+                    if (!data.alarmTimeList || !Array.isArray(data.alarmTimeList)) {
+                        data.alarmTimeList = [''];
+                    }
+
+                    // 更新表单数据
+                    this.formData = {
+                        ...data,
+                        towerUserList: originalTowerUserList // 确保保留原始的 towerUserList
+                    };
+
+                    // 如果是走访类型且有供电所数据
+                    if (this.isVisit && data.powerIdList?.length > 0) {
+                        // 先等待供电所数据加载完成
+                        await this.handlePowerSupplyChange(data.powerIdList);
+
+                        // 如果有台区数据，等待台区数据加载
+                        if (data.towerIdList?.length > 0) {
+                            await this.handleTowerChange(data.towerIdList);
+                        }
+
+                        // 获取表格数据并进行勾选
+                        await this.getObjectTable();
+                    }
+                }
             } catch (error) {
                 console.error('获取计划详情失败:', error)
             }
         },
-        // 对象列表勾选事件
+        // Modify the handleSelectionChange method
         handleSelectionChange(val) {
             if (this.formData.isSelectAll !== 1) {
-                this.selectedCount = val.length;
-                // 根据不同类型处理选中数据
-                if (this.isVisit) {
-                    // 走访类型，需要收集客户和台区信息
-                    this.formData.towerUserList = val.map(item => ({
-                        userId: item.userId,
-                        userName: item.userName,
-                        towerId: item.towerId,
-                        towerName: item.towerName,
-                        customId: item.customId,
-                    }));
-                } else {
-                    // 非走访类型，只需要台区ID
-                    this.formData.towerIdList = val.map(item => item.towerId);
-                }
+                // 更新选中计数
+                this.selectedCount = this.formData.towerUserList.length;
+
+                // 处理当前页的选中状态
+                const currentPageSelections = val.map(item => ({
+                    userId: item.userId,
+                    userName: item.userName,
+                    towerId: item.towerId,
+                    towerName: item.towerName,
+                    areaName: item.areaName,
+                    companyName: item.companyName,
+                    powerName: item.powerName,
+                    deptId: item.deptId,
+                    provinceName: item.provinceName
+                }));
+
+                // 获取当前页面所有的 customId 或 towerId
+                const currentPageIds = this.tableData.map(item => ({
+                    towerId: item.towerId,
+                    userId: item.userId
+                }));
+
+                // 从 towerUserList 中移除当前页面的所有记录
+                this.formData.towerUserList = this.formData.towerUserList.filter(item => {
+                    return !currentPageIds.some(pageItem =>
+                        pageItem.towerId === item.towerId && pageItem.userId === item.userId
+                    );
+                });
+
+                // 将当前页的选中项添加到 towerUserList
+                this.formData.towerUserList.push(...currentPageSelections);
+
+                // 更新选中计数
+                this.selectedCount = this.formData.towerUserList.length;
 
                 // 如果手动取消了某些选择，更新全选状态
-                if (val.length < this.tableData.length) {
+                if (this.selectedCount < this.total) {
                     this.formData.isSelectAll = 0;
                 }
             }
         },
 
-        // 处理全选/取消全选
+        // 修改全选/取消全选处理
         handleToggleSelectAll() {
             if (this.formData.isSelectAll === 1) {
                 // 当前是全选状态，需要取消全选
@@ -465,7 +536,6 @@ export default {
                 this.formData.isSelectAll = 0;
                 this.selectedCount = 0;
                 this.formData.towerUserList = [];
-                this.formData.towerIdList = [];
             } else {
                 // 当前不是全选状态，需要全选
                 this.formData.isSelectAll = 1;
@@ -549,7 +619,7 @@ export default {
                 title: node.label // 用于tooltip显示完整信息
             };
         },
-        // 获取对象列表(分页查询)
+        // 修改 getObjectTable 方法，添加勾选逻辑
         async getObjectTable(pagination) {
             if (!this.formData.powerSupply || !this.formData.powerSupply.length) {
                 this.$modal.msgWarning('请先选择供电所');
@@ -574,28 +644,82 @@ export default {
                     if (customerRes.code === 200) {
                         this.tableData = customerRes.rows || [];
                         this.total = parseInt(customerRes.total) || 0;
-                    }
-                } else {
-                    // 非走访类型，使用原有的台区查询接口
-                    const params = {
-                        pageNum: this.queryParams.pageNum,
-                        pageSize: this.queryParams.pageSize,
-                        deptIdList: this.formData.powerSupply.toString(),
-                        towerName: this.searchKeyword // 添加台区名称搜索
-                    };
-                    const res = await asyncGetAreaList(params);
-                    this.tableData = res.rows || [];
-                    this.total = parseInt(res.total) || 0;
-                }
 
-                // 在数据加载完成后，如果是全选状态，则选中当前页所有数据
-                this.$nextTick(() => {
-                    if (this.formData.isSelectAll === 1) {
-                        this.tableData.forEach(row => {
-                            this.$refs.multipleTable.toggleRowSelection(row, true);
+                        // 在数据加载完成后进行勾选
+                        this.$nextTick(() => {
+                            // 清除当前页的选择
+                            this.$refs.multipleTable.clearSelection();
+
+                            // 根据不同状态进行勾选
+                            if (this.formData.isSelectAll === 1) {
+                                // 全选状态，勾选当前页所有行
+                                this.tableData.forEach(row => {
+                                    this.$refs.multipleTable.toggleRowSelection(row, true);
+                                });
+                                // 维护选中计数为总数
+                                this.selectedCount = this.total;
+                            } else {
+                                // 部分选中状态，根据 towerUserList 进行勾选
+                                this.tableData.forEach(row => {
+                                    const shouldSelect = this.formData.towerUserList.some(item =>
+                                        item.customId === row.customId
+                                    );
+                                    if (shouldSelect) {
+                                        this.$refs.multipleTable.toggleRowSelection(row, true);
+                                    }
+                                });
+                                // 维护选中计数为 towerUserList 的长度
+                                this.selectedCount = this.formData.towerUserList.length;
+                            }
                         });
                     }
-                });
+                } else {
+                    // 巡检类型
+                    const params = {
+                        pageNum: pagination?.page || this.queryParams.pageNum,
+                        pageSize: pagination?.limit || this.queryParams.pageSize,
+                        deptIdList: this.formData.powerSupply.toString(),
+                        planId: this.$route.params.id || '',
+                        towerName: this.searchKeyword
+                    };
+
+                    const res = await asyncGetAreaList(params);
+
+                    if (res.code === 200) {
+                        this.tableData = res.rows || [];
+                        this.total = parseInt(res.total) || 0;
+
+                        // 在数据加载完成后进行勾选
+                        this.$nextTick(() => {
+                            // 清除当前页的选择
+                            this.$refs.multipleTable.clearSelection();
+
+                            // 根据不同状态进行勾选
+                            if (this.formData.isSelectAll === 1) {
+                                // 全选状态，勾选当前页所有行
+                                this.tableData.forEach(row => {
+                                    this.$refs.multipleTable.toggleRowSelection(row, true);
+                                });
+                                // 维护选中计数为总数
+                                this.selectedCount = this.total;
+                            } else {
+                                // 部分选中状态，根据 towerUserList 进行勾选
+
+                                this.tableData.forEach(row => {
+                                    const shouldSelect = this.formData.towerUserList.some(item =>
+                                        item.towerId === row.towerId
+                                    );
+                                    if (shouldSelect) {
+                                        this.$refs.multipleTable.toggleRowSelection(row, true);
+                                    }
+                                });
+                                // 维护选中计数为 towerUserList 的长度
+                                this.selectedCount = this.formData.towerUserList.length;
+                            }
+                        });
+                    }
+                }
+
             } catch (error) {
                 console.error('获取列表数据失败:', error);
                 // this.$modal.msgError('获取列表数据失败');
@@ -635,7 +759,6 @@ export default {
                             }));
                     }
                 }
-
                 this.getObjectTable();
             } else {
                 this.tableData = [];
@@ -685,20 +808,20 @@ export default {
             try {
                 await this.$refs.form.validate();
 
-                if (!this.formData.isSelectAll &&
-                    (!this.formData.towerUserList?.length && !this.formData.towerIdList?.length)) {
-                    this.$modal.msgWarning('请选择勾选用户台区客户信息后再提交！');
+                // 如果没有选中任何台区信息
+                if (!this.formData.isSelectAll && !this.formData.towerUserList?.length) {
+                    this.$modal.msgWarning('请至少勾选一个台区后再提交！');
                     return;
                 }
 
                 // 处理提交数据
-                const submitData = {
-                    planName: this.formData.planName,
-                    formId: this.formData.formId,
-                    planDesc: this.formData.planDesc,
-                    planType: this.planType,
-                    enabled: 1,
-                };
+                const submitData = Object.fromEntries(
+                    Object.entries(this.formData).filter(([key, value]) => value !== null)
+                );
+                submitData.towerUserList = this.formData.towerUserList;
+                submitData.planType = this.planType;
+                // 新增的话enabled 为1,否则根据原来的值
+                submitData.enabled = this.$route.params.id ? submitData.enabled : 1;
 
                 // 处理时间相关字段
                 if (this.needFullTimeOptions) {
@@ -746,7 +869,8 @@ export default {
                         submitData.towerUserList = this.formData.towerUserList;
                     }
                 } else if (this.formData.towerIdList?.length) {
-                    submitData.towerIdList = this.formData.towerIdList;
+                    // submitData.towerIdList = this.formData.towerIdList;
+                    submitData.towerUserList = this.formData.towerUserList;
                 }
 
                 // 编辑时需要添加planId
@@ -765,6 +889,35 @@ export default {
                 console.error('保存失败:', error);
                 // this.$modal.msgError(error.msg || '保存失败');
             }
+        },
+        // 重置表单
+        handleReset() {
+            this.$refs.form.resetFields();
+            this.formData = {
+                planType: null,
+                planName: null,
+                planDesc: null,
+                formId: null,
+                cycled: "0",
+                cycledTime: null,
+                cycledTimeType: null,
+                startTime: null,
+                endTime: null,
+                closed: "0",
+                closedTime: null,
+                earlyWarning: "0",
+                alarmTimeList: [""],
+                towerUserList: [],
+                isSelectAll: 0,
+                powerSupply: null,
+                towerIdList: null
+            };
+            this.selectedCount = 0;
+            this.tableData = [];
+            this.searchKeyword = '';
+            this.queryParams.pageNum = 1;
+            this.queryParams.pageSize = 10;
+            this.loadInitData();
         },
     }
 }
