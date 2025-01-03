@@ -66,6 +66,12 @@
             <dict-tag :options="dict.type.plan_status_option" :value="scope.row.planStatus" />
           </template>
         </el-table-column>
+        <el-table-column label="启动" prop="enabled" align="center">
+          <template slot-scope="scope">
+            <el-switch v-model="scope.row.enabled" active-color="#13ce66" inactive-color="#ff4949" active-value="1"
+              inactive-value="0" @change="handleEnabledChange(scope.row)" />
+          </template>
+        </el-table-column>
         <el-table-column label="创建时间" prop="createTime" align="center">
           <template slot-scope="scope">
             <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
@@ -86,7 +92,7 @@
 </template>
 
 <script>
-import { asyncGetPlanList } from '@/api/plan'
+import { asyncGetPlanList, asyncEnabledPlan } from '@/api/plan'
 export default {
   name: "PlanManagement",
   dicts: ['plan_status_option', 'plan_type_option'],
@@ -179,7 +185,23 @@ export default {
     handleUpdate(row) {
       const routeUrl = `/plan/visit/${row.planType}/${row.planId}`;
       this.$tab.openPage("编辑计划", routeUrl);
-    }
+    },
+    /** 处理启动状态切换 */
+    handleEnabledChange(row) {
+      const enabled = row.enabled === '1' ? '1' : '0';
+      const text = enabled === '1' ? "启动" : "停止";
+      this.$modal.confirm(`确认要${text}该计划吗？`).then(() => {
+        return asyncEnabledPlan({
+          id: row.planId,
+          enabled: enabled
+        });
+      }).then(() => {
+        this.$modal.msgSuccess(`${text}成功`);
+      }).catch(() => {
+        row.enabled = !row.enabled; // 恢复原状态
+        this.$modal.msgError(`${text}失败`);
+      });
+    },
   }
 };
 </script>

@@ -64,3 +64,11 @@ export function asyncEditPlan(data) {
     data,
   });
 }
+// 是否启用
+
+export function asyncEnabledPlan(data) {
+  return request({
+    url: `/plannedManage/update/enabled/${data.id}/${data.enabled}`,
+    method: 'get',
+  });
+}

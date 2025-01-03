@@ -1562,6 +1562,9 @@ export default {
 
                             submitData.cycledTime = Number(this.formData.cycledTime);
 
+                        } else {
+
+                            submitData.cycledTime = null;
                         }
 
                     }
@@ -1599,6 +1602,9 @@ export default {
                     // 过滤掉空值
 
                     submitData.alarmTimeList = this.formData.alarmTimeList.filter(time => time !== '');
+
+                } else {
+                    delete submitData.alarmTimeList;
 
                 }
 
