@@ -1,17 +1,32 @@
 <template>
     <div>
-        <div class="flex gap-4">
+        <div class="flex gap-4 mb-4">
             <el-button type="primary" @click="handleDownloadTemplate">
                 <i class="el-icon-download mr-1"></i>下载模版
             </el-button>
-            <el-upload class="upload-demo" :action="uploadUrl" :before-upload="beforeUpload"
-                :on-success="handleUploadSuccess" :on-error="handleUploadError" :show-file-list="false">
+            <el-upload class="upload-demo" :action="uploadUrl" :auto-upload="false" :on-change="handleFileChange"
+                :before-upload="beforeUpload" :on-remove="handleFileRemove" :on-exceed="handleExceed" :limit="1"
+                accept=".xlsx, .xls" :show-file-list="true">
                 <el-button type="success">
                     <i class="el-icon-upload mr-1"></i>上传文件
                 </el-button>
+                <template #tip>
+                    <div class="text-xs text-gray-500 mt-1">上传格式: .xlsx, .xls</div>
+                </template>
             </el-upload>
         </div>
-        <!-- 上传的数据表格 -->
+
+        <div v-if="uploadedData.length" class="mb-4">
+            <el-alert type="info" :closable="false">
+                <div class="flex items-center justify-between">
+                    <span>已选择 {{ selectedItems.length }} 项</span>
+                    <el-button v-if="uploadedData.length" type="text" @click="resetSelection">
+                        清空选择
+                    </el-button>
+                </div>
+            </el-alert>
+        </div>
+
         <el-table v-if="uploadedData.length > 0" :data="uploadedData" @selection-change="handleSelectionChange"
             ref="uploadTable" height="410" :header-cell-style="{
                 background: '#f5f7fa',
@@ -59,6 +74,9 @@ export default {
     data() {
         return {
             uploadedData: [],
+            selectedItems: [], // 新增选中项数组
+            uploadFile: null, // 新增:保存上传的文件
+            fileList: [], // 新增文件列表
             uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload'
         }
     },
@@ -111,14 +129,18 @@ export default {
             return true
         },
 
-        handleUploadSuccess(response, file, fileList) {
-            if (response.code === 200) {
-                this.$message.success('文件上传成功')
-                this.uploadedData = response.data
-                this.$emit('upload-success', [])
-            } else {
-                this.$message.error(response.msg || '文件上传失败')
+        handleFileChange(file) {
+            if (file) {
+                // 保存文件对象供后续使用
+                this.uploadFile = file.raw
+                // 触发事件通知父组件
+                this.$emit('file-change', this.uploadFile)
             }
+        },
+
+        handleFileRemove() {
+            this.uploadFile = null
+            this.$emit('file-change', null)
         },
 
         handleUploadError(err) {
@@ -126,8 +148,12 @@ export default {
             this.$message.error('文件上传失败，请重试')
         },
 
+        handleExceed(files) {
+            this.$message.warning('最多只能上传1个文件')
+        },
+
         handleSelectionChange(val) {
-            const selectedData = val.map(item => ({
+            this.selectedItems = val.map(item => ({
                 userId: item.userId,
                 userName: item.userName,
                 towerId: item.towerId,
@@ -138,7 +164,14 @@ export default {
                 deptId: item.deptId,
                 provinceName: item.provinceName
             }))
-            this.$emit('input', selectedData)
+            // 触发v-model更新
+            this.$emit('input', this.selectedItems)
+        },
+
+        resetSelection() {
+            this.selectedItems = []
+            this.$refs.uploadTable?.clearSelection()
+            this.$emit('input', [])
         }
     }
 }

@@ -1,21 +1,6 @@
 <template>
     <div class="app-container">
-        <el-page-header @back="handleBack">
-            <template #title>
-                <div class="w-full h-full flex items-center">返回计划列表</div>
-            </template>
-            <template #content>
-                <div class="flex items-center space-x-4 justify-between w-full">
-                    <span class="text-lg font-semibold mr-3">
-                        {{ pageTitle }}
-                    </span>
-                    <div>
-                        <el-button type="primary" class="mr-2" @click="handleSubmit">保存</el-button>
-                        <el-button @click="handleReset">重置</el-button>
-                    </div>
-                </div>
-            </template>
-        </el-page-header>
+        <page-header :title="pageTitle" @back="handleBack" @submit="handleSubmit" @reset="handleReset" />
         <el-divider />
         <el-form ref="form" :model="formData" label-width="120px" inline>
             <div class="flex flex-col gap-4">
@@ -27,6 +12,21 @@
                     <el-tabs v-model="activeTab">
                         <!-- 系统内选择 tab -->
                         <el-tab-pane label="系统内选择" name="system">
+                            <!-- 添加说明信息 -->
+                            <div class="bg-gray-50 p-4 mb-4 rounded text-sm text-gray-600">
+                                <div class="flex items-start gap-2">
+                                    <i class="el-icon-info-circle text-blue-500 mt-0.5"></i>
+                                    <div>
+                                        <p class="font-medium mb-2">系统内选择说明:</p>
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li>您可以根据供电所、台区等条件筛选目标对象</li>
+                                            <li>支持按名称搜索快速定位特定对象</li>
+                                            <li>可以逐个勾选或使用全选功能批量选择</li>
+                                            <li>已选对象会在下方表格中显示,可随时调整</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                             <div>
                                 <el-form-item label="所属供电所" prop="powerSupply">
                                     <template #label>
@@ -40,7 +40,7 @@
                                     <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
                                         :normalizer="normalizer" placeholder="请选择供电所" multiple clearable
                                         :searchable="true" :disableBranchNodes="true" :limit="1"
-                                        :limitText="treeselectLimitText" class="w-96"
+                                        :limitText="treeselectLimitText" class="w-96" appendToBody :z-index="9999"
                                         @input="handlePowerSupplyChange" />
                                 </el-form-item>
                             </div>
@@ -48,7 +48,7 @@
                                 <el-form-item label="所属台区:" prop="towerIdList">
                                     <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
                                         :normalizer="normalizerTower" :flat="true" :max-height="400" placeholder="请选择台区"
-                                        multiple clearable :searchable="true" :limit="1"
+                                        multiple clearable :searchable="true" :limit="1" appendToBody :z-index="9999"
                                         :limitText="treeselectLimitText" class="w-96" @input="handleTowerChange" />
                                 </el-form-item>
                             </div>
@@ -79,10 +79,7 @@
                                 </el-alert>
                             </div>
                             <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
-                                height="420" :header-cell-style="{
-                                    background: '#f5f7fa',
-                                    color: '#606266'
-                                }" class="mt-4">
+                                empty-text="请选择供电所">
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <template v-if="isVisit">
                                     <el-table-column prop="customName" label="客户名称"></el-table-column>
@@ -104,8 +101,23 @@
                         </el-tab-pane>
                         <!-- 上传模版-->
                         <el-tab-pane label="上传模版" name="upload">
+                            <!-- 添加说明信息 -->
+                            <div class="bg-gray-50 p-4 mb-4 rounded text-sm text-gray-600">
+                                <div class="flex items-start gap-2">
+                                    <i class="el-icon-info-circle text-blue-500 mt-0.5"></i>
+                                    <div>
+                                        <p class="font-medium mb-2">批量导入说明:</p>
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li>下载模板: 获取标准格式的Excel模板文件</li>
+                                            <li>填写数据: 请按模板要求填写目标对象信息</li>
+                                            <li>上传文件: 支持.xlsx/.xls格式,大小不超过2MB</li>
+                                            <li>导入后可以在表格中查看和调整选择的对象</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                             <upload-template v-model="formData.towerUserList" :plan-type="planType"
-                                @upload-success="handleUploadSuccess" />
+                                @file-change="handleFileChange" @upload-success="handleUploadSuccess" />
                         </el-tab-pane>
                     </el-tabs>
                 </div>
@@ -131,12 +143,14 @@ import Treeselect from '@riophae/vue-treeselect'
 import PlanBasicInfo from './components/PlanBasicInfo.vue'
 import PlanTimeSettings from './components/PlanTimeSettings.vue'
 import UploadTemplate from './components/UploadTemplate.vue'
+import PageHeader from './components/PageHeader.vue'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import dayjs from 'dayjs';
 
 export default {
     name: 'PlanVisit',
     components: {
+        PageHeader,
         Treeselect,
         PlanBasicInfo,
         PlanTimeSettings,
@@ -201,6 +215,7 @@ export default {
                 alarmTimeList: ['']
             },
             activeTab: 'system', // 当前激活的标签页
+            uploadFile: null, // 新增:保存上传的文件
         }
     },
     computed: {
@@ -669,9 +684,15 @@ export default {
         async handleSubmit() {
             try {
                 await this.$refs.form.validate();
-                // 如果没有选中任何台区信息
-                if (!this.formData.isSelectAll && !this.formData.towerUserList?.length) {
-                    this.$modal.msgWarning('请至少勾选一个台区后再提交！');
+
+                // 修改验证逻辑: 如果是系统内选择且没有选中对象,或者是上传模板但没有文件
+                if (this.activeTab === 'system' && !this.formData.isSelectAll && !this.formData.towerUserList?.length) {
+                    this.$modal.msgWarning('请至少勾选一个台区或切换到上传模版进行导入！');
+                    return;
+                }
+
+                if (this.activeTab === 'upload' && !this.uploadFile) {
+                    this.$modal.msgWarning('请选择要上传的文件！');
                     return;
                 }
 
@@ -772,10 +793,21 @@ export default {
                         type: 'application/json'
                     });
                     formData.append('dto', jsonBlob);
+                    if (this.uploadFile) {
+                        formData.append('file', this.uploadFile)
+                    }
                     await asyncEditPlan(formData);
                     this.$modal.msgSuccess('修改成功');
                 } else {
-                    await asyncAddPlan(submitData);
+                    const formData = new FormData();
+                    const jsonBlob = new Blob([JSON.stringify(submitData)], {
+                        type: 'application/json'
+                    });
+                    formData.append('dto', jsonBlob);
+                    if (this.uploadFile) {
+                        formData.append('file', this.uploadFile)
+                    }
+                    await asyncAddPlan(formData);
                     this.$modal.msgSuccess('新增成功');
                 }
                 this.handleBack();
@@ -835,6 +867,10 @@ export default {
             // 清空系统内选择的数据
             this.selectedCount = 0
             this.formData.towerUserList = []
+        },
+        // 处理文件变化
+        handleFileChange(file) {
+            this.uploadFile = file
         }
     }
 }

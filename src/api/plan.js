@@ -83,3 +83,18 @@ export function asyncDownLoadTemplate(data) {
     params: data,
   });
 }
+// 查询分类计划总数
+export function asyncGetPlanCount() {
+  return request({
+    url: '/plannedManage/get/type',
+    method: 'get',
+  });
+}
+// 删除计划
+export function asyncDeletePlan(data) {
+  return request({
+    url: '/plannedManage/del',
+    method: 'delete',
+    params: data,  // 使用 params 而不是直接传值
+  });
+}

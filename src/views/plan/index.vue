@@ -13,7 +13,7 @@
           class="w-1/5 p-4 relative cursor-pointer rounded hover:opacity-95" @click="createPlan(item.type)">
           <div class="absolute z-10 left-4 top-4 w-full">
             <div class="text-2xl text-white font-bold">{{ item.name }}</div>
-            <div class="text-white text-base mt-2 font-bold">0项</div>
+            <div class="text-white text-base mt-2 font-bold">{{ getPlanCount(item.type) }}项</div>
           </div>
           <img :src="item.image" :alt="item.name" class="absolute left-0 top-0 w-full h-24 object-cover z-0 rounded" />
         </div>
@@ -68,8 +68,8 @@
         </el-table-column>
         <el-table-column label="启动" prop="enabled" align="center">
           <template slot-scope="scope">
-            <el-switch v-model="scope.row.enabled" active-color="#13ce66" inactive-color="#ff4949" active-value="1"
-              inactive-value="0" @change="handleEnabledChange(scope.row)" />
+            <custom-switch v-model="scope.row.enabled" active-value="1" inactive-value="0"
+              @change="(val, resolve, reject) => handleEnabledChange(scope.row, val, resolve, reject)" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" align="center">
@@ -92,9 +92,14 @@
 </template>
 
 <script>
-import { asyncGetPlanList, asyncEnabledPlan } from '@/api/plan'
+import { asyncGetPlanList, asyncEnabledPlan, asyncGetPlanCount, asyncDeletePlan } from '@/api/plan'
+import CustomSwitch from '@/components/CustomSwitch.vue'
+
 export default {
   name: "PlanManagement",
+  components: {
+    CustomSwitch
+  },
   dicts: ['plan_status_option', 'plan_type_option'],
   data() {
     return {
@@ -133,11 +138,13 @@ export default {
           type: '4',
           image: require('@/assets/images/box4.jpg')
         }
-      ]
+      ],
+      planCounts: [], // 添加计划数量数据
     };
   },
   created() {
     this.getList();
+    this.getPlanTypeCount(); // 添加获取计划类型数量的调用
   },
   methods: {
     /** 查询计划列表 */
@@ -153,7 +160,7 @@ export default {
         this.loading = false;
       }).catch(() => {
         this.loading = false;
-        this.$message.error('获取计划列表失败');
+        // this.$message.error('获取计划列表失败');
       });
     },
     /** 搜索按钮操作 */
@@ -168,13 +175,19 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(row) {
-      const planId = row.planId;
+      const planId = row.planId
       this.$modal.confirm('是否确认删除该计划？').then(() => {
-        // return delPlan(planId);
+        // 修改删除接口调用
+        return asyncDeletePlan({ planIds: planId })
       }).then(() => {
-        this.getList();
-        this.$modal.msgSuccess("删除成功");
-      }).catch(() => { });
+        this.getList()
+        this.$modal.msgSuccess("删除成功")
+        // 同时刷新统计数量
+        this.getPlanTypeCount()
+      }).catch((error) => {
+        console.error('删除失败:', error)
+        // this.$modal.msgError(error.msg || '删除失败')
+      })
     },
     /** 打开新建计划页面 */
     createPlan(type) {
@@ -187,20 +200,44 @@ export default {
       this.$tab.openPage("编辑计划", routeUrl);
     },
     /** 处理启动状态切换 */
-    handleEnabledChange(row) {
-      const enabled = row.enabled === '1' ? '1' : '0';
-      const text = enabled === '1' ? "启动" : "停止";
-      this.$modal.confirm(`确认要${text}该计划吗？`).then(() => {
-        return asyncEnabledPlan({
+    async handleEnabledChange(row, newValue, resolve, reject) {
+      const text = newValue === '1' ? "启动" : "停止"
+      try {
+        await this.$modal.confirm(`确认要${text}该计划吗？`)
+        const res = await asyncEnabledPlan({
           id: row.planId,
-          enabled: enabled
-        });
-      }).then(() => {
-        this.$modal.msgSuccess(`${text}成功`);
-      }).catch(() => {
-        row.enabled = !row.enabled; // 恢复原状态
-        this.$modal.msgError(`${text}失败`);
-      });
+          enabled: newValue
+        })
+
+        if (res.code === 200) {
+          this.$modal.msgSuccess(`${text}成功`)
+          this.getList() // 刷新列表
+          resolve() // 成功时 resolve
+        } else {
+          this.$modal.msgError(res.msg || `${text}失败`)
+          reject(new Error(res.msg || `${text}失败`)) // 失败时 reject
+        }
+      } catch (error) {
+        // 取消确认或接口报错时 reject
+        reject(error)
+      }
+    },
+    // 获取计划类型数量
+    async getPlanTypeCount() {
+      try {
+        const res = await asyncGetPlanCount()
+        // 修改判断条件为 200
+        if (res.code === 200) {
+          this.planCounts = res.data || []
+        }
+      } catch (error) {
+        console.error('获取计划类型数量失败:', error)
+      }
+    },
+    // 获取指定类型的计划数量
+    getPlanCount(type) {
+      const found = this.planCounts.find(item => item.planType === type)
+      return found ? (found.planTypeCounts || 0) : 0
     },
   }
 };

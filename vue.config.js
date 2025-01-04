@@ -6,7 +6,7 @@ function resolve(dir) {
   return path.join(__dirname, dir);
 }
 
-const name = process.env.VUE_APP_TITLE || '若依管理系统';
+const name = process.env.VUE_APP_TITLE || '码上通管理系统';
 const port = process.env.port || process.env.npm_config_port || 80;
 
 // vue.config.js 配置说明
