@@ -73,3 +73,13 @@ export function asyncEnabledPlan(data) {
     method: 'get',
   });
 }
+
+// 下载模版
+export function asyncDownLoadTemplate(data) {
+  return request({
+    url: '/resource/download/template',
+    method: 'get',
+    responseType: 'blob',
+    params: data,
+  });
+}

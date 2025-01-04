@@ -1,5 +1,5 @@
 <template>
-    <div class="app-container" style="height: calc(100vh - 84px); overflow-y: auto">
+    <div class="app-container">
         <el-page-header @back="handleBack">
             <template #title>
                 <div class="w-full h-full flex items-center">返回计划列表</div>
@@ -66,11 +66,13 @@
                             <div class="my-4">
                                 <el-alert type="info" :closable="false">
                                     <div class="flex items-center justify-between">
-                                        <span>已选择
+                                        <span>
+                                            已选择
                                             {{ formData.isSelectAll === 1 ? total : selectedCount }}
                                             项
                                         </span>
-                                        <el-button type="text" @click="handleToggleSelectAll">
+                                        <el-button v-if="total || selectedCount" type="text"
+                                            @click="handleToggleSelectAll">
                                             {{ formData.isSelectAll === 1 ? '取消全选' : '全选' }}
                                         </el-button>
                                     </div>
@@ -100,43 +102,10 @@
                             <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
                                 :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
                         </el-tab-pane>
-                        <!-- 上传模版 tab -->
+                        <!-- 上传模版-->
                         <el-tab-pane label="上传模版" name="upload">
-                            <div class="flex items-center space-x-4 mb-6">
-                                <el-button type="primary" @click="handleDownloadTemplate">
-                                    <i class="el-icon-download mr-1"></i>下载模版
-                                </el-button>
-                                <el-upload class="upload-demo" :action="uploadUrl" :before-upload="beforeUpload"
-                                    :on-success="handleUploadSuccess" :on-error="handleUploadError"
-                                    :show-file-list="false">
-                                    <el-button type="success">
-                                        <i class="el-icon-upload mr-1"></i>上传文件
-                                    </el-button>
-                                </el-upload>
-                            </div>
-                            <!-- 上传的数据表格 -->
-                            <el-table v-if="uploadedData.length > 0" :data="uploadedData"
-                                @selection-change="handleUploadSelectionChange" ref="uploadTable" height="410"
-                                :header-cell-style="{
-                                    background: '#f5f7fa',
-                                    color: '#606266'
-                                }">
-                                <el-table-column type="selection" width="55"></el-table-column>
-                                <template v-if="isVisit">
-                                    <el-table-column prop="customName" label="客户名称"></el-table-column>
-                                    <el-table-column prop="towerName" label="所属台区"></el-table-column>
-                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
-                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
-                                    <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
-                                    <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
-                                </template>
-                                <template v-else>
-                                    <el-table-column prop="towerName" label="台区名称"></el-table-column>
-                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
-                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
-                                    <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
-                                </template>
-                            </el-table>
+                            <upload-template v-model="formData.towerUserList" :plan-type="planType"
+                                @upload-success="handleUploadSuccess" />
                         </el-tab-pane>
                     </el-tabs>
                 </div>
@@ -161,14 +130,17 @@ import { deptTreeSelect } from '@/api/system/user'
 import Treeselect from '@riophae/vue-treeselect'
 import PlanBasicInfo from './components/PlanBasicInfo.vue'
 import PlanTimeSettings from './components/PlanTimeSettings.vue'
+import UploadTemplate from './components/UploadTemplate.vue'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import dayjs from 'dayjs';
 
 export default {
     name: 'PlanVisit',
     components: {
         Treeselect,
         PlanBasicInfo,
-        PlanTimeSettings
+        PlanTimeSettings,
+        UploadTemplate
     },
     dicts: ['plan_type_option'],
     data() {
@@ -217,40 +189,6 @@ export default {
             powerSupplyTree: [], // 供电所树形数据
             selectedCount: 0,
             searchKeyword: '', // 添加搜索关键字
-            pickerOptions: {
-                disabledDate(time) {
-                    return time.getTime() < Date.now() - 8.64e7 // 禁用今天之前的日期
-                },
-                shortcuts: [
-                    {
-                        text: '未来一周',
-                        onClick(picker) {
-                            const end = new Date()
-                            const start = new Date()
-                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 7)
-                            picker.$emit('pick', [start, end])
-                        }
-                    },
-                    {
-                        text: '未来一个月',
-                        onClick(picker) {
-                            const end = new Date()
-                            const start = new Date()
-                            end.setMonth(start.getMonth() + 1)
-                            picker.$emit('pick', [start, end])
-                        }
-                    },
-                    {
-                        text: '未来三个月',
-                        onClick(picker) {
-                            const end = new Date()
-                            const start = new Date()
-                            end.setMonth(start.getMonth() + 3)
-                            picker.$emit('pick', [start, end])
-                        }
-                    }
-                ]
-            },
             timeSettings: {
                 cycled: '0',
                 cycledTime: null,
@@ -263,8 +201,6 @@ export default {
                 alarmTimeList: ['']
             },
             activeTab: 'system', // 当前激活的标签页
-            uploadedData: [], // 上传文件后的数据
-            uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload', // 上传文件的URL
         }
     },
     computed: {
@@ -426,7 +362,7 @@ export default {
                         cycled: data.cycled || '0',
                         cycledTime: data.cycledTime || null,
                         cycledTimeType: data.cycledTimeType || null,
-                        cycledTimeUnit: data.cycledTimeUnit || 'day',
+                        cycledTimeUnit: 'day',
                         taskTime: data.taskTime || [],
                         closed: data.closed || '0',
                         closedTime: data.closedTime || null,
@@ -503,30 +439,6 @@ export default {
                 this.tableData.forEach((row) => {
                     this.$refs.multipleTable.toggleRowSelection(row, true)
                 })
-            }
-        },
-        // 增加告警时间
-        addAlarmTime() {
-            this.formData.alarmTimeList.push('')
-            this.$nextTick(() => {
-                const container = document.querySelector('.app-container')
-                if (container) {
-                    container.scrollTo({
-                        top: container.scrollHeight,
-                        behavior: 'smooth'
-                    })
-                }
-            })
-        },
-        // 删除告警时间
-        removeAlarmTime(index) {
-            this.formData.alarmTimeList.splice(index, 1)
-        },
-        // 循环启用改变事件
-        cycledChange(value) {
-            if (value === '0') {
-                this.formData.cycledTimeType = ''
-                this.formData.cycledTime = ''
             }
         },
         // 回到计划管理页面
@@ -737,117 +649,138 @@ export default {
             this.queryParams.pageNum = 1
             this.getObjectTable()
         },
-        // 添加日期格式化方法
+        // 修改日期格式化方法
         formatDateTime(date) {
             if (!date) return ''
-            const dt = new Date(date)
-            const year = dt.getFullYear()
-            const month = String(dt.getMonth() + 1).padStart(2, '0')
-            const day = String(dt.getDate()).padStart(2, '0')
-            const hours = String(dt.getHours()).padStart(2, '0')
-            const minutes = String(dt.getMinutes()).padStart(2, '0')
-            const seconds = String(dt.getSeconds()).padStart(2, '0')
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+            const dt = date instanceof Date ? date : new Date(date)
+            if (isNaN(dt.getTime())) return ''
+
+            return dt.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/\//g, '-')
         },
         // 添加保存方法
         async handleSubmit() {
             try {
-                await this.$refs.form.validate()
+                await this.$refs.form.validate();
                 // 如果没有选中任何台区信息
                 if (!this.formData.isSelectAll && !this.formData.towerUserList?.length) {
-                    this.$modal.msgWarning('请至少勾选一个台区后再提交！')
-                    return
+                    this.$modal.msgWarning('请至少勾选一个台区后再提交！');
+                    return;
                 }
+
                 // 处理提交数据
                 const submitData = Object.fromEntries(
                     Object.entries(this.formData).filter(([key, value]) => value !== null)
-                )
-                submitData.towerUserList = this.formData.towerUserList
-                submitData.planType = this.planType
+                );
+                submitData.towerUserList = this.formData.towerUserList;
+                submitData.planType = this.planType;
+
                 // 新增的话enabled 为1,否则根据原来的值
-                submitData.enabled = this.$route.params.id ? submitData.enabled : 1
+                submitData.enabled = this.$route.params.id ? submitData.enabled : 1;
+
                 // 处理时间相关字段
                 if (this.needFullTimeOptions) {
-                    submitData.cycled = this.formData.cycled
-                    // 只有在循环启用为"是"时才添加循环相关字段
+                    submitData.cycled = this.formData.cycled;
                     if (this.formData.cycled === '1') {
-                        submitData.cycledTimeType = this.formData.cycledTimeType
-                        // 只有在自定义时才需要 cycledTime
-                        if (this.formData.cycledTimeType === 'custom') {
-                            // 根据不同单位转换为天数
-                            const time = Number(this.formData.cycledTime)
+                        // 1. 设置循环类型
+                        submitData.cycledTimeType = this.formData.cycledTimeType;
+
+                        // 2. 处理循环时间
+                        if (this.formData.cycledTimeType === 'D') {
+                            // 自定义时间，需要转换单位
+                            const time = Number(this.formData.cycledTime);
                             switch (this.formData.cycledTimeUnit) {
                                 case 'day':
-                                    submitData.cycledTime = time
-                                    break
+                                    submitData.cycledTime = time.toString();
+                                    break;
                                 case 'week':
-                                    submitData.cycledTime = time * 7
-                                    break
+                                    submitData.cycledTimeType = 'W';
+                                    submitData.cycledTime = time.toString();
+                                    break;
                                 case 'month':
-                                    submitData.cycledTime = time * 30
-                                    break
+                                    submitData.cycledTimeType = 'M';
+                                    submitData.cycledTime = time.toString();
+                                    break;
                                 case 'year':
-                                    submitData.cycledTime = time * 365
-                                    break
+                                    submitData.cycledTimeType = 'Y';
+                                    submitData.cycledTime = time.toString();
+                                    break;
                             }
                         } else {
-                            submitData.cycledTime = null
+                            // 预设选项，直接使用已设置的值
+                            submitData.cycledTime = this.formData.cycledTime;
                         }
                     }
-                    submitData.closed = this.formData.closed
-                    // 只有在自动关闭为"是"时才添加关闭时间
-                    if (this.formData.closed === '1') {
-                        submitData.closedTime = this.formatDateTime(this.formData.closedTime)
-                    }
                 }
+
                 // 任务时间段
                 if (this.formData.taskTime?.length === 2) {
-                    submitData.startTime = this.formatDateTime(this.formData.taskTime[0])
-                    submitData.endTime = this.formatDateTime(this.formData.taskTime[1])
+                    // 使用 dayjs 格式化日期
+                    submitData.taskTime = [
+                        dayjs(this.formData.taskTime[0]).format('YYYY-MM-DD HH:mm:ss'),
+                        dayjs(this.formData.taskTime[1]).format('YYYY-MM-DD HH:mm:ss')
+                    ];
+                    submitData.startTime = submitData.taskTime[0];
+                    submitData.endTime = submitData.taskTime[1];
                 }
+
+                // 处理 closedTime
+                if (this.formData.closedTime) {
+                    submitData.closedTime = dayjs(this.formData.closedTime).format('YYYY-MM-DD HH:mm:ss');
+                }
+
                 // 预警相关
-                submitData.earlyWarning = this.formData.earlyWarning
+                submitData.earlyWarning = this.formData.earlyWarning;
                 // 只有在预警启用为"是"时才添加告警时间列表
                 if (this.formData.earlyWarning === '1') {
                     // 过滤掉空值
-                    submitData.alarmTimeList = this.formData.alarmTimeList.filter((time) => time !== '')
+                    submitData.alarmTimeList = this.formData.alarmTimeList.filter((time) => time !== '');
                 } else {
-                    delete submitData.alarmTimeList
+                    delete submitData.alarmTimeList;
                 }
+
                 // 对象选择相关
-                submitData.isSelectAll = this.formData.isSelectAll
+                submitData.isSelectAll = this.formData.isSelectAll;
                 if (this.formData.powerSupply?.length) {
-                    submitData.powerIdList = this.formData.powerSupply
+                    submitData.powerIdList = this.formData.powerSupply;
                 }
+
                 // 根据不同类型设置不同的选择字段
                 if (this.isVisit) {
                     if (this.formData.towerUserList?.length) {
-                        submitData.towerUserList = this.formData.towerUserList
+                        submitData.towerUserList = this.formData.towerUserList;
                     }
                 } else if (this.formData.towerIdList?.length) {
-                    // submitData.towerIdList = this.formData.towerIdList;
-                    submitData.towerUserList = this.formData.towerUserList
+                    submitData.towerUserList = this.formData.towerUserList;
                 }
+
                 // 编辑时需要添加planId
-                const { id } = this.$route.params
+                const { id } = this.$route.params;
                 if (id) {
-                    submitData.planId = id
+                    submitData.planId = id;
                     // 创建FormData对象
-                    const formData = new FormData()
+                    const formData = new FormData();
                     // 将JSON数据转换为Blob并添加到FormData
                     const jsonBlob = new Blob([JSON.stringify(submitData)], {
                         type: 'application/json'
-                    })
-                    formData.append('dto', jsonBlob)
-                    await asyncEditPlan(formData)
-                    this.$modal.msgSuccess('修改成功')
+                    });
+                    formData.append('dto', jsonBlob);
+                    await asyncEditPlan(formData);
+                    this.$modal.msgSuccess('修改成功');
                 } else {
-                    await asyncAddPlan(submitData)
-                    this.$modal.msgSuccess('新增成功')
+                    await asyncAddPlan(submitData);
+                    this.$modal.msgSuccess('新增成功');
                 }
-                this.handleBack()
+                this.handleBack();
             } catch (error) {
-                console.error('保存失败:', error)
+                console.error('保存失败:', error);
                 // this.$modal.msgError(error.msg || '保存失败');
             }
         },
@@ -884,7 +817,6 @@ export default {
             this.searchKeyword = ''
             this.queryParams.pageNum = 1
             this.queryParams.pageSize = 10
-            this.uploadedData = []
             this.activeTab = 'system'
             this.loadInitData()
         },
@@ -898,133 +830,12 @@ export default {
         handleTimeSettingsChange(val) {
             Object.assign(this.formData, val)
         },
-        // 处理下载模版
-        handleDownloadTemplate() {
-            // 根据不同的计划类型下载不同的模版
-            const templateName = this.isVisit ? 'visit_template.xlsx' : 'inspection_template.xlsx'
-            const downloadUrl = process.env.VUE_APP_BASE_API + '/plan/template/download/' + this.planType
-            // 创建一个隐藏的 a 标签来触发下载
-            const link = document.createElement('a')
-            link.href = downloadUrl
-            link.download = templateName
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        },
-        // 上传文件前的验证
-        beforeUpload(file) {
-            const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                file.type === 'application/vnd.ms-excel'
-            const isLt2M = file.size / 1024 / 1024 < 2
-            if (!isExcel) {
-                this.$message.error('只能上传Excel文件!')
-                return false
-            }
-            if (!isLt2M) {
-                this.$message.error('文件大小不能超过 2MB!')
-                return false
-            }
-            return true
-        },
-        // 文件上传成功的处理
-        handleUploadSuccess(response, file, fileList) {
-            if (response.code === 200) {
-                this.$message.success('文件上传成功')
-                // 更新上传的数据
-                this.uploadedData = response.data
-                // 清空系统内选择的数据
-                this.formData.towerUserList = []
-                // 重置选中计数
-                this.selectedCount = 0
-            } else {
-                this.$message.error(response.msg || '文件上传失败')
-            }
-        },
-        // 文件上传失败的处理
-        handleUploadError(err) {
-            console.error('文件上传失败:', err)
-            this.$message.error('文件上传失败，请重试')
-        },
-        // 处理上传表格的选择变化
-        handleUploadSelectionChange(val) {
-            // 清空之前的选择
+        // 添加新的上传成功处理方法
+        handleUploadSuccess() {
+            // 清空系统内选择的数据
+            this.selectedCount = 0
             this.formData.towerUserList = []
-            // 添加新的选择
-            this.formData.towerUserList = val.map(item => ({
-                userId: item.userId,
-                userName: item.userName,
-                towerId: item.towerId,
-                towerName: item.towerName,
-                areaName: item.areaName,
-                companyName: item.companyName,
-                powerName: item.powerName,
-                deptId: item.deptId,
-                provinceName: item.provinceName
-            }))
-            // 更新选中计数
-            this.selectedCount = this.formData.towerUserList.length
         }
     }
 }
 </script>
-
-<style>
-.section-title {
-    position: relative;
-    padding-left: 12px;
-    display: inline-block;
-}
-
-.section-title::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 16px;
-    background-color: #409eff;
-    border-radius: 2px;
-}
-
-/* 添加表格样式 */
-.el-table {
-    /* 设置边框和圆角 */
-    border: 1px solid #ebeef5;
-    border-radius: 4px;
-}
-
-/* 修改表格头部样式 */
-.el-table th {
-    background-color: #f5f7fa !important;
-    color: #606266;
-    font-weight: 500;
-    padding: 12px 0;
-}
-
-/* 去除表格外边框 */
-.el-table--border,
-.el-table--group {
-    border: none;
-}
-
-/* 修改表格内部滚动条样式 */
-.el-table .el-table__body-wrapper::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.el-table .el-table__body-wrapper::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 3px;
-}
-
-.el-table .el-table__body-wrapper::-webkit-scrollbar-track {
-    background: #f5f5f5;
-}
-
-/* 添加上传相关样式 */
-.upload-demo {
-    display: inline-block;
-}
-</style>

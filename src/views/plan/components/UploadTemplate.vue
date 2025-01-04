@@ -1,0 +1,145 @@
+<template>
+    <div>
+        <div class="flex gap-4">
+            <el-button type="primary" @click="handleDownloadTemplate">
+                <i class="el-icon-download mr-1"></i>下载模版
+            </el-button>
+            <el-upload class="upload-demo" :action="uploadUrl" :before-upload="beforeUpload"
+                :on-success="handleUploadSuccess" :on-error="handleUploadError" :show-file-list="false">
+                <el-button type="success">
+                    <i class="el-icon-upload mr-1"></i>上传文件
+                </el-button>
+            </el-upload>
+        </div>
+        <!-- 上传的数据表格 -->
+        <el-table v-if="uploadedData.length > 0" :data="uploadedData" @selection-change="handleSelectionChange"
+            ref="uploadTable" height="410" :header-cell-style="{
+                background: '#f5f7fa',
+                color: '#606266'
+            }">
+            <el-table-column type="selection" width="55"></el-table-column>
+            <template v-if="isVisit">
+                <el-table-column prop="customName" label="客户名称"></el-table-column>
+                <el-table-column prop="towerName" label="所属台区"></el-table-column>
+                <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
+                <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
+            </template>
+            <template v-else>
+                <el-table-column prop="towerName" label="台区名称"></el-table-column>
+                <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
+            </template>
+        </el-table>
+    </div>
+</template>
+
+<script>
+import { asyncDownLoadTemplate } from '@/api/plan' // 添加导入
+
+export default {
+    name: 'UploadTemplate',
+    props: {
+        planType: {
+            type: String,
+            required: true
+        },
+        value: {
+            type: Array,
+            default: () => []
+        },
+        powerDepts: { // 添加供电所参数
+            type: Array,
+            default: () => []
+        }
+    },
+
+    data() {
+        return {
+            uploadedData: [],
+            uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload'
+        }
+    },
+
+    computed: {
+        isVisit() {
+            return this.planType === '3' || this.planType === '4'
+        }
+    },
+
+    methods: {
+        async handleDownloadTemplate() {
+            try {
+                // 只需要传递 type 参数
+                const params = {
+                    type: this.isVisit ? 'zf' : 'xs'
+                }
+
+                // 调用下载API
+                const res = await asyncDownLoadTemplate(params)
+
+                // 下载文件
+                const fileName = this.isVisit ? '走访类计划任务派单模板.xlsx' : '巡视类计划任务派单模板.xlsx'
+                const link = document.createElement('a')
+                link.href = window.URL.createObjectURL(new Blob([res]))
+                link.download = fileName
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(link.href)
+
+            } catch (error) {
+                console.error('下载模板失败:', error)
+                this.$modal.msgError('下载模板失败')
+            }
+        },
+
+        beforeUpload(file) {
+            const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                file.type === 'application/vnd.ms-excel'
+            const isLt2M = file.size / 1024 / 1024 < 2
+            if (!isExcel) {
+                this.$message.error('只能上传Excel文件!')
+                return false
+            }
+            if (!isLt2M) {
+                this.$message.error('文件大小不能超过 2MB!')
+                return false
+            }
+            return true
+        },
+
+        handleUploadSuccess(response, file, fileList) {
+            if (response.code === 200) {
+                this.$message.success('文件上传成功')
+                this.uploadedData = response.data
+                this.$emit('upload-success', [])
+            } else {
+                this.$message.error(response.msg || '文件上传失败')
+            }
+        },
+
+        handleUploadError(err) {
+            console.error('文件上传失败:', err)
+            this.$message.error('文件上传失败，请重试')
+        },
+
+        handleSelectionChange(val) {
+            const selectedData = val.map(item => ({
+                userId: item.userId,
+                userName: item.userName,
+                towerId: item.towerId,
+                towerName: item.towerName,
+                areaName: item.areaName,
+                companyName: item.companyName,
+                powerName: item.powerName,
+                deptId: item.deptId,
+                provinceName: item.provinceName
+            }))
+            this.$emit('input', selectedData)
+        }
+    }
+}
+</script>

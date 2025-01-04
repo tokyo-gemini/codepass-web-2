@@ -35,30 +35,31 @@
 
             <!-- 循环时间选择 -->
             <el-form-item v-if="timeSettings.cycled === '1'" label="循环时间" prop="cycledTimeType">
-                <el-select v-model="timeSettings.cycledTimeType" clearable placeholder="请选择循环时间" @change="handleInput">
-                    <el-option label="每周" value="W" />
-                    <el-option label="每两周" value="biweekly" />
-                    <el-option label="每月" value="monthly" />
-                    <el-option label="每两月" value="bimonthly" />
-                    <el-option label="每三月" value="quarterly" />
-                    <el-option label="每六月" value="semiannually" />
-                    <el-option label="每一年" value="annually" />
+                <el-select v-model="selectedCycleOption" clearable placeholder="请选择循环时间"
+                    @change="handleCycledTimeChange">
+                    <el-option label="每周" value="W_1" />
+                    <el-option label="每两周" value="W_2" />
+                    <el-option label="每月" value="M_1" />
+                    <el-option label="每两月" value="M_2" />
+                    <el-option label="每季度" value="M_3" />
+                    <el-option label="每半年" value="M_6" />
+                    <el-option label="每年" value="Y_1" />
                     <el-option label="自定义" value="custom" />
                 </el-select>
             </el-form-item>
 
             <!-- 自定义循环时间 -->
-            <el-form-item v-if="timeSettings.cycled === '1' && timeSettings.cycledTimeType === 'custom'" label="自定义循环时间"
+            <el-form-item v-if="timeSettings.cycled === '1' && timeSettings.cycledTimeType === 'D'" label="自定义循环时间"
                 prop="cycledTime">
                 <div class="flex items-center gap-2">
                     <el-input v-model="timeSettings.cycledTime" clearable type="number" placeholder="请输入循环时间"
-                        style="width: 200px" @input="handleInput" />
-                    <el-select v-model="timeSettings.cycledTimeUnit" placeholder="请选择单位" style="width: 100px"
-                        @change="handleInput">
-                        <el-option label="天" value="day" />
-                        <el-option label="周" value="week" />
-                        <el-option label="月" value="month" />
-                        <el-option label="年" value="year" />
+                        style="width: 200px" @input="handleCustomCycleTime" />
+                    <el-select v-model="timeSettings.cycledTimeType" placeholder="请选择单位" style="width: 100px"
+                        @change="handleCustomCycleType">
+                        <el-option label="天" value="D" />
+                        <el-option label="周" value="W" />
+                        <el-option label="月" value="M" />
+                        <el-option label="年" value="Y" />
                     </el-select>
                 </div>
             </el-form-item>
@@ -209,6 +210,7 @@ export default {
 
     data() {
         return {
+            selectedCycleOption: null, // 添加新的数据属性
             timeSettings: {
                 cycled: '0',
                 cycledTime: null,
@@ -261,6 +263,14 @@ export default {
         value: {
             handler(val) {
                 this.timeSettings = { ...val }
+                // 设置选中项
+                if (val.cycledTimeType && val.cycledTime) {
+                    if (val.cycledTimeType === 'D') {
+                        this.selectedCycleOption = 'custom'
+                    } else {
+                        this.selectedCycleOption = `${val.cycledTimeType}_${val.cycledTime}`
+                    }
+                }
             },
             immediate: true,
             deep: true
@@ -277,6 +287,33 @@ export default {
                 this.timeSettings.cycledTimeType = ''
                 this.timeSettings.cycledTime = ''
             }
+            this.handleInput()
+        },
+
+        handleCycledTimeChange(value) {
+            if (value === 'custom') {
+                this.timeSettings.cycledTimeType = 'D'
+                this.timeSettings.cycledTime = ''
+                this.selectedCycleOption = 'custom'
+            } else {
+                // 解析选择的值，格式为：类型_时间
+                const [type, time] = value.split('_')
+                this.timeSettings.cycledTimeType = type
+                this.timeSettings.cycledTime = time
+                this.selectedCycleOption = value
+            }
+            this.handleInput()
+        },
+
+        // 添加处理自定义循环时间的方法
+        handleCustomCycleTime(value) {
+            this.timeSettings.cycledTime = value
+            this.handleInput()
+        },
+
+        // 添加处理自定义循环类型的方法
+        handleCustomCycleType(value) {
+            this.timeSettings.cycledTimeType = value
             this.handleInput()
         },
 
