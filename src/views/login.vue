@@ -1,7 +1,7 @@
 <template>
   <div class="login">
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form">
-      <h3 class="title">码上通后台管理系统</h3>
+      <h3 class="title">码上通管理系统</h3>
       <el-form-item prop="username">
         <el-input v-model="loginForm.username" type="text" auto-complete="off" placeholder="账号">
           <svg-icon slot="prefix" icon-class="user" class="el-input__icon input-icon" />
@@ -34,10 +34,6 @@
         </div>
       </el-form-item>
     </el-form>
-    <!--  底部  -->
-    <div class="el-login-footer">
-      <span>Copyright © 2018-2024 ruoyi.vip All Rights Reserved.</span>
-    </div>
   </div>
 </template>
 
@@ -52,8 +48,8 @@ export default {
     return {
       codeUrl: "",
       loginForm: {
-        username: "admin",
-        password: "admin123",
+        username: "",
+        password: "",
         rememberMe: false,
         code: "",
         uuid: ""
@@ -141,34 +137,47 @@ export default {
   justify-content: center;
   align-items: center;
   height: 100%;
-  background-image: url("../assets/images/login-background.jpg");
-  background-size: cover;
+  background: #1c663e; // 国网特征绿色
 }
 
 .title {
   margin: 0px auto 30px auto;
   text-align: center;
-  color: #707070;
+  color: #1c663e;
+  font-size: 24px;
+  font-weight: bold;
 }
 
 .login-form {
-  border-radius: 6px;
+  border-radius: 8px;
   background: #ffffff;
   width: 400px;
-  padding: 25px 25px 5px 25px;
+  padding: 35px 35px 15px 35px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 
   .el-input {
-    height: 38px;
+    height: 40px;
 
     input {
-      height: 38px;
+      height: 40px;
     }
   }
 
   .input-icon {
-    height: 39px;
+    height: 40px;
     width: 14px;
     margin-left: 2px;
+  }
+
+  .el-button--primary {
+    background-color: #1c663e;
+    border-color: #1c663e;
+
+    &:hover,
+    &:focus {
+      background-color: #2a744c;
+      border-color: #2a744c;
+    }
   }
 }
 
