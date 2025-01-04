@@ -1,4 +1,4 @@
-import request from '@/utils/request';
+import request from '../utils/request';
 
 // 获取计划管理列表
 export function asyncGetPlanList(data) {
@@ -61,6 +61,7 @@ export function asyncEditPlan(data) {
   return request({
     url: '/plannedManage/update',
     method: 'put',
+    headers: { 'Content-Type': 'multipart/form-data' },
     data,
   });
 }
