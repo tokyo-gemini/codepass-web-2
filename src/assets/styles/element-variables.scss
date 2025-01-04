@@ -1,31 +1,42 @@
 /**
-* I think element-ui's default theme color is too light for long-term use.
-* So I modified the default color and you can modify it to your liking.
+* 基于国网绿 (#008c87) 的 Element UI 主题色优化
 **/
 
-/* theme color */
-$--color-primary: #1890ff;
-$--color-success: #13ce66;
-$--color-warning: #ffba00;
-$--color-danger: #ff4949;
-// $--color-info: #1E1E1E;
+/* 主题色 */
+$--color-primary: #008c87; // 国网绿作为主色调
+$--color-success: #00a98f; // 成功色，接近国网绿的深绿色
+$--color-warning: #ffc107; // 警告色，使用柔和的琥珀色
+$--color-danger: #ff5252; // 危险色，使用柔和的红色
+$--color-info: #607d8b; // 信息色，使用深灰色
 
+/* 文字颜色 */
+$--color-text-primary: #2c3e50; // 主要文字颜色，深灰色
+$--color-text-regular: #34495e; // 常规文字颜色，稍浅的深灰色
+$--color-text-secondary: #7f8c8d; // 次要文字颜色，灰色
+$--color-text-placeholder: #bdc3c7; // 占位符文字颜色，浅灰色
+
+/* 边框颜色 */
+$--border-color-base: #dfe4ed; // 基础边框颜色
+$--border-color-light: #e6ebf5; // 浅色边框
+$--border-color-lighter: #f0f2f5; // 更浅的边框
+
+/* 背景颜色 */
+$--background-color-base: #f8f9fa; // 基础背景色，浅灰色
+$--background-color-light: #f1f3f5; // 浅色背景
+
+/* 按钮字体粗细 */
 $--button-font-weight: 400;
 
-// $--color-text-regular: #1f2d3d;
-
-$--border-color-light: #dfe4ed;
-$--border-color-lighter: #e6ebf5;
-
+/* 表格边框 */
 $--table-border: 1px solid #dfe6ec;
 
-/* icon font path, required */
+/* 图标字体路径 */
 $--font-path: '~element-ui/lib/theme-chalk/fonts';
 
+/* 引入 Element UI 默认样式 */
 @import "~element-ui/packages/theme-chalk/src/index";
 
-// the :export directive is the magic sauce for webpack
-// https://www.bluematador.com/blog/how-to-share-variables-between-js-and-sass
+/* 导出主题色供 JavaScript 使用 */
 :export {
   theme: $--color-primary;
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container h-screen">
+  <div class="app-container">
     <el-tabs v-model="queryParams.type" class="mb-4" @tab-click="handleTypeChange">
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
@@ -61,7 +61,7 @@
       </template>
 
       <!-- 公共筛选项续 -->
-      <el-form-item label="工单编号" prop="formDataId">
+      <el-form-item label="计划工单编号/申请编号" prop="formDataId">
         <el-input v-model="queryParams.formDataId" placeholder="计划工单编号/申请编号" clearable />
       </el-form-item>
 
@@ -77,8 +77,8 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="结果状态" prop="resultStatus">
-        <el-select v-model="queryParams.resultStatus" placeholder="请选择结果状态" clearable>
+      <el-form-item label="结果状态" prop="statusDataName">
+        <el-select v-model="queryParams.statusDataName" placeholder="请选择结果状态" clearable>
           <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
@@ -106,13 +106,7 @@
         <el-empty :description="emptyText"></el-empty>
       </template>
       <!-- 固定列 -->
-      <el-table-column label="工单编号" align="center" prop="formDataId" width="100" />
-      <el-table-column label="申请编号" align="center" prop="appNo" width="120">
-        <template slot-scope="scope">
-          {{ scope.row.appNo || '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="国网编号" align="center" prop="codeId" width="120" />
+      <el-table-column label="计划工单编号/申请编号" align="center" prop="formDataId" width="120" />
       <el-table-column label="工单类型" align="center" prop="formType" width="120">
         <template slot-scope="scope">
           <el-tooltip :content="getFormTypeText(scope.row.formType)" placement="top">
@@ -120,63 +114,29 @@
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column label="业务类型" align="center" min-width="200">
+      <el-table-column label="创建时间" align="center" prop="createTime" width="160">
         <template slot-scope="scope">
-          <div class="flex flex-col gap-1">
-            <el-tooltip v-if="scope.row.busiTypeName" :content="scope.row.busiTypeName" placement="top">
-              <span>{{ scope.row.busiTypeName }}</span>
-            </el-tooltip>
-            <el-tooltip v-if="scope.row.oneTypeName" :content="scope.row.oneTypeName" placement="top">
-              <span>{{ scope.row.oneTypeName }}</span>
-            </el-tooltip>
-            <el-tooltip v-if="scope.row.twoTypeName" :content="scope.row.twoTypeName" placement="top">
-              <span>{{ scope.row.twoTypeName }}</span>
-            </el-tooltip>
-            <el-tooltip v-if="scope.row.threeTypeName" :content="scope.row.threeTypeName" placement="top">
-              <span>{{ scope.row.threeTypeName }}</span>
-            </el-tooltip>
-            <span
-              v-if="!scope.row.busiTypeName && !scope.row.oneTypeName && !scope.row.twoTypeName && !scope.row.threeTypeName">-</span>
-          </div>
+          {{ scope.row.createTime ? parseTime(scope.row.createTime) : '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="标签名称" align="center" prop="tagName">
+      <el-table-column label="处理时间" align="center" prop="submitTime" width="160">
         <template slot-scope="scope">
-          <el-tooltip v-if="scope.row.tagName" :content="scope.row.tagName" placement="top">
-            <span>{{ scope.row.tagName }}</span>
-          </el-tooltip>
-          <span v-else>-</span>
+          {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="状态名称" align="center" prop="statusDataName">
+      <el-table-column label="结果状态" align="center" prop="statusDataName">
         <template slot-scope="scope">
           {{ scope.row.statusDataName || '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="表单状态" align="center" prop="formStatus">
+      <el-table-column label="执行状态" align="center" prop="formStatus">
         <template slot-scope="scope">
           <el-tag :type="getFormStatusType(scope.row.formStatus)">
             {{ getFormStatusText(scope.row.formStatus) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="开始时间" align="center" prop="startTime" width="160">
-        <template slot-scope="scope">
-          {{ scope.row.startTime ? parseTime(scope.row.startTime) : '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="提交时间" align="center" prop="submitTime" width="160">
-        <template slot-scope="scope">
-          {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="处理人" align="center" prop="userName" />
-      <!-- 动态列 -->
-      <template v-for="column in dynamicColumns">
-        <el-table-column v-if="column.visible" :key="column.prop" :prop="column.prop" :label="column.label"
-          align="center" />
-      </template>
-      <!-- 操作列 -->
+      <el-table-column label="上报人" align="center" prop="userName" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100" fixed="right">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-view" @click="handleView(scope.row)">查看</el-button>
@@ -232,10 +192,7 @@
         <div class="font-bold mb-2">表单数据</div>
         <el-descriptions :column="2" border>
           <el-descriptions-item v-for="item in detailInfo.formWidgetList" :key="item.prop" :label="item.label">
-            <template v-if="item.type === 'm-input'">
-              {{ item.value || '-' }}
-            </template>
-            <!-- 可以根据不同的type添加不同的展示逻辑 -->
+            {{ item.value || '-' }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -314,10 +271,12 @@ export default {
       formTypeMap: {
         '1': '日常巡视',
         '2': '特殊巡视',
-        '3': '定期走访',
-        '4': '临时走访',
-        '5': '应急巡视',
-        '6': '工单巡视'
+        '3': '日常走访',
+        '4': '特殊走访',
+        '5': '工单走访',
+        '6': '工单巡视',
+        '7': '默认走访',
+        '8': '默认巡视',
       },
     };
   },
@@ -499,15 +458,12 @@ export default {
         };
 
         const res = await asyncGetDetail(params);
-        if (res.code === 0 && res.data) {
-          this.detailInfo = res.data;
-          this.detailVisible = true;
-        } else {
-          this.$modal.msgError('获取详情失败');
-        }
+        this.detailInfo = res.data;
+        this.detailVisible = true;
+
       } catch (error) {
         console.error('获取详情失败:', error);
-        this.$modal.msgError('获取详情失败');
+        // this.$modal.msgError('获取详情失败');
       }
     },
     /** 显示标签选择弹窗 */
