@@ -1,54 +1,43 @@
-// base color
-$blue:#324157;
-$light-blue:#3A71A8;
-$red:#C03639;
+// 基础颜色
+$blue: #324157;
+$light-blue: #3A71A8;
+$red: #C03639;
 $pink: #E65D6E;
-$green: #30B08F;
+$green: #008c87; // 国网绿
 $tiffany: #4AB7BD;
-$yellow:#FEC171;
-$panGreen: #30B08F;
+$yellow: #FEC171;
+$panGreen: #008c87; // 国网绿
 
 // 默认菜单主题风格
-$base-menu-color:#bfcbd9;
-$base-menu-color-active:#f4f4f5;
-$base-menu-background:#304156;
-$base-logo-title-color: #ffffff;
+$base-menu-color: #ffffff; // 菜单文字颜色，白色
+$base-menu-color-active: #ffffff !important; // 菜单激活状态文字颜色，白色
+$base-menu-background: #008c87; // 菜单背景色，国网绿
+$base-menu-active-background: #ffffff !important; // 菜单激活状态背景色，稍深的国网绿
+$base-logo-title-color: #ffffff; // Logo 文字颜色，白色
 
-$base-menu-light-color:rgba(0,0,0,.70);
-$base-menu-light-background:#ffffff;
-$base-logo-light-title-color: #001529;
+// 浅色菜单主题风格
+$base-menu-light-color: rgba(0, 0, 0, 0.70); // 浅色菜单文字颜色
+$base-menu-light-background: #ffffff; // 浅色菜单背景色
+$base-logo-light-title-color: #001529; // 浅色 Logo 文字颜色
 
-$base-sub-menu-background:#1f2d3d;
-$base-sub-menu-hover:#001528;
+// 子菜单背景色
+$base-sub-menu-background: #007a75; // 子菜单背景色，稍深的国网绿
+$base-sub-menu-hover: #006c67; // 子菜单悬停背景色，更深的国网绿
 
-// 自定义暗色菜单风格
-/**
-$base-menu-color:hsla(0,0%,100%,.65);
-$base-menu-color-active:#fff;
-$base-menu-background:#001529;
-$base-logo-title-color: #ffffff;
-
-$base-menu-light-color:rgba(0,0,0,.70);
-$base-menu-light-background:#ffffff;
-$base-logo-light-title-color: #001529;
-
-$base-sub-menu-background:#000c17;
-$base-sub-menu-hover:#001528;
-*/
-
+// 侧边栏宽度
 $base-sidebar-width: 200px;
 
-// the :export directive is the magic sauce for webpack
-// https://www.bluematador.com/blog/how-to-share-variables-between-js-and-sass
+// 导出变量供 JavaScript 使用
 :export {
   menuColor: $base-menu-color;
   menuLightColor: $base-menu-light-color;
   menuColorActive: $base-menu-color-active;
   menuBackground: $base-menu-background;
+  menuActiveBackground: $base-menu-active-background;
   menuLightBackground: $base-menu-light-background;
   subMenuBackground: $base-sub-menu-background;
   subMenuHover: $base-sub-menu-hover;
   sideBarWidth: $base-sidebar-width;
   logoTitleColor: $base-logo-title-color;
-  logoLightTitleColor: $base-logo-light-title-color
+  logoLightTitleColor: $base-logo-light-title-color;
 }
