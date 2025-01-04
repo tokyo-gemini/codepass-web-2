@@ -77,7 +77,7 @@
                                 </el-alert>
                             </div>
                             <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
-                                height="410" :header-cell-style="{
+                                height="420" :header-cell-style="{
                                     background: '#f5f7fa',
                                     color: '#606266'
                                 }" class="mt-4">
