@@ -32,92 +32,142 @@
                         <div class="section-title">对象选择</div>
                     </div>
 
-                    <div>
-                        <el-form-item label="所属供电所" prop="powerSupply">
-                            <template #label>
-                                <div class="flex items-center gap-1">
-                                    <span>所属供电所</span>
-                                    <el-tooltip content="选择计划执行的供电所范围" placement="top">
-                                        <i class="el-icon-info text-gray-400 cursor-help"></i>
-                                    </el-tooltip>
-                                </div>
-                            </template>
-                            <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
-                                :normalizer="normalizer" placeholder="请选择供电所" multiple clearable :searchable="true"
-                                :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText" class="w-96"
-                                @input="handlePowerSupplyChange" />
-                        </el-form-item>
-                    </div>
-
-                    <div v-if="isVisit">
-                        <el-form-item label="所属台区:" prop="towerIdList">
-                            <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
-                                :normalizer="normalizerTower" :flat="true" :max-height="400" placeholder="请选择台区"
-                                multiple clearable :searchable="true" :limit="1" :limitText="treeselectLimitText"
-                                class="w-96" @input="handleTowerChange" />
-                        </el-form-item>
-                    </div>
-
-                    <!-- 添加搜索框 -->
-
-                    <div class="mb-4 flex items-center">
-                        <el-form-item label="客户名称:" prop="searchKeyword">
-                            <el-input v-model="searchKeyword" :placeholder="isVisit ? '请输入客户名称搜索' : '请输入台区名称搜索'"
-                                style="width: 400px" clearable @keyup.enter.native="handleSearch" @clear="handleSearch">
-                                <el-button slot="append" icon="el-icon-search" @click="handleSearch"></el-button>
-                            </el-input>
-                        </el-form-item>
-                    </div>
-
-                    <div class="my-4">
-                        <el-alert type="info" :closable="false">
-                            <div class="flex items-center justify-between">
-                                <span>已选择
-                                    {{ formData.isSelectAll === 1 ? total : selectedCount }}
-                                    项
-                                </span>
-
-                                <el-button type="text" @click="handleToggleSelectAll">
-                                    {{ formData.isSelectAll === 1 ? '取消全选' : '全选' }}
-                                </el-button>
+                    <el-tabs v-model="activeTab">
+                        <!-- 系统内选择 tab -->
+                        <el-tab-pane label="系统内选择" name="system">
+                            <div>
+                                <el-form-item label="所属供电所" prop="powerSupply">
+                                    <template #label>
+                                        <div class="flex items-center gap-1">
+                                            <span>所属供电所</span>
+                                            <el-tooltip content="选择计划执行的供电所范围" placement="top">
+                                                <i class="el-icon-info text-gray-400 cursor-help"></i>
+                                            </el-tooltip>
+                                        </div>
+                                    </template>
+                                    <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
+                                        :normalizer="normalizer" placeholder="请选择供电所" multiple clearable
+                                        :searchable="true" :disableBranchNodes="true" :limit="1"
+                                        :limitText="treeselectLimitText" class="w-96"
+                                        @input="handlePowerSupplyChange" />
+                                </el-form-item>
                             </div>
-                        </el-alert>
-                    </div>
 
-                    <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
-                        height="410" :header-cell-style="{
-                            background: '#f5f7fa',
-                            color: '#606266'
-                        }" class="mt-4">
-                        <el-table-column type="selection" width="55"></el-table-column>
+                            <div v-if="isVisit">
+                                <el-form-item label="所属台区:" prop="towerIdList">
+                                    <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
+                                        :normalizer="normalizerTower" :flat="true" :max-height="400" placeholder="请选择台区"
+                                        multiple clearable :searchable="true" :limit="1"
+                                        :limitText="treeselectLimitText" class="w-96" @input="handleTowerChange" />
+                                </el-form-item>
+                            </div>
 
-                        <template v-if="isVisit">
-                            <el-table-column prop="customName" label="客户名称"></el-table-column>
+                            <!-- 添加搜索框 -->
 
-                            <el-table-column prop="towerName" label="所属台区"></el-table-column>
+                            <div class="mb-4 flex items-center">
+                                <el-form-item label="客户名称:" prop="searchKeyword">
+                                    <el-input v-model="searchKeyword" :placeholder="isVisit ? '请输入客户名称搜索' : '请输入台区名称搜索'"
+                                        style="width: 400px" clearable @keyup.enter.native="handleSearch"
+                                        @clear="handleSearch">
+                                        <el-button slot="append" icon="el-icon-search"
+                                            @click="handleSearch"></el-button>
+                                    </el-input>
+                                </el-form-item>
+                            </div>
 
-                            <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                            <div class="my-4">
+                                <el-alert type="info" :closable="false">
+                                    <div class="flex items-center justify-between">
+                                        <span>已选择
+                                            {{ formData.isSelectAll === 1 ? total : selectedCount }}
+                                            项
+                                        </span>
 
-                            <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                                        <el-button type="text" @click="handleToggleSelectAll">
+                                            {{ formData.isSelectAll === 1 ? '取消全选' : '全选' }}
+                                        </el-button>
+                                    </div>
+                                </el-alert>
+                            </div>
 
-                            <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
+                            <el-table :data="tableData" @selection-change="handleSelectionChange" ref="multipleTable"
+                                height="410" :header-cell-style="{
+                                    background: '#f5f7fa',
+                                    color: '#606266'
+                                }" class="mt-4">
+                                <el-table-column type="selection" width="55"></el-table-column>
 
-                            <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
-                        </template>
+                                <template v-if="isVisit">
+                                    <el-table-column prop="customName" label="客户名称"></el-table-column>
 
-                        <template v-else>
-                            <el-table-column prop="towerName" label="台区名称"></el-table-column>
+                                    <el-table-column prop="towerName" label="所属台区"></el-table-column>
 
-                            <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
 
-                            <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
 
-                            <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
-                        </template>
-                    </el-table>
+                                    <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
 
-                    <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
-                        :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
+                                    <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
+                                </template>
+
+                                <template v-else>
+                                    <el-table-column prop="towerName" label="台区名称"></el-table-column>
+
+                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+
+                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+
+                                    <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
+                                </template>
+                            </el-table>
+
+                            <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
+                                :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
+                        </el-tab-pane>
+
+                        <!-- 上传模版 tab -->
+                        <el-tab-pane label="上传模版" name="upload">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <el-button type="primary" @click="handleDownloadTemplate">
+                                    <i class="el-icon-download mr-1"></i>下载模版
+                                </el-button>
+
+                                <el-upload class="upload-demo" :action="uploadUrl" :before-upload="beforeUpload"
+                                    :on-success="handleUploadSuccess" :on-error="handleUploadError"
+                                    :show-file-list="false">
+                                    <el-button type="success">
+                                        <i class="el-icon-upload mr-1"></i>上传文件
+                                    </el-button>
+                                </el-upload>
+                            </div>
+
+                            <!-- 上传的数据表格 -->
+                            <el-table v-if="uploadedData.length > 0" :data="uploadedData"
+                                @selection-change="handleUploadSelectionChange" ref="uploadTable" height="410"
+                                :header-cell-style="{
+                                    background: '#f5f7fa',
+                                    color: '#606266'
+                                }">
+                                <el-table-column type="selection" width="55"></el-table-column>
+
+                                <template v-if="isVisit">
+                                    <el-table-column prop="customName" label="客户名称"></el-table-column>
+                                    <el-table-column prop="towerName" label="所属台区"></el-table-column>
+                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                                    <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
+                                    <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
+                                </template>
+                                <template v-else>
+                                    <el-table-column prop="towerName" label="台区名称"></el-table-column>
+                                    <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
+                                    <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
+                                    <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
+                                </template>
+                            </el-table>
+                        </el-tab-pane>
+                    </el-tabs>
                 </div>
 
                 <plan-time-settings v-model="timeSettings" :need-full-time-options="needFullTimeOptions"
@@ -296,7 +346,10 @@ export default {
                 closedTime: null,
                 earlyWarning: '0',
                 alarmTimeList: ['']
-            }
+            },
+            activeTab: 'system', // 当前激活的标签页
+            uploadedData: [], // 上传文件后的数据
+            uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload', // 上传文件的URL
         }
     },
 
@@ -1218,6 +1271,9 @@ export default {
 
             this.queryParams.pageSize = 10
 
+            this.uploadedData = []
+            this.activeTab = 'system'
+
             this.loadInitData()
         },
 
@@ -1231,6 +1287,81 @@ export default {
         // 处理时间设置变化
         handleTimeSettingsChange(val) {
             Object.assign(this.formData, val)
+        },
+
+        // 处理下载模版
+        handleDownloadTemplate() {
+            // 根据不同的计划类型下载不同的模版
+            const templateName = this.isVisit ? 'visit_template.xlsx' : 'inspection_template.xlsx'
+            const downloadUrl = process.env.VUE_APP_BASE_API + '/plan/template/download/' + this.planType
+
+            // 创建一个隐藏的 a 标签来触发下载
+            const link = document.createElement('a')
+            link.href = downloadUrl
+            link.download = templateName
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        },
+
+        // 上传文件前的验证
+        beforeUpload(file) {
+            const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                file.type === 'application/vnd.ms-excel'
+            const isLt2M = file.size / 1024 / 1024 < 2
+
+            if (!isExcel) {
+                this.$message.error('只能上传Excel文件!')
+                return false
+            }
+            if (!isLt2M) {
+                this.$message.error('文件大小不能超过 2MB!')
+                return false
+            }
+            return true
+        },
+
+        // 文件上传成功的处理
+        handleUploadSuccess(response, file, fileList) {
+            if (response.code === 200) {
+                this.$message.success('文件上传成功')
+                // 更新上传的数据
+                this.uploadedData = response.data
+                // 清空系统内选择的数据
+                this.formData.towerUserList = []
+                // 重置选中计数
+                this.selectedCount = 0
+            } else {
+                this.$message.error(response.msg || '文件上传失败')
+            }
+        },
+
+        // 文件上传失败的处理
+        handleUploadError(err) {
+            console.error('文件上传失败:', err)
+            this.$message.error('文件上传失败，请重试')
+        },
+
+        // 处理上传表格的选择变化
+        handleUploadSelectionChange(val) {
+            // 清空之前的选择
+            this.formData.towerUserList = []
+
+            // 添加新的选择
+            this.formData.towerUserList = val.map(item => ({
+                userId: item.userId,
+                userName: item.userName,
+                towerId: item.towerId,
+                towerName: item.towerName,
+                areaName: item.areaName,
+                companyName: item.companyName,
+                powerName: item.powerName,
+                deptId: item.deptId,
+                provinceName: item.provinceName
+            }))
+
+            // 更新选中计数
+            this.selectedCount = this.formData.towerUserList.length
         }
     }
 }
@@ -1310,5 +1441,10 @@ export default {
 
 .el-table .el-table__body-wrapper::-webkit-scrollbar-track {
     background: #f5f5f5;
+}
+
+/* 添加上传相关样式 */
+.upload-demo {
+    display: inline-block;
 }
 </style>
