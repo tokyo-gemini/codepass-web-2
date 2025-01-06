@@ -23,8 +23,7 @@
           <el-input v-model="formInfo.formName" placeholder="请输入表单名称" />
         </el-form-item>
         <el-form-item label="表单类型" prop="formType">
-          <el-select style="width: 200px" v-model="formInfo.formType" placeholder="请选择表单类型"
-            :disabled="shouldDisableFormType">
+          <el-select style="width: 200px" v-model="formInfo.formType" placeholder="请选择表单类型" :disabled="!!formId">
             <el-option v-for="dict in dict.type.form_type_option" :key="dict.value" :label="dict.label"
               :value="dict.value" />
           </el-select>
@@ -49,12 +48,6 @@ export default {
   name: 'FormDesigner',
   // 声明需要使用的字典
   dicts: ['form_type_option'],
-  props: {
-    isCopy: {
-      type: Boolean,
-      default: false
-    }
-  },
   data() {
     return {
       formId: this.$route.params.id,
@@ -123,11 +116,6 @@ export default {
     pageTitle() {
       return this.formId ? `编辑表单-${this.formInfo.formName}` : '新增表单';
     },
-    // 判断是否禁用表单类型选择
-    shouldDisableFormType() {
-      // 编辑时禁用，复制和新增时不禁用
-      return this.formId && !this.isCopy;
-    }
   },
   methods: {
     async initPage() {

@@ -10,12 +10,12 @@
       <el-form-item label="所属供电所" prop="powerId">
         <treeselect v-model="queryParams.powerId" :options="powerSupplyOptions" :normalizer="normalizer"
           placeholder="请选择供电所" class="w-48" :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText"
-          @input="handlePowerSupplyChange" />
+          @input="handlePowerSupplyChange" :clearable="true" :searchable="true" :default-expand-level="0" />
       </el-form-item>
 
       <el-form-item label="所属台区" prop="towerId">
         <treeselect v-model="queryParams.towerId" :options="towerOptions" :normalizer="normalizer" placeholder="请选择台区"
-          class="w-48" />
+          class="w-48" :clearable="true" :searchable="true" :default-expand-level="0" />
       </el-form-item>
 
       <el-form-item :label="queryParams.type === 'zf' ? '走访日期' : '巡检日期'" prop="dispatchTime">
@@ -26,7 +26,7 @@
       <!-- 走访特有筛选项 -->
       <template v-if="queryParams.type === 'zf'">
         <!-- 客户标签 - 独占一行 -->
-        <div class="w-full mb-4">
+        <div class="w-full mb-4" v-if="false">
           <el-form-item label="客户标签" prop="tagIdList" class="tag-form-item">
             <div class="flex items-start gap-2">
               <el-button size="small" type="primary" plain icon="el-icon-plus" @click="showTagDialog">添加标签</el-button>
@@ -96,7 +96,7 @@
     </el-form>
 
     <!-- 表格顶部操作区 -->
-    <div class="mb-4 flex justify-between items-center">
+    <div class="mb-4 w-full flex justify-end items-center">
       <el-button type="text" icon="el-icon-setting" @click="showColumnSettings">列设置</el-button>
     </div>
 
@@ -114,6 +114,21 @@
           </el-tooltip>
         </template>
       </el-table-column>
+
+      <!-- 动态列 -->
+      <el-table-column v-for="col in dynamicColumns.filter(col => col.visible)" :key="col.prop" align="center"
+        class-name="dynamic-column">
+        <template slot="header">
+          <div class="dynamic-column-header">
+            <span>{{ col.label }}</span>
+            <el-tooltip :content="`编号:${col.prop}`" placement="top">
+              <i class="el-icon-info dynamic-column-icon"></i>
+            </el-tooltip>
+          </div>
+        </template>
+      </el-table-column>
+
+      <!-- 固定列(继续) -->
       <el-table-column label="创建时间" align="center" prop="createTime" width="160">
         <template slot-scope="scope">
           {{ scope.row.createTime ? parseTime(scope.row.createTime) : '-' }}
@@ -234,8 +249,8 @@ export default {
         formId: '',
         cityId: '',
         companyId: '',
-        powerId: '',
-        towerId: '',
+        powerId: null, // 修改为 null
+        towerId: null, // 修改为 null
         dispatchStartTime: '',
         dispatchEndTime: '',
         tagIdList: [],
@@ -641,19 +656,26 @@ export default {
     /** 获取表单控件配置 */
     async getFormControls() {
       try {
+        if (!this.queryParams.formId) return;
+
         const res = await asyncGetFormControls(this.queryParams.formId);
         if (res.data?.length) {
           // 初始化动态列配置
           this.dynamicColumns = res.data.map(item => ({
             prop: item.prop,
             label: item.label,
-            visible: false // 默认不显示
+            visible: true // 默认显示所有列
           }));
-          // 恢复上次的列显示设置
+
+          // 初始化选中列
+          this.selectedColumns = this.dynamicColumns.map(col => col.prop);
+
+          // 尝试恢复上次的列显示设置
           this.restoreColumnSettings();
         }
       } catch (error) {
         console.error('获取表单控件失败:', error);
+        this.$message.error('获取表单控件失败');
       }
     },
 
@@ -679,12 +701,22 @@ export default {
     /** 保存列设置 */
     saveColumnSettings() {
       // 更新列的可见性
-      this.dynamicColumns.forEach(col => {
-        col.visible = this.selectedColumns.includes(col.prop);
-      });
+      this.dynamicColumns = this.dynamicColumns.map(col => ({
+        ...col,
+        visible: this.selectedColumns.includes(col.prop)
+      }));
+
       // 保存设置到本地存储
       this.saveColumnSettingsToStorage();
       this.columnSettingsVisible = false;
+
+      // 强制表格重新渲染
+      this.$nextTick(() => {
+        this.loading = true;
+        setTimeout(() => {
+          this.loading = false;
+        }, 100);
+      });
     },
 
     /** 保存列设置到本地存储 */
@@ -782,7 +814,7 @@ export default {
   background-color: #fafafa;
 }
 
-/* 表格内容样式 */
+/* 表格内容和动态列表头样式 */
 :deep(.el-table) {
   .flex-col {
     span {
@@ -792,14 +824,27 @@ export default {
         border-bottom: 1px dashed #ebeef5;
       }
     }
-  }
 
-  .flex-col {
     span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       max-width: 100%;
+    }
+  }
+
+  /* 动态列样式 */
+  .dynamic-column {
+    .dynamic-column-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .dynamic-column-icon {
+      font-size: 14px;
+      color: #409EFF;
     }
   }
 }
