@@ -117,7 +117,7 @@ export default {
             Cookies.remove('rememberMe');
           }
           this.$store.dispatch("Login", this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || "/" }).catch(() => { });
+            this.$router.push({ path: this.redirect || '/kanban/performance/index' }).catch(() => { });
           }).catch(() => {
             this.loading = false;
             if (this.captchaEnabled) {

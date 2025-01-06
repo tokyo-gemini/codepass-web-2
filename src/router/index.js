@@ -67,6 +67,12 @@ export const constantRoutes = [
     redirect: '/kanban/performance/index',
   },
   {
+    path: '/',
+    component: Layout,
+    redirect: '/kanban/performance/index',
+    hidden: true
+  },
+  {
     path: '/kanban',
     component: Layout,
     redirect: 'noredirect',
