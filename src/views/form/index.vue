@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <div class="bg-white rounded p-4 shadow">
+    <div class="bg-white w-full h-full rounded p-4 shadow">
 
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="formName">
         <el-form-item label="表单名称/编号" prop="formName">
@@ -63,8 +63,8 @@
         </el-table-column>
       </el-table>
 
-      <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum"
-        v-model:limit="queryParams.pageSize" @pagination="getList" />
+      <pagination v-show="total > 0" :total="total" :page="queryParams.pageNum" :limit="queryParams.pageSize"
+        @pagination="handlePagination" />
     </div>
 
   </div>
@@ -93,7 +93,7 @@ export default {
       form: {},
       queryParams: {
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 10, // 修改默认分页大小为10
         formName: undefined,
         formType: undefined
       },
@@ -165,12 +165,14 @@ export default {
         // 非默认表单直接复制
         this.$modal.confirm('确定要复制当前表单?').then(async () => {
           try {
-            // 调用复制接口获取新表单数据
             const res = await asyncCopyFormDesign({ formId: row.formId });
             if (res.code === 200) {
               this.$modal.msgSuccess('复制成功,请编辑复制的表单！');
-              // 直接传递完整的表单数据，无需额外处理
-              this.$tab.openPage(`复制表单-${res.data.formName}`, `/form/designer/${res.data.formId}`);
+              // 添加 isCopy 参数
+              this.$tab.openPage(
+                `复制表单-${res.data.formName}`,
+                `/form/designer/${res.data.formId}?isCopy=true`
+              );
             }
           } catch (error) {
             console.error('复制失败:', error);
@@ -207,7 +209,13 @@ export default {
     handleUpdate(row) {
       const formId = row.formId || this.ids[0];
       this.$tab.openPage(`编辑表单-${row.formName}`, `/form/designer/${formId}`);
-    }
+    },
+    // 添加分页方法
+    handlePagination(val) {
+      this.queryParams.pageNum = val.page;
+      this.queryParams.pageSize = val.limit;
+      this.getList();
+    },
   }
 };
 </script>

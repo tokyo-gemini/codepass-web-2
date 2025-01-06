@@ -123,6 +123,9 @@ export const constantRoutes = [
         component: () => import('@/views/form/designer'),
         name: 'FormDesigner',
         meta: { title: '表单设计器', icon: 'form' },
+        props: (route) => ({
+          isCopy: route.query.isCopy === 'true'
+        })
       },
     ],
   },
