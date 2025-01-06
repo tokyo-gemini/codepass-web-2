@@ -20,41 +20,70 @@
         </el-page-header>
         <el-divider></el-divider>
 
-        <div class="bg-white p-4 rounded shadow">
-            <!-- 已绑定表单列表 -->
-            <div class="flex flex-wrap gap-4">
-                <!-- 已绑定的表单卡片 -->
-                <div v-for="form in bindingForms" :key="form.formId"
-                    class="w-40 h-40 shadow rounded flex flex-col justify-between p-4">
-                    <div class="flex flex-col gap-2">
-                        <el-tooltip class="item" effect="dark" :content="form.formName" placement="top">
-                            <div class="font-bold text-gray-800 truncate">{{ form.formName }}</div>
-                        </el-tooltip>
-                        <div class="text-sm text-gray-500">
-                            已关联 {{ form.statusBindingOptions.length }} 个选项
-                        </div>
-                    </div>
-                    <div class="flex justify-between mt-4">
-                        <el-button type="primary" size="small" @click="handleEditBinding(form)">
-                            编辑
-                        </el-button>
-                        <el-button type="danger" size="small" @click="handleDeleteBinding(form)">
-                            删除
-                        </el-button>
-                    </div>
-                </div>
-
-                <!-- 添加新表单按钮 -->
-                <div class="w-40 h-40 shadow rounded flex items-center justify-center flex-col gap-4">
-                    <div class="rounded-full border el-icon-circle-plus text-6xl flex items-center justify-center text-gray-300 hover:opacity-90 cursor-pointer"
-                        @click="checkAndOpenDialog"></div>
-                    <div class="font-bold">点击添加关联表单</div>
+        <!-- 添加操作说明区域 -->
+        <div class="bg-gray-50 p-4 mb-4 rounded text-sm text-gray-600">
+            <div class="flex items-start gap-2">
+                <i class="el-icon-info-circle text-blue-500 mt-0.5"></i>
+                <div>
+                    <p class="font-medium mb-2">状态关联说明:</p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>已绑定表单: 显示当前已关联的表单及其状态映射关系</li>
+                        <li>编辑关联: 可修改表单控件与状态的对应关系</li>
+                        <li>删除关联: 解除表单与当前状态的绑定</li>
+                        <li>新增关联: 为新的表单控件建立状态映射</li>
+                    </ul>
                 </div>
             </div>
         </div>
 
+        <div class="bg-white p-4 rounded shadow">
+            <!-- 已绑定表单列表 -->
+            <div class="flex flex-wrap gap-4">
+                <!-- 已绑定的表单卡片 -->
+                <el-tooltip content="查看已绑定的表单信息" placement="top">
+                    <div v-for="form in bindingForms" :key="form.formId"
+                        class="w-40 h-40 shadow rounded flex flex-col justify-between p-4">
+                        <div class="flex flex-col gap-2">
+                            <el-tooltip class="item" effect="dark" :content="form.formName" placement="top">
+                                <div class="font-bold text-gray-800 truncate">{{ form.formName }}</div>
+                            </el-tooltip>
+                            <div class="text-sm text-gray-500">
+                                已关联 {{ form.statusBindingOptions.length }} 个选项
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-4">
+                            <el-button type="primary" size="small" @click="handleEditBinding(form)">
+                                编辑
+                            </el-button>
+                            <el-button type="danger" size="small" @click="handleDeleteBinding(form)">
+                                删除
+                            </el-button>
+                        </div>
+                    </div>
+                </el-tooltip>
+
+                <!-- 添加新表单按钮 -->
+                <el-tooltip content="添加新的表单关联" placement="top">
+                    <div class="w-40 h-40 shadow rounded flex items-center justify-center flex-col gap-4">
+                        <div class="rounded-full border el-icon-circle-plus text-6xl flex items-center justify-center text-gray-300 hover:opacity-90 cursor-pointer"
+                            @click="checkAndOpenDialog"></div>
+                        <div class="font-bold">点击添加关联表单</div>
+                    </div>
+                </el-tooltip>
+            </div>
+        </div>
+
         <!-- 新增对话框 -->
-        <el-dialog title="关联表单控件" :visible.sync="dialogVisible" width="70%">
+        <el-dialog :visible.sync="dialogVisible" width="70%">
+            <template #title>
+                <div class="flex items-center gap-2">
+                    <span>关联表单控件</span>
+                    <el-tooltip content="选择要关联的表单及其控件，并为每个选项配置对应的状态" placement="right">
+                        <i class="el-icon-question text-gray-400 cursor-help"></i>
+                    </el-tooltip>
+                </div>
+            </template>
+
             <div class="grid grid-cols-1 gap-4">
                 <!-- 表单列表 -->
                 <div class="bg-gray-50 p-4 rounded-lg">
@@ -64,7 +93,13 @@
                             :class="{ 'ring-2 ring-blue-500': currentFormIndex === index }" @click="selectForm(index)">
                             <div class="flex flex-col gap-2">
                                 <div class="font-medium text-gray-900">{{ form.label }}</div>
-                                <div class="text-sm text-gray-500">表单编号: {{ form.formNumber }}</div>
+                                <div class="flex items-center gap-1 text-sm text-gray-500">
+                                    <span>表单编号:</span>
+                                    <span>{{ form.formNumber }}</span>
+                                    <el-tooltip content="用于系统内部识别的唯一编号" placement="top">
+                                        <i class="el-icon-info text-gray-400 cursor-help"></i>
+                                    </el-tooltip>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -73,9 +108,11 @@
                 <!-- 选项配置区域 -->
                 <div v-if="currentFormIndex !== null" class="bg-white p-4 rounded-lg shadow">
                     <div class="space-y-4">
-                        <!-- 控件选择 -->
                         <div class="flex items-center gap-4">
                             <label class="text-sm font-medium text-gray-700">请选择一个表单控件</label>
+                            <el-tooltip content="选择包含选项的表单控件进行状态映射配置" placement="top">
+                                <i class="el-icon-info text-gray-400 cursor-help"></i>
+                            </el-tooltip>
                             <el-select v-model="optionArray[`it${currentFormIndex}`].value" clearable placeholder="选择控件"
                                 class="w-64" @change="val => handleSelectionChange(val, currentFormIndex)">
                                 <el-option v-for="option in optionArray[`it${currentFormIndex}`].selectItems"
@@ -87,7 +124,12 @@
                         <div v-if="formRender" class="space-y-4">
                             <div v-for="info in baseInfo" :key="info.valueId" class="p-4 bg-gray-50 rounded-lg">
                                 <div class="flex items-center gap-4">
-                                    <span class="font-medium">{{ info.label }}</span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="font-medium">{{ info.label }}</span>
+                                        <el-tooltip content="为该选项值选择对应的状态" placement="top">
+                                            <i class="el-icon-info text-gray-400 cursor-help"></i>
+                                        </el-tooltip>
+                                    </div>
                                     <span class="text-gray-600">{{ info.value }}</span>
                                     <el-radio-group v-model="info.rowCurrent">
                                         <el-radio v-for="it in info.row" :key="it.statusDataId"
@@ -103,8 +145,12 @@
             </div>
 
             <div slot="footer" class="flex justify-end gap-4">
-                <el-button @click="reset">取 消</el-button>
-                <el-button type="primary" @click="rowCurrentChange">确 定</el-button>
+                <el-tooltip content="取消当前操作" placement="top">
+                    <el-button @click="reset">取 消</el-button>
+                </el-tooltip>
+                <el-tooltip content="保存表单与状态的关联关系" placement="top">
+                    <el-button type="primary" @click="rowCurrentChange">确 定</el-button>
+                </el-tooltip>
             </div>
         </el-dialog>
     </div>
@@ -307,7 +353,7 @@ export default {
             if (selectedWidget) {
                 selectedWidget.options.optionItems.forEach((item, idx) => {
                     this.baseInfo.push({
-                        label: `选中${idx + 1}`,
+                        label: `选项${idx + 1}:`,
                         value: item.label,
                         row: this.currentState.statusDataList,
                         rowCurrent: null,
