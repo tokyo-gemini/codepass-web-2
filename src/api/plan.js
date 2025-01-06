@@ -52,6 +52,7 @@ export function asyncAddPlan(data) {
   return request({
     url: '/plannedManage/add',
     method: 'post',
+    headers: { 'Content-Type': 'multipart/form-data' },
     data,
   });
 }
