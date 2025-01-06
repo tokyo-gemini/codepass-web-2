@@ -415,17 +415,19 @@ export default {
                     companyName: item.companyName,
                     powerName: item.powerName,
                     deptId: item.deptId,
-                    provinceName: item.provinceName
+                    provinceName: item.provinceName,
+                    customId: item.customId,
                 }))
                 // 获取当前页面所有的 customId 或 towerId
                 const currentPageIds = this.tableData.map((item) => ({
                     towerId: item.towerId,
-                    userId: item.userId
+                    userId: item.userId,
+                    customId: item.customId
                 }))
                 // 从 towerUserList 中移除当前页面的所有记录
                 this.formData.towerUserList = this.formData.towerUserList.filter((item) => {
                     return !currentPageIds.some(
-                        (pageItem) => pageItem.towerId === item.towerId && pageItem.userId === item.userId
+                        (pageItem) => pageItem.towerId === item.towerId && pageItem.customId === item.customId
                     )
                 })
                 // 将当前页的选中项添加到 towerUserList
