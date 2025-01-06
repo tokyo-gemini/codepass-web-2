@@ -52,10 +52,10 @@ import VueMeta from 'vue-meta';
 import DictData from '@/components/DictData';
 
 import Vant from 'vant';
-import VmForm from 'vform-mobile-builds'; //引入VForm库
+import VmForm from '@/vform/VmFormDesigner.umd.min.js'; //引入VForm库
 
 import 'vant/lib/index.css';
-import 'vform-mobile-builds/dist/VmFormDesigner.css';
+import '@/vform/VmFormDesigner.css';
 
 // 全局方法挂载
 Vue.prototype.getDicts = getDicts;

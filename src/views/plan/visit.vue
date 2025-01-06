@@ -770,7 +770,13 @@ export default {
                 }
 
                 // 对象选择相关
-                submitData.isSelectAll = this.formData.isSelectAll;
+                // 如果是上传模版，强制设置isSelectAll为0
+                if (this.activeTab === 'upload') {
+                    submitData.isSelectAll = '0';
+                } else {
+                    submitData.isSelectAll = this.formData.isSelectAll;
+                }
+
                 if (this.formData.powerSupply?.length) {
                     submitData.powerIdList = this.formData.powerSupply;
                 }
