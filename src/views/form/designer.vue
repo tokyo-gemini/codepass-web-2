@@ -5,31 +5,41 @@
         <div class="w-full h-full flex items-center">返回表单列表</div>
       </template>
       <template #content>
-        <div class="flex items-center space-x-4 justify-between w-full">
-          <span class="text-lg font-semibold mr-3">
-            {{ pageTitle }}
-          </span>
-          <div>
-            <el-button type="primary" @click="handleSave" class="mr-2">保存</el-button>
-            <el-button v-if="!$route.query.copyData" @click="handleReset">重置</el-button>
+        <div class="flex gap-4">
+          <div class="flex items-center space-x-4 justify-between w-full designer">
+            <span class="text-lg font-semibold mr-3">
+              {{ pageTitle }}
+            </span>
+            <div class="flex gap-4">
+              <el-form :model="formInfo" :rules="rules" ref="formInfoRef" inline>
+                <div class="flex w-full">
+                  <div class="w-auto">
+                    <el-form-item label="表单名称" prop="formName">
+                      <el-input style="width: 200px" v-model="formInfo.formName" placeholder="请输入表单名称" />
+                    </el-form-item>
+                  </div>
+                  <div class="w-auto">
+                    <el-form-item label="表单类型" prop="formType">
+                      <el-select style="width: 200px" v-model="formInfo.formType" placeholder="请选择表单类型"
+                        :disabled="!!formId">
+                        <el-option v-for="dict in dict.type.form_type_option" :key="dict.value" :label="dict.label"
+                          :value="dict.value" />
+                      </el-select>
+                    </el-form-item>
+                  </div>
+                  <div class="w-full flex-1">
+                    <el-button type="primary" @click="handleSave" class="mr-2">保存</el-button>
+                    <el-button v-if="!$route.query.copyData" @click="handleReset">重置</el-button>
+                  </div>
+                </div>
+              </el-form>
+            </div>
           </div>
         </div>
       </template>
     </el-page-header>
     <el-divider></el-divider>
-    <div class="">
-      <el-form :model="formInfo" :rules="rules" ref="formInfoRef" inline>
-        <el-form-item label="表单名称" prop="formName">
-          <el-input v-model="formInfo.formName" placeholder="请输入表单名称" />
-        </el-form-item>
-        <el-form-item label="表单类型" prop="formType">
-          <el-select style="width: 200px" v-model="formInfo.formType" placeholder="请选择表单类型" :disabled="!!formId">
-            <el-option v-for="dict in dict.type.form_type_option" :key="dict.value" :label="dict.label"
-              :value="dict.value" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-    </div>
+
     <div class="designer">
       <vm-form-designer ref="designerRef" :designer-config="designerConfig" @save="handleSave">
       </vm-form-designer>

@@ -72,7 +72,12 @@
   line-height: 1.1;
   color: inherit;
 }
-
+.designer .el-form-item--mini.el-form-item{
+  margin-bottom: 0;
+}
+.el-header.main-header{
+  display: none;
+}
 .el-message-box__status + .el-message-box__message{
   word-break: break-word;
 }
@@ -80,7 +85,12 @@
 .el-dialog:not(.is-fullscreen) {
   margin-top: 6vh !important;
 }
-
+  .el-dialog.is-fullscreen{
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 600px !important;
+  }
 .el-dialog__wrapper.scrollbar .el-dialog .el-dialog__body {
   overflow: auto;
   overflow-x: hidden;
