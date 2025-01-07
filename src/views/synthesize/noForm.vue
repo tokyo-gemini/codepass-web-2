@@ -32,14 +32,14 @@
                     {{ scope.row.createTime ? parseTime(scope.row.createTime) : '-' }}
                 </template>
             </el-table-column>
-            <el-table-column label="处理时间" align="center" prop="submitTime" width="160">
+            <el-table-column label="处理时间" align="center" prop="updateTime" width="160">
                 <template slot-scope="scope">
-                    {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
+                    {{ scope.row.updateTime ? parseTime(scope.row.updateTime) : '-' }}
                 </template>
             </el-table-column>
-            <el-table-column label="结果状态" align="center" prop="statusDataName">
+            <el-table-column label="结果状态" align="center" prop="statusValue">
                 <template slot-scope="scope">
-                    {{ scope.row.statusDataName || '-' }}
+                    {{ scope.row.statusValue || '-' }}
                 </template>
             </el-table-column>
             <el-table-column label="执行状态" align="center" prop="formStatus">
@@ -62,16 +62,14 @@
         <!-- 查看详情弹窗 -->
         <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
             <el-descriptions :column="2" border>
-                <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
-                <el-descriptions-item label="客户ID">{{ detailInfo.customId }}</el-descriptions-item>
-                <el-descriptions-item label="联系电话">{{ detailInfo.phoneNumber }}</el-descriptions-item>
-                <el-descriptions-item label="所属台区">{{ detailInfo.towerName }}</el-descriptions-item>
-                <el-descriptions-item label="台区容量">{{ detailInfo.towerVolume }}</el-descriptions-item>
-                <el-descriptions-item label="台区ID">{{ detailInfo.towerId }}</el-descriptions-item>
-                <el-descriptions-item :span="2" label="详细地址">{{ detailInfo.address }}</el-descriptions-item>
-                <el-descriptions-item label="设备用户名称">{{ detailInfo.deviceUserName || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="设备用户电话">{{ detailInfo.deviceUserPhoneNumber || '-'
-                    }}</el-descriptions-item>
+                <el-descriptions-item label="台区编码">{{ detailInfo.tgNo || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="台区名称">{{ detailInfo.tgName || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="用户编号">{{ detailInfo.consNo || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="用户名称">{{ detailInfo.consName || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="用电地址">{{ detailInfo.elecAddr || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="账务联系电话">{{ detailInfo.telNo || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="网格员编号">{{ detailInfo.gridNo || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="网格员名称">{{ detailInfo.gridName || '-' }}</el-descriptions-item>
             </el-descriptions>
             <vm-form-render :form-json="detailInfo.formJson" :formConfig="detailInfo.formConfig" view-mode
                 :form-data="detailInfo.formData" ref="vmFormRef">
@@ -169,7 +167,7 @@ export default {
                 const res = await asyncGetNoFormDetail(params);
                 if (res.code === 200) {
                     this.detailInfo = {
-                        custom: res.data.custom,
+                        ...res.data.custom,
                         formJson: { widgetList: JSON.parse(res.data.widgetList), formConfig: JSON.parse(res.data.formConfig) },
                         formData: JSON.parse(res.data.jsonData),
                         optionData: JSON.parse(res.data.optionData),

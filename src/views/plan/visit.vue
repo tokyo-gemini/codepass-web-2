@@ -649,7 +649,7 @@ export default {
                 this.handleBack();
             } catch (error) {
                 console.error('保存失败:', error);
-                this.$modal.msgError(error.msg || '保存失败');
+                // this.$modal.msgError(error.msg || '保存失败');
             }
         },
         // 重置表单

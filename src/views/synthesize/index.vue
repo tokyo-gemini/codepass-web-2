@@ -1,9 +1,9 @@
 <template>
   <div class="app-container">
     <el-tabs v-model="queryParams.type" class="mb-4" @tab-click="handleTypeChange">
+      <el-tab-pane label="无单查询" name="wd"></el-tab-pane>
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
-      <el-tab-pane label="无单查询" name="wd"></el-tab-pane>
     </el-tabs>
 
     <!-- 无单查询组件 -->
@@ -257,7 +257,7 @@ export default {
       customerTagOptions: [],
       // 查询参数
       queryParams: {
-        type: 'zf', // 默认走访
+        type: 'wd', // 默认走访
         formType: '',
         formId: '',
         cityId: '',
@@ -312,7 +312,7 @@ export default {
     // 1. 获取站所数据
     await this.getPowerSupplyOptions();
     // 2. 获取工单类型并设置默认值
-    await this.getWorkOrderType();
+    // await this.getWorkOrderType();
     // getList 会在 getFormOptions 成功后自动调用
   },
   computed: {

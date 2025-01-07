@@ -247,7 +247,7 @@ export default {
         this.$tab.closeOpenPage({ path: '/form/index', title: '表单管理' });
       } catch (error) {
         console.error('保存失败:', error);
-        this.$modal.msgError('保存失败');
+        // this.$modal.msgError('保存失败');
       }
     },
     prepareSaveData(formJson) {

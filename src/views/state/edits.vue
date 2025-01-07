@@ -416,7 +416,7 @@ export default {
                 this.fetchBindingForms()
             } catch (error) {
                 console.error("保存失败:", error);
-                this.$message.error("保存失败");
+                // this.$message.error("保存失败");
             }
         },
         reset() {
