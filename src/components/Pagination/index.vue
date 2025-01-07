@@ -1,22 +1,13 @@
 <template>
-  <div :class="{'hidden':hidden}" class="pagination-container">
-    <el-pagination
-      :background="background"
-      :current-page.sync="currentPage"
-      :page-size.sync="pageSize"
-      :layout="layout"
-      :page-sizes="pageSizes"
-      :pager-count="pagerCount"
-      :total="total"
-      v-bind="$attrs"
-      @size-change="handleSizeChange"
-      @current-change="handleCurrentChange"
-    />
+  <div :class="{ 'hidden': hidden }" class="pagination-container">
+    <el-pagination :background="background" :current-page.sync="currentPage" :page-size.sync="pageSize" :layout="layout"
+      :page-sizes="pageSizes" :pager-count="pagerCount" :total="total" v-bind="$attrs" @size-change="handleSizeChange"
+      @current-change="handleCurrentChange" />
   </div>
 </template>
 
 <script>
-import { scrollTo } from '@/utils/scroll-to'
+// import { scrollTo } from '@/utils/scroll-to'
 
 export default {
   name: 'Pagination',
@@ -90,13 +81,13 @@ export default {
       }
       this.$emit('pagination', { page: this.currentPage, limit: val })
       if (this.autoScroll) {
-        scrollTo(0, 800)
+        // scrollTo(0, 800)
       }
     },
     handleCurrentChange(val) {
       this.$emit('pagination', { page: val, limit: this.pageSize })
       if (this.autoScroll) {
-        scrollTo(0, 800)
+        // scrollTo(0, 800)
       }
     }
   }
@@ -108,6 +99,7 @@ export default {
   background: #fff;
   padding: 32px 16px;
 }
+
 .pagination-container.hidden {
   display: none;
 }

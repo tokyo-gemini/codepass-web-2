@@ -84,6 +84,24 @@ export function asyncDownLoadTemplate(data) {
     params: data,
   });
 }
+// 下载自助填报模版
+export function asyncDownLoadSelfTemplate(data) {
+  return request({
+    url: '/selfPlanned/downloadTemplate',
+    method: 'post',
+    responseType: 'blob',
+    params: data,
+  });
+}
+// 上传自助填报信息
+export function asyncUploadSelfInfo(data) {
+  return request({
+    url: '/selfPlanned/upload/file',
+    method: 'post',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data,
+  });
+}
 // 查询分类计划总数
 export function asyncGetPlanCount() {
   return request({
@@ -97,5 +115,30 @@ export function asyncDeletePlan(data) {
     url: '/plannedManage/del',
     method: 'delete',
     params: data,  // 使用 params 而不是直接传值
+  });
+}
+// 自助填报新增
+export function asyncAddSelfPlan(data) {
+  return request({
+    url: '/selfPlanned/add',
+    method: 'post',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data,
+  });
+}
+// 自助填报编辑
+export function asyncEditSelfPlan(data) {
+  return request({
+    url: '/selfPlanned/update',
+    method: 'put',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data,
+  });
+}
+// 自助填报详情
+export function asyncGetSelfPlanDetail(id) {
+  return request({
+    url: `/selfPlanned/get/${id}`,
+    method: 'get',
   });
 }

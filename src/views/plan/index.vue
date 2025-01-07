@@ -1,21 +1,32 @@
 <template>
   <div class="app-container flex flex-col gap-4">
     <!-- 快速创建模块 -->
-    <div class="bg-white rounded p-4 shadow flex flex-col gap-2 h-44">
+    <div class="bg-white rounded p-4 shadow flex flex-col gap-2 h-48">
       <div class="text-lg font-medium flex items-center gap-4">
         <div>
           快速创建
         </div>
         <div class="text-gray-500 text-xs">可以点击下方不同计划类型,完成计划的创建</div>
       </div>
-      <div class="flex justify-between items-center">
+      <div class="flex flex-wrap w-full gap-4 h-full">
         <div v-for="(item, index) in planTypes" :key="index"
-          class="w-1/5 p-4 relative cursor-pointer rounded hover:opacity-95" @click="createPlan(item.type)">
-          <div class="absolute z-10 left-4 top-4 w-full">
-            <div class="text-2xl text-white font-bold">{{ item.name }}</div>
-            <div class="text-white text-base mt-2 font-bold">{{ getPlanCount(item.type) }}项</div>
+          class="flex-1 p-4 relative cursor-pointer rounded hover:opacity-95" @click="createPlan(item.type)"
+          style="flex-basis: calc(16.66% - 16px);">
+          <div class="absolute z-10 left-4 top-4">
+            <div class="text-white font-bold box-border"
+              :class="{ 'text-2xl': item.name.length <= 4, 'text-base leading-tight': item.name.length > 4 }">
+              <template v-if="item.name.length > 4">
+                <div>自助填报</div>
+                <div class="mt-1">{{ item.name.slice(4) }}</div>
+              </template>
+              <template v-else>
+                {{ item.name }}
+              </template>
+            </div>
+            <div class="text-white text-sm mt-2 font-bold">{{ getPlanCount(item.type) }}项</div>
           </div>
-          <img :src="item.image" :alt="item.name" class="absolute left-0 top-0 w-full h-24 object-cover z-0 rounded" />
+          <img :src="item.image" :alt="item.name" class="absolute left-0 top-0 w-full h-28 object-cover z-0 rounded"
+            :style="item.filterStyle" />
         </div>
       </div>
     </div>
@@ -137,6 +148,18 @@ export default {
           name: '特殊走访',
           type: '4',
           image: require('@/assets/images/box4.jpg')
+        },
+        {
+          name: '自助填报日常走访',
+          type: '5',
+          image: require('@/assets/images/box3.jpg'),
+          filterStyle: 'filter: brightness(0.8) sepia(0.3)'
+        },
+        {
+          name: '自助填报特殊走访',
+          type: '6',
+          image: require('@/assets/images/box4.jpg'),
+          filterStyle: 'filter: brightness(0.8) sepia(0.3)'
         }
       ],
       planCounts: [], // 添加计划数量数据

@@ -80,7 +80,6 @@ export default {
     }
   },
   created() {
-    this.getCode();
     this.getCookie();
   },
   methods: {
