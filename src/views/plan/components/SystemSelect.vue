@@ -28,20 +28,20 @@
                 <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree" :normalizer="normalizer"
                     placeholder="请选择供电所" multiple clearable :searchable="true" :disableBranchNodes="true" :limit="1"
                     :limitText="treeselectLimitText" class="w-96" appendToBody :z-index="9999"
-                    @input="handlePowerSupplyChange" />
+                    @input="handlePowerSupplyChange" @node:expand="handleNodeExpand" />
             </el-form-item>
         </div>
         <div v-if="isVisit">
             <el-form-item label="所属台区:" prop="towerIdList">
                 <treeselect v-model="formData.towerIdList" :options="towerIdListOption" :normalizer="normalizerTower"
                     :flat="true" :max-height="400" placeholder="请选择台区" multiple clearable :searchable="true" :limit="1"
-                    appendToBody :z-index="9999" :limitText="treeselectLimitText" class="w-96"
+                    appendToBody :z-index="9999" :limitText="treeselectLimitText" class="w-96" ref="treeselect"
                     @input="handleTowerChange" />
             </el-form-item>
         </div>
         <!-- 添加搜索框 -->
         <div class="mb-4 flex items-center">
-            <el-form-item label="客户名称:" prop="searchKeyword">
+            <el-form-item label="搜索条件" prop="searchKeyword">
                 <el-input v-model="searchKeyword" :placeholder="isVisit ? '请输入客户名称搜索' : '请输入台区名称搜索'"
                     style="width: 400px" clearable @keyup.enter.native="handleSearch" @clear="handleSearch">
                     <el-button slot="append" icon="el-icon-search" @click="handleSearch"></el-button>
@@ -155,6 +155,15 @@ export default {
 
     },
     methods: {
+        handleNodeExpand(node) {
+            this.$nextTick(() => {
+                const menu = this.$refs.treeselect.$el.querySelector('.vue-treeselect__menu');
+                if (menu) {
+                    menu.scrollTop = menu.scrollHeight; // Scrolls to the bottom
+                    // Alternatively, scroll to a specific child node if needed
+                }
+            });
+        },
         // 获取供电所树形数据
         async getPowerSupplyTree() {
             try {
@@ -307,10 +316,21 @@ export default {
         // Modify the handleSelectionChange method
         handleSelectionChange(val) {
             if (this.formData.isSelectAll !== 1) {
-                // 更新选中计数
-                this.selectedCount = this.formData.towerUserList ? this.formData.towerUserList.length : 0;
+                // 获取当前页的所有 ID
+                const currentPageIds = this.tableData.map((item) => ({
+                    towerId: item.towerId,
+                    customId: item.customId
+                }));
 
-                // 处理当前页的选中状态
+                // 保留不在当前页的选中项
+                let remainingSelections = this.formData.towerUserList.filter((item) => {
+                    return !currentPageIds.some(pageItem =>
+                        (this.isVisit && pageItem.customId === item.customId) ||
+                        (!this.isVisit && pageItem.towerId === item.towerId)
+                    );
+                });
+
+                // 将当前页的新选中项添加到结果中
                 const currentPageSelections = val.map((item) => ({
                     userId: item.userId,
                     userName: item.userName,
@@ -324,25 +344,13 @@ export default {
                     customId: item.customId,
                 }));
 
-                // 确保 towerUserList 存在且是数组
-                if (!this.formData.towerUserList) {
-                    this.formData.towerUserList = [];
-                }
+                // 合并保留的选中项和当前页的新选中项
+                this.formData.towerUserList = [...remainingSelections, ...currentPageSelections];
 
-                // 从 towerUserList 中移除当前页面的所有记录
-                this.formData.towerUserList = this.formData.towerUserList.filter((item) => {
-                    return !this.tableData.some(
-                        (pageItem) =>
-                            pageItem.towerId === item.towerId &&
-                            pageItem.customId === item.customId
-                    );
-                });
-
-                // 将当前页的选中项添加到 towerUserList
-                this.formData.towerUserList.push(...currentPageSelections);
-
-                // 更新选中计数并触发事件
+                // 更新选中计数
                 this.selectedCount = this.formData.towerUserList.length;
+
+                // 发出更新事件
                 this.$emit('input', this.formData.towerUserList);
 
                 // 如果手动取消了某些选择，更新全选状态
@@ -410,7 +418,7 @@ export default {
                                 // 部分选中状态，根据 towerUserList 进行勾选
                                 this.tableData.forEach((row) => {
                                     const shouldSelect = this.formData.towerUserList.some(
-                                        (item) => item.customId === row.customId
+                                        (item) => item.customId == row.customId
                                     )
                                     if (shouldSelect) {
                                         this.$refs.multipleTable.toggleRowSelection(row, true)
@@ -447,10 +455,10 @@ export default {
                                 // 维护选中计数为总数
                                 this.selectedCount = this.total
                             } else {
-                                // 部分选中状态，根据 towerUserList 进行勾选
+                                // 修改勾选逻辑：根据 towerId 和 userId 共同判断
                                 this.tableData.forEach((row) => {
                                     const shouldSelect = this.formData.towerUserList.some(
-                                        (item) => item.towerId === row.towerId
+                                        (item) => item.towerId === row.towerId && item.userId === row.userId
                                     )
                                     if (shouldSelect) {
                                         this.$refs.multipleTable.toggleRowSelection(row, true)

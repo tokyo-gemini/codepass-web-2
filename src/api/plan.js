@@ -84,7 +84,7 @@ export function asyncDownLoadTemplate(data) {
     params: data,
   });
 }
-// 下载自助填报模版
+// 下载自主填报模版
 export function asyncDownLoadSelfTemplate(data) {
   return request({
     url: '/selfPlanned/downloadTemplate',
@@ -93,7 +93,7 @@ export function asyncDownLoadSelfTemplate(data) {
     params: data,
   });
 }
-// 上传自助填报信息
+// 上传自主填报信息
 export function asyncUploadSelfInfo(data) {
   return request({
     url: '/selfPlanned/upload/file',
@@ -117,7 +117,7 @@ export function asyncDeletePlan(data) {
     params: data,  // 使用 params 而不是直接传值
   });
 }
-// 自助填报新增
+// 自主填报新增
 export function asyncAddSelfPlan(data) {
   return request({
     url: '/selfPlanned/add',
@@ -126,16 +126,16 @@ export function asyncAddSelfPlan(data) {
     data,
   });
 }
-// 自助填报编辑
+// 自主填报编辑
 export function asyncEditSelfPlan(data) {
   return request({
     url: '/selfPlanned/update',
-    method: 'put',
+    method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
     data,
   });
 }
-// 自助填报详情
+// 自主填报详情
 export function asyncGetSelfPlanDetail(id) {
   return request({
     url: `/selfPlanned/get/${id}`,

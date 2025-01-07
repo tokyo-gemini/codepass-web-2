@@ -8,7 +8,7 @@
                 <!-- 根据planType选择不同的对象选择组件 -->
                 <template v-if="isSelfReport">
                     <self-report-template v-model="formData.towerUserList" :plan-type="planType"
-                        @file-change="handleFileChange" />
+                        :customs-list="formData.customs" @file-change="handleFileChange" />
                 </template>
                 <template v-else>
                     <div class="rounded bg-white shadow w-full p-4">
@@ -60,10 +60,12 @@ import {
     asyncGetPlanOptions,
     asyncGetAreaList,
     asyncGetPlanDetail,
-    asyncGetCustomerTags,
     asyncGetCustomerList,
     asyncAddPlan,
-    asyncEditPlan
+    asyncEditPlan,
+    asyncAddSelfPlan,
+    asyncEditSelfPlan,
+    asyncGetSelfPlanDetail
 } from '@/api/plan'
 import { deptTreeSelect } from '@/api/system/user'
 import Treeselect from '@riophae/vue-treeselect'
@@ -150,15 +152,6 @@ export default {
         }
     },
     computed: {
-        currentPageSelections() {
-            return this.tableData.filter((row) => {
-                return this.formData.towerUserList.some(
-                    (item) =>
-                        item.customId === row.customId ||
-                        (item.towerId === row.towerId && item.userId === row.userId)
-                )
-            })
-        },
         // 走访
         isVisit() {
             return this.planType === '3' || this.planType === '4' || this.planType === '5' || this.planType === '6'
@@ -170,7 +163,7 @@ export default {
             if (this.isSelfReport) {
                 console.log(this.planType);
 
-                return this.planType === '5' ? '自助填报日常走访' : '自助填报特殊走访'
+                return this.planType === '5' ? '自主填报日常走访' : '自主填报特殊走访'
             }
             return '新增计划'
         },
@@ -180,9 +173,16 @@ export default {
         },
         // 是否需要显示完整时间选项（循环启用和到期计划）
         needFullTimeOptions() {
+            // 修改判断逻辑：自主填报走访与对应的普通走访使用相同的时间选项
+            if (this.planType === '5') { // 自主日常走访用日常走访的时间选项
+                return true // 因为普通日常走访(3)是需要完整时间选项的
+            } else if (this.planType === '6') { // 自主特殊走访用特殊走访的时间选项
+                return false // 因为普通特殊走访(4)不需要完整时间选项
+            }
+            // 原有的普通计划判断逻辑
             return this.planType === '1' || this.planType === '3'
         },
-        // 添加自助填报判断
+        // 添加自主填报判断
         isSelfReport() {
             return this.planType === '5' || this.planType === '6'
         }
@@ -197,97 +197,23 @@ export default {
             this.getPowerSupplyTree()
             this.getPlanDetail()
         },
-        // 加载客户标签根据搜索关键字
-        async loadCustomerTagOptions({ searchQuery, callback }) {
-            try {
-                // 调用 API 获取客户标签数据，传入搜索关键字
-                const res = await asyncGetCustomerTags({ keyword: searchQuery })
-                const options = res.data.map((item) => ({
-                    id: item.tagId,
-                    label: item.tagName
-                }))
-                // 将数据传递给回调函数
-                callback(null, options)
-            } catch (error) {
-                console.error('加载客户标签失败:', error)
-                callback(error)
-            }
-        },
-        treeselectLimitText(count) {
-            const findLabel = (tree, values) => {
-                const labels = []
-                const findNodeLabel = (tree, value) => {
-                    for (const node of tree) {
-                        if (node.id === value) {
-                            return node.label
-                        }
-                        if (node.children) {
-                            const label = findNodeLabel(node.children, value)
-                            if (label) {
-                                return label
-                            }
-                        }
-                    }
-                    return null
-                }
-                for (const value of values) {
-                    const label = findNodeLabel(this.powerSupplyTree, value)
-                    if (label) {
-                        labels.push(label)
-                    }
-                }
-                return labels
-            }
-            const labels = findLabel(this.powerSupplyTree, this.formData.powerSupply)
-            // Create a div containing multiple divs for each label
-            const contentVNodes = this.$createElement(
-                'div',
-                {},
-                labels.map((label) => {
-                    return this.$createElement('div', {}, label)
-                })
-            )
-            return this.$createElement(
-                'div',
-                {
-                    class: 'virtual-dom'
-                },
-                [
-                    this.$createElement(
-                        'el-popover',
-                        {
-                            props: {
-                                placement: 'top-start',
-                                width: 300,
-                                trigger: 'hover'
-                            },
-                            scopedSlots: {
-                                default: () => contentVNodes
-                            }
-                        },
-                        [
-                            this.$createElement(
-                                'span',
-                                {
-                                    slot: 'reference'
-                                },
-                                `和${count}个供电所`
-                            )
-                        ]
-                    )
-                ]
-            )
-        },
         // 如果是编辑页面，获取计划详情
         async getPlanDetail() {
             if (!this.$route.params.id) return
             try {
                 const { id } = this.$route.params
-                const res = await asyncGetPlanDetail(id)
+                // 根据是否是自主填报选择不同的详情接口
+                const res = this.isSelfReport
+                    ? await asyncGetSelfPlanDetail(id)
+                    : await asyncGetPlanDetail(id)
+
                 if (res.code === 200 && res.data) {
                     const data = res.data
-                    // 保存原始的 towerUserList，供后续勾选使用
-                    const originalTowerUserList = data.towerUserList || []
+                    // 保存原始的选择列表，区分自主填报和普通计划
+                    const originalList = this.isSelfReport
+                        ? (data.customs || [])  // 自主填报用 customs
+                        : (data.towerUserList || []) // 普通计划用 towerUserList
+
                     // 处理时间区间
                     if (data.startTime && data.endTime) {
                         data.taskTime = [new Date(data.startTime), new Date(data.endTime)]
@@ -307,7 +233,9 @@ export default {
                     // 更新表单数据
                     this.formData = {
                         ...data,
-                        towerUserList: originalTowerUserList // 确保保留原始的 towerUserList
+                        // 根据计划类型设置不同的字段名
+                        towerUserList: this.isSelfReport ? [] : originalList, // 普通计划
+                        customs: this.isSelfReport ? originalList : [] // 自主填报
                     }
                     // 设置基本信息
                     this.formBasicInfo = {
@@ -383,24 +311,6 @@ export default {
                 }
             }
         },
-        // 修改全选/取消全选处理
-        handleToggleSelectAll() {
-            if (this.formData.isSelectAll === 1) {
-                // 当前是全选状态，需要取消全选
-                this.$refs.multipleTable.clearSelection()
-                this.formData.isSelectAll = 0
-                this.selectedCount = 0
-                this.formData.towerUserList = []
-            } else {
-                // 当前不是全选状态，需要全选
-                this.formData.isSelectAll = 1
-                this.selectedCount = this.total
-                // 选中当前页的所有行
-                this.tableData.forEach((row) => {
-                    this.$refs.multipleTable.toggleRowSelection(row, true)
-                })
-            }
-        },
         // 回到计划管理页面
         handleBack() {
             this.$tab.closeOpenPage({ path: '/plan/index', title: '计划管理' })
@@ -421,33 +331,6 @@ export default {
                 this.powerSupplyTree = res.data || []
             } catch (error) {
                 console.error('获取供电所树形数据失败:', error)
-            }
-        },
-        // 转换树形数据结构
-        normalizer(node) {
-            if (node.children && !node.children.length) {
-                delete node.children
-            }
-            // 判断是否为叶子节点
-            node.disableCheck = node.children ? true : false
-            return {
-                id: node.id,
-                label: node.label,
-                children: node.children
-            }
-        },
-        normalizerCustomerTag(node) {
-            return {
-                id: node.tagId,
-                label: node.tagName
-            }
-        },
-        normalizerTower(node) {
-            return {
-                id: node.id,
-                label: node.label,
-                // 添加一些额外的属性来帮助识别
-                title: node.label // 用于tooltip显示完整信息
             }
         },
         // 修改 getObjectTable 方法，添加勾选逻辑
@@ -595,36 +478,6 @@ export default {
                 this.getObjectTable()
             }
         },
-        // 获取客户标签可选项
-        async getCustomerTagOptions() {
-            try {
-                const res = await asyncGetCustomerTags()
-                this.customerTagTree = res.data || []
-            } catch (error) {
-                console.error('获取客户标签失败:', error)
-            }
-        },
-        // 添加搜索方法
-        handleSearch() {
-            this.queryParams.pageNum = 1
-            this.getObjectTable()
-        },
-        // 修改日期格式化方法
-        formatDateTime(date) {
-            if (!date) return ''
-            const dt = date instanceof Date ? date : new Date(date)
-            if (isNaN(dt.getTime())) return ''
-
-            return dt.toLocaleDateString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            }).replace(/\//g, '-')
-        },
         // 添加保存方法
         async handleSubmit() {
             try {
@@ -632,9 +485,13 @@ export default {
 
                 // 修改验证逻辑: 如果是系统内选择且没有选中对象,或者是上传模板但没有文件
                 if (this.activeTab === 'system' && !this.formData.isSelectAll && !this.formData.towerUserList?.length) {
-                    this.$modal.msgWarning('请至少勾选一个台区或切换到上传模版进行导入！');
-                    return;
+                    if (!this.isSelfReport) {
+                        this.$modal.msgWarning('请至少勾选一个台区或切换到上传模版进行导入！');
+                        return;
+                    }
+
                 }
+
 
                 if (this.activeTab === 'upload' && !this.uploadFile) {
                     this.$modal.msgWarning('请选择要上传的文件！');
@@ -743,38 +600,56 @@ export default {
                     submitData.towerUserList = this.formData.towerUserList;
                 }
 
+                // 处理自主填报的选择列表
+                if (this.isSelfReport) {
+                    // 合并两个表格数据并去重
+                    const combined = [...(this.formData.customs || []), ...(this.formData.towerUserList || [])]
+                    const uniqueMap = {}
+                    const deduplicated = []
+                    for (const item of combined) {
+                        const key = `${item.tgNo || ''}-${item.consNo || ''}-${item.gridNo || ''}`
+                        if (!uniqueMap[key]) {
+                            uniqueMap[key] = true
+                            deduplicated.push(item)
+                        }
+                    }
+                    submitData.customs = deduplicated
+                    submitData.isSelectAll = 0
+                    delete submitData.towerUserList
+                }
+
                 // 编辑时需要添加planId
                 const { id } = this.$route.params;
-                if (id) {
-                    submitData.planId = id;
-                    // 创建FormData对象
-                    const formData = new FormData();
-                    // 将JSON数据转换为Blob并添加到FormData
-                    const jsonBlob = new Blob([JSON.stringify(submitData)], {
-                        type: 'application/json'
-                    });
-                    formData.append('dto', jsonBlob);
-                    if (this.uploadFile) {
-                        formData.append('file', this.uploadFile)
-                    }
-                    await asyncEditPlan(formData);
-                    this.$modal.msgSuccess('修改成功');
-                } else {
-                    const formData = new FormData();
-                    const jsonBlob = new Blob([JSON.stringify(submitData)], {
-                        type: 'application/json'
-                    });
-                    formData.append('dto', jsonBlob);
-                    if (this.uploadFile) {
-                        formData.append('file', this.uploadFile)
-                    }
-                    await asyncAddPlan(formData);
-                    this.$modal.msgSuccess('新增成功');
+                const formData = new FormData();
+                const jsonBlob = new Blob([JSON.stringify(submitData)], {
+                    type: 'application/json'
+                });
+                formData.append('dto', jsonBlob);
+
+                if (this.uploadFile) {
+                    formData.append('file', this.uploadFile)
                 }
+
+                // 根据是否是自主填报使用不同的接口
+                if (this.isSelfReport) {
+                    if (id) {
+                        await asyncEditSelfPlan(formData);
+                    } else {
+                        await asyncAddSelfPlan(formData);
+                    }
+                } else {
+                    if (id) {
+                        await asyncEditPlan(formData);
+                    } else {
+                        await asyncAddPlan(formData);
+                    }
+                }
+
+                this.$modal.msgSuccess(id ? '修改成功' : '新增成功');
                 this.handleBack();
             } catch (error) {
                 console.error('保存失败:', error);
-                // this.$modal.msgError(error.msg || '保存失败');
+                this.$modal.msgError(error.msg || '保存失败');
             }
         },
         // 重置表单

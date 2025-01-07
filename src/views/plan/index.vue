@@ -16,7 +16,7 @@
             <div class="text-white font-bold box-border"
               :class="{ 'text-2xl': item.name.length <= 4, 'text-base leading-tight': item.name.length > 4 }">
               <template v-if="item.name.length > 4">
-                <div>自助填报</div>
+                <div>自主填报</div>
                 <div class="mt-1">{{ item.name.slice(4) }}</div>
               </template>
               <template v-else>
@@ -150,13 +150,13 @@ export default {
           image: require('@/assets/images/box4.jpg')
         },
         {
-          name: '自助填报日常走访',
+          name: '自主填报日常走访',
           type: '5',
           image: require('@/assets/images/box3.jpg'),
           filterStyle: 'filter: brightness(0.8) sepia(0.3)'
         },
         {
-          name: '自助填报特殊走访',
+          name: '自主填报特殊走访',
           type: '6',
           image: require('@/assets/images/box4.jpg'),
           filterStyle: 'filter: brightness(0.8) sepia(0.3)'

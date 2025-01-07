@@ -1,7 +1,6 @@
 <template>
     <div class="rounded bg-white shadow w-full p-4">
         <div class="font-bold pb-4 flex items-center">
-            <div class="section-title">计划名称</div>
             <dict-tag :options="dict.type.plan_type_option" :value="planType" />
         </div>
 
@@ -99,7 +98,15 @@ export default {
         // 根据类型获取表单列表
         async getFormListByType() {
             try {
-                const res = await asyncGetPlanOptions(this.planType)
+                // 自主填报使用对应普通走访的表单
+                let type = this.planType
+                if (type === '5') { // 自主日常走访使用日常走访的表单
+                    type = '3'
+                } else if (type === '6') { // 自主特殊走访使用特殊走访的表单 
+                    type = '4'
+                }
+
+                const res = await asyncGetPlanOptions(type)
                 this.formList = res.data || []
             } catch (error) {
                 console.error('获取表单列表失败:', error)
