@@ -18,93 +18,11 @@
                         <el-tabs v-model="activeTab">
                             <!-- 系统内选择 tab -->
                             <el-tab-pane label="系统内选择" name="system">
-                                <!-- 添加说明信息 -->
-                                <div class="bg-gray-50 p-4 mb-4 rounded text-sm text-gray-600">
-                                    <div class="flex items-start gap-2">
-                                        <i class="el-icon-info-circle text-blue-500 mt-0.5"></i>
-                                        <div>
-                                            <p class="font-medium mb-2">系统内选择说明:</p>
-                                            <ul class="list-disc pl-4 space-y-1">
-                                                <li>您可以根据供电所、台区等条件筛选目标对象</li>
-                                                <li>支持按名称搜索快速定位特定对象</li>
-                                                <li>可以逐个勾选或使用全选功能批量选择</li>
-                                                <li>已选对象会在下方表格中显示,可随时调整</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <el-form-item label="所属供电所" prop="powerSupply">
-                                        <template #label>
-                                            <div class="flex items-center gap-1">
-                                                <span>所属供电所</span>
-                                                <el-tooltip content="选择计划执行的供电所范围" placement="top">
-                                                    <i class="el-icon-info text-gray-400 cursor-help"></i>
-                                                </el-tooltip>
-                                            </div>
-                                        </template>
-                                        <Treeselect v-model="formData.powerSupply" :options="powerSupplyTree"
-                                            :normalizer="normalizer" placeholder="请选择供电所" multiple clearable
-                                            :searchable="true" :disableBranchNodes="true" :limit="1"
-                                            :limitText="treeselectLimitText" class="w-96" appendToBody :z-index="9999"
-                                            @input="handlePowerSupplyChange" />
-                                    </el-form-item>
-                                </div>
-                                <div v-if="isVisit">
-                                    <el-form-item label="所属台区:" prop="towerIdList">
-                                        <treeselect v-model="formData.towerIdList" :options="towerIdListOption"
-                                            :normalizer="normalizerTower" :flat="true" :max-height="400"
-                                            placeholder="请选择台区" multiple clearable :searchable="true" :limit="1"
-                                            appendToBody :z-index="9999" :limitText="treeselectLimitText" class="w-96"
-                                            @input="handleTowerChange" />
-                                    </el-form-item>
-                                </div>
-                                <!-- 添加搜索框 -->
-                                <div class="mb-4 flex items-center">
-                                    <el-form-item label="客户名称:" prop="searchKeyword">
-                                        <el-input v-model="searchKeyword"
-                                            :placeholder="isVisit ? '请输入客户名称搜索' : '请输入台区名称搜索'" style="width: 400px"
-                                            clearable @keyup.enter.native="handleSearch" @clear="handleSearch">
-                                            <el-button slot="append" icon="el-icon-search"
-                                                @click="handleSearch"></el-button>
-                                        </el-input>
-                                    </el-form-item>
-                                </div>
-                                <div class="my-4">
-                                    <el-alert type="info" :closable="false">
-                                        <div class="flex items-center justify-between">
-                                            <span>
-                                                已选择
-                                                {{ formData.isSelectAll === 1 ? total : selectedCount }}
-                                                项
-                                            </span>
-                                            <el-button v-if="total || selectedCount" type="text"
-                                                @click="handleToggleSelectAll">
-                                                {{ formData.isSelectAll === 1 ? '取消全选' : '全选' }}
-                                            </el-button>
-                                        </div>
-                                    </el-alert>
-                                </div>
-                                <el-table :data="tableData" @selection-change="handleSelectionChange"
-                                    ref="multipleTable" empty-text="请选择供电所">
-                                    <el-table-column type="selection" width="55"></el-table-column>
-                                    <template v-if="isVisit">
-                                        <el-table-column prop="customName" label="客户名称"></el-table-column>
-                                        <el-table-column prop="towerName" label="所属台区"></el-table-column>
-                                        <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
-                                        <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
-                                        <el-table-column prop="areaName" label="所属供电公司"></el-table-column>
-                                        <el-table-column prop="provinceName" label="所属省公司"></el-table-column>
-                                    </template>
-                                    <template v-else>
-                                        <el-table-column prop="towerName" label="台区名称"></el-table-column>
-                                        <el-table-column prop="powerName" label="所属供电单位"></el-table-column>
-                                        <el-table-column prop="companyName" label="所属单位区县"></el-table-column>
-                                        <el-table-column prop="userName" label="所属城市网格经理"></el-table-column>
-                                    </template>
-                                </el-table>
-                                <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
-                                    :limit.sync="queryParams.pageSize" @pagination="getObjectTable" />
+                                <system-select v-model="formData.towerUserList" :plan-type="planType"
+                                    :is-visit="isVisit" :power-depts.sync="formData.powerSupply"
+                                    @update:selectedCount="val => selectedCount = val"
+                                    @update:total="val => total = val"
+                                    @update:isSelectAll="val => formData.isSelectAll = val" ref="multipleTable" />
                             </el-tab-pane>
                             <!-- 上传模版-->
                             <el-tab-pane label="上传模版" name="upload">
@@ -153,6 +71,7 @@ import PlanBasicInfo from './components/PlanBasicInfo.vue'
 import PlanTimeSettings from './components/PlanTimeSettings.vue'
 import UploadTemplate from './components/UploadTemplate.vue'
 import PageHeader from './components/PageHeader.vue'
+import SystemSelect from './components/SystemSelect.vue'
 import SelfReportTemplate from './components/SelfReportTemplate.vue'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import dayjs from 'dayjs';
@@ -165,7 +84,8 @@ export default {
         PlanBasicInfo,
         PlanTimeSettings,
         UploadTemplate,
-        SelfReportTemplate
+        SelfReportTemplate,
+        SystemSelect
     },
     dicts: ['plan_type_option'],
     data() {
@@ -722,11 +642,21 @@ export default {
                 }
 
                 // 处理提交数据
-                const submitData = Object.fromEntries(
-                    Object.entries(this.formData).filter(([key, value]) => value !== null)
-                );
-                submitData.towerUserList = this.formData.towerUserList;
-                submitData.planType = this.planType;
+                const submitData = {
+                    ...Object.fromEntries(
+                        Object.entries(this.formData).filter(([key, value]) => value !== null)
+                    ),
+                    powerIdList: this.formData.powerSupply, // 确保添加 powerIdList
+                    planType: this.planType // 明确添加 planType
+                };
+
+                // 如果是上传模版，强制设置isSelectAll为0
+                if (this.activeTab === 'upload') {
+                    submitData.isSelectAll = '0';
+                } else {
+                    submitData.isSelectAll = this.formData.isSelectAll;
+                    submitData.powerIdList = this.formData.powerSupply; // 再次确保添加
+                }
 
                 // 新增的话enabled 为1,否则根据原来的值
                 submitData.enabled = this.$route.params.id ? submitData.enabled : 1;
