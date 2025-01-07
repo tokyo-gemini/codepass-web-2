@@ -38,3 +38,20 @@ export const asyncGetDetail = (params) => {
     params,
   });
 };
+
+// 无单填报走访信息查询
+export const asyncGetNoFormList = (params) => {
+  return request({
+    url: '/search/get/self/page',
+    method: 'get',
+    params,
+  });
+};
+// 查看无单填报走访信息详情
+export const asyncGetNoFormDetail = (params) => {
+  return request({
+    url: '/search/get/self/info',
+    method: 'get',
+    params,
+  });
+};

@@ -3,219 +3,229 @@
     <el-tabs v-model="queryParams.type" class="mb-4" @tab-click="handleTypeChange">
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
+      <el-tab-pane label="无单查询" name="wd"></el-tab-pane>
     </el-tabs>
 
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="100px">
-      <!-- 公共筛选项 -->
-      <el-form-item label="所属供电所" prop="powerId">
-        <treeselect v-model="queryParams.powerId" :options="powerSupplyOptions" :normalizer="normalizer"
-          placeholder="请选择供电所" class="w-48" :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText"
-          @input="handlePowerSupplyChange" :clearable="true" :searchable="true" :default-expand-level="0" />
-      </el-form-item>
+    <!-- 无单查询组件 -->
+    <no-form-list v-if="queryParams.type === 'wd'" />
 
-      <el-form-item label="所属台区" prop="towerId">
-        <treeselect v-model="queryParams.towerId" :options="towerOptions" :normalizer="normalizer" placeholder="请选择台区"
-          class="w-48" :clearable="true" :searchable="true" :default-expand-level="0" />
-      </el-form-item>
+    <!-- 原有的走访和巡视查询内容 -->
+    <template v-else>
+      <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="100px">
+        <!-- 公共筛选项 -->
+        <el-form-item label="所属供电所" prop="powerId">
+          <treeselect v-model="queryParams.powerId" :options="powerSupplyOptions" :normalizer="normalizer"
+            placeholder="请选择供电所" class="w-48" :disableBranchNodes="true" :limit="1" :limitText="treeselectLimitText"
+            @input="handlePowerSupplyChange" :clearable="true" :searchable="true" :default-expand-level="0" />
+        </el-form-item>
 
-      <el-form-item :label="queryParams.type === 'zf' ? '走访日期' : '巡检日期'" prop="dispatchTime">
-        <el-date-picker v-model="dispatchTimeRange" type="daterange" range-separator="至" start-placeholder="开始日期"
-          end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleDateChange" />
-      </el-form-item>
+        <el-form-item label="所属台区" prop="towerId">
+          <treeselect v-model="queryParams.towerId" :options="towerOptions" :normalizer="normalizer" placeholder="请选择台区"
+            class="w-48" :clearable="true" :searchable="true" :default-expand-level="0" />
+        </el-form-item>
 
-      <!-- 走访特有筛选项 -->
-      <template v-if="queryParams.type === 'zf'">
-        <!-- 客户标签 - 独占一行 -->
-        <div class="w-full mb-4" v-if="false">
-          <el-form-item label="客户标签" prop="tagIdList" class="tag-form-item">
-            <div class="flex items-start gap-2">
-              <el-button size="small" type="primary" plain icon="el-icon-plus" @click="showTagDialog">添加标签</el-button>
-              <div class="flex-1 flex flex-wrap gap-2">
-                <!-- 当标签数量小于等于3个时直接显示 -->
-                <template v-if="selectedTags.length <= 3">
-                  <el-tag v-for="tag in selectedTags" :key="tag.id" closable size="small" @close="handleRemoveTag(tag)">
-                    {{ tag.label }}
-                  </el-tag>
-                </template>
-                <!-- 当标签数量大于3个时使用折叠面板 -->
-                <el-collapse-transition v-else>
-                  <div v-show="showAllTags" class="flex flex-wrap gap-2">
+        <el-form-item :label="queryParams.type === 'zf' ? '走访日期' : '巡检日期'" prop="dispatchTime">
+          <el-date-picker v-model="dispatchTimeRange" type="daterange" range-separator="至" start-placeholder="开始日期"
+            end-placeholder="结束日期" value-format="yyyy-MM-dd" @change="handleDateChange" />
+        </el-form-item>
+
+        <!-- 走访特有筛选项 -->
+        <template v-if="queryParams.type === 'zf'">
+          <!-- 客户标签 - 独占一行 -->
+          <div class="w-full mb-4" v-if="false">
+            <el-form-item label="客户标签" prop="tagIdList" class="tag-form-item">
+              <div class="flex items-start gap-2">
+                <el-button size="small" type="primary" plain icon="el-icon-plus" @click="showTagDialog">添加标签</el-button>
+                <div class="flex-1 flex flex-wrap gap-2">
+                  <!-- 当标签数量小于等于3个时直接显示 -->
+                  <template v-if="selectedTags.length <= 3">
                     <el-tag v-for="tag in selectedTags" :key="tag.id" closable size="small"
                       @close="handleRemoveTag(tag)">
                       {{ tag.label }}
                     </el-tag>
-                  </div>
-                </el-collapse-transition>
-                <!-- 展开/收起按钮 -->
-                <el-button v-if="selectedTags.length > 3" type="text" size="small" @click="showAllTags = !showAllTags">
-                  {{ showAllTags ? '收起' : `展开(${selectedTags.length})` }}
-                </el-button>
+                  </template>
+                  <!-- 当标签数量大于3个时使用折叠面板 -->
+                  <el-collapse-transition v-else>
+                    <div v-show="showAllTags" class="flex flex-wrap gap-2">
+                      <el-tag v-for="tag in selectedTags" :key="tag.id" closable size="small"
+                        @close="handleRemoveTag(tag)">
+                        {{ tag.label }}
+                      </el-tag>
+                    </div>
+                  </el-collapse-transition>
+                  <!-- 展开/收起按钮 -->
+                  <el-button v-if="selectedTags.length > 3" type="text" size="small"
+                    @click="showAllTags = !showAllTags">
+                    {{ showAllTags ? '收起' : `展开(${selectedTags.length})` }}
+                  </el-button>
+                </div>
               </div>
-            </div>
+            </el-form-item>
+          </div>
+
+          <el-form-item label="客户名称" prop="customName">
+            <el-input v-model="queryParams.customName" placeholder="请输入客户名称" clearable />
           </el-form-item>
-        </div>
+        </template>
 
-        <el-form-item label="客户名称" prop="customName">
-          <el-input v-model="queryParams.customName" placeholder="请输入客户名称" clearable />
+        <!-- 公共筛选项续 -->
+        <el-form-item label="计划工单编号/申请编号" prop="formDataId">
+          <el-input v-model="queryParams.formDataId" placeholder="计划工单编号/申请编号" clearable />
         </el-form-item>
-      </template>
 
-      <!-- 公共筛选项续 -->
-      <el-form-item label="计划工单编号/申请编号" prop="formDataId">
-        <el-input v-model="queryParams.formDataId" placeholder="计划工单编号/申请编号" clearable />
-      </el-form-item>
+        <el-form-item label="工单类型" prop="formType">
+          <el-select v-model="queryParams.formType" placeholder="请选择工单类型" @change="handleFormTypeChange" clearable>
+            <el-option v-for="item in formTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item label="工单类型" prop="formType">
-        <el-select v-model="queryParams.formType" placeholder="请选择工单类型" @change="handleFormTypeChange" clearable>
-          <el-option v-for="item in formTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
+        <el-form-item label="来源表单" prop="formId">
+          <el-select v-model="queryParams.formId" placeholder="请选择来源表单" clearable>
+            <el-option v-for="item in formOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item label="来源表单" prop="formId">
-        <el-select v-model="queryParams.formId" placeholder="请选择来源表单" clearable>
-          <el-option v-for="item in formOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
+        <el-form-item label="结果状态" prop="statusDataName">
+          <el-select v-model="queryParams.statusDataName" placeholder="请选择结果状态" clearable>
+            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item label="结果状态" prop="statusDataName">
-        <el-select v-model="queryParams.statusDataName" placeholder="请选择结果状态" clearable>
-          <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
+        <el-form-item label="执行状态" prop="formStatus">
+          <el-select v-model="queryParams.formStatus" placeholder="请选择执行状态" clearable>
+            <el-option v-for="item in formStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item label="执行状态" prop="formStatus">
-        <el-select v-model="queryParams.formStatus" placeholder="请选择执行状态" clearable>
-          <el-option v-for="item in formStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+          <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
 
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+      <!-- 表格顶部操作区 -->
+      <div class="mb-4 w-full flex justify-end items-center">
+        <el-button type="text" icon="el-icon-setting" @click="showColumnSettings">列设置</el-button>
+      </div>
 
-    <!-- 表格顶部操作区 -->
-    <div class="mb-4 w-full flex justify-end items-center">
-      <el-button type="text" icon="el-icon-setting" @click="showColumnSettings">列设置</el-button>
-    </div>
-
-    <el-table v-loading="loading" :data="visitList" :show-header="hasFormList">
-      <!-- 没有来源表单时显示的提示 -->
-      <template slot="empty">
-        <el-empty :description="emptyText"></el-empty>
-      </template>
-      <!-- 固定列 -->
-      <el-table-column label="计划工单编号/申请编号" align="center" prop="formDataId" width="120" />
-      <el-table-column label="工单类型" align="center" prop="formType" width="120">
-        <template slot-scope="scope">
-          <el-tooltip :content="getFormTypeText(scope.row.formType)" placement="top">
-            <span>{{ getFormTypeText(scope.row.formType) }}</span>
-          </el-tooltip>
+      <el-table v-loading="loading" :data="visitList" :show-header="hasFormList">
+        <!-- 没有来源表单时显示的提示 -->
+        <template slot="empty">
+          <el-empty :description="emptyText"></el-empty>
         </template>
-      </el-table-column>
-
-      <!-- 动态列 -->
-      <el-table-column v-for="col in dynamicColumns.filter(col => col.visible)" :key="col.prop" align="center"
-        class-name="dynamic-column">
-        <template slot="header">
-          <div class="dynamic-column-header">
-            <span>{{ col.label }}</span>
-            <el-tooltip :content="`编号:${col.prop}`" placement="top">
-              <i class="el-icon-info dynamic-column-icon"></i>
+        <!-- 固定列 -->
+        <el-table-column label="计划工单编号/申请编号" align="center" prop="formDataId" width="120" />
+        <el-table-column label="工单类型" align="center" prop="formType" width="120">
+          <template slot-scope="scope">
+            <el-tooltip :content="getFormTypeText(scope.row.formType)" placement="top">
+              <span>{{ getFormTypeText(scope.row.formType) }}</span>
             </el-tooltip>
-          </div>
-        </template>
-      </el-table-column>
+          </template>
+        </el-table-column>
 
-      <!-- 固定列(继续) -->
-      <el-table-column label="创建时间" align="center" prop="createTime" width="160">
-        <template slot-scope="scope">
-          {{ scope.row.createTime ? parseTime(scope.row.createTime) : '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="处理时间" align="center" prop="submitTime" width="160">
-        <template slot-scope="scope">
-          {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="结果状态" align="center" prop="statusDataName">
-        <template slot-scope="scope">
-          {{ scope.row.statusDataName || '-' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="执行状态" align="center" prop="formStatus">
-        <template slot-scope="scope">
-          <el-tag :type="getFormStatusType(scope.row.formStatus)">
-            {{ getFormStatusText(scope.row.formStatus) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="上报人" align="center" prop="userName" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100" fixed="right">
-        <template slot-scope="scope">
-          <el-button size="mini" type="text" icon="el-icon-view" @click="handleView(scope.row)">查看</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+        <!-- 动态列 -->
+        <el-table-column v-for="col in dynamicColumns.filter(col => col.visible)" :key="col.prop" align="center"
+          class-name="dynamic-column">
+          <template slot="header">
+            <div class="dynamic-column-header">
+              <span>{{ col.label }}</span>
+              <el-tooltip :content="`编号:${col.prop}`" placement="top">
+                <i class="el-icon-info dynamic-column-icon"></i>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
 
-    <!-- 列设置弹窗 -->
-    <el-dialog title="列设置" :visible.sync="columnSettingsVisible" width="500px" append-to-body
-      custom-class="column-settings-dialog">
-      <div class="column-settings-content">
-        <div class="mb-4 flex justify-between items-center">
-          <el-input v-model="columnSearchKeyword" placeholder="搜索列名" prefix-icon="el-icon-search" clearable
-            class="w-64" />
-          <div>
-            <el-button type="text" @click="selectAllColumns">全选</el-button>
-            <el-button type="text" @click="unselectAllColumns">取消全选</el-button>
+        <!-- 固定列(继续) -->
+        <el-table-column label="创建时间" align="center" prop="createTime" width="160">
+          <template slot-scope="scope">
+            {{ scope.row.createTime ? parseTime(scope.row.createTime) : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="处理时间" align="center" prop="submitTime" width="160">
+          <template slot-scope="scope">
+            {{ scope.row.submitTime ? parseTime(scope.row.submitTime) : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="结果状态" align="center" prop="statusDataName">
+          <template slot-scope="scope">
+            {{ scope.row.statusDataName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="执行状态" align="center" prop="formStatus">
+          <template slot-scope="scope">
+            <el-tag :type="getFormStatusType(scope.row.formStatus)">
+              {{ getFormStatusText(scope.row.formStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="上报人" align="center" prop="userName" />
+        <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100" fixed="right">
+          <template slot-scope="scope">
+            <el-button size="mini" type="text" icon="el-icon-view" @click="handleView(scope.row)">查看</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 列设置弹窗 -->
+      <el-dialog title="列设置" :visible.sync="columnSettingsVisible" width="500px" append-to-body
+        custom-class="column-settings-dialog">
+        <div class="column-settings-content">
+          <div class="mb-4 flex justify-between items-center">
+            <el-input v-model="columnSearchKeyword" placeholder="搜索列名" prefix-icon="el-icon-search" clearable
+              class="w-64" />
+            <div>
+              <el-button type="text" @click="selectAllColumns">全选</el-button>
+              <el-button type="text" @click="unselectAllColumns">取消全选</el-button>
+            </div>
           </div>
+
+          <el-checkbox-group v-model="selectedColumns" class="column-list">
+            <el-checkbox v-for="column in filteredDynamicColumns" :key="column.prop" :label="column.prop"
+              class="column-item">
+              {{ column.label }}
+            </el-checkbox>
+          </el-checkbox-group>
         </div>
+        <div slot="footer">
+          <el-button @click="columnSettingsVisible = false">取 消</el-button>
+          <el-button type="primary" @click="saveColumnSettings">确 定</el-button>
+        </div>
+      </el-dialog>
 
-        <el-checkbox-group v-model="selectedColumns" class="column-list">
-          <el-checkbox v-for="column in filteredDynamicColumns" :key="column.prop" :label="column.prop"
-            class="column-item">
-            {{ column.label }}
-          </el-checkbox>
-        </el-checkbox-group>
-      </div>
-      <div slot="footer">
-        <el-button @click="columnSettingsVisible = false">取 消</el-button>
-        <el-button type="primary" @click="saveColumnSettings">确 定</el-button>
-      </div>
-    </el-dialog>
+      <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
+        @pagination="getList" />
 
-    <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
-      @pagination="getList" />
-
-    <!-- 查看详情弹窗 -->
-    <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
-        <el-descriptions-item label="客户ID">{{ detailInfo.customId }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ detailInfo.phoneNumber }}</el-descriptions-item>
-        <el-descriptions-item label="所属台区">{{ detailInfo.towerName }}</el-descriptions-item>
-        <el-descriptions-item label="台区容量">{{ detailInfo.towerVolume }}</el-descriptions-item>
-        <el-descriptions-item label="台区ID">{{ detailInfo.towerId }}</el-descriptions-item>
-        <el-descriptions-item :span="2" label="详细地址">{{ detailInfo.address }}</el-descriptions-item>
-        <el-descriptions-item label="设备用户名称">{{ detailInfo.deviceUserName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="设备用户电话">{{ detailInfo.deviceUserPhoneNumber || '-' }}</el-descriptions-item>
-      </el-descriptions>
-
-      <!-- 动态表单数据展示 -->
-      <div class="mt-4" v-if="detailInfo.formWidgetList">
-        <div class="font-bold mb-2">表单数据</div>
+      <!-- 查看详情弹窗 -->
+      <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
         <el-descriptions :column="2" border>
-          <el-descriptions-item v-for="item in detailInfo.formWidgetList" :key="item.prop" :label="item.label">
-            {{ item.value || '-' }}
-          </el-descriptions-item>
+          <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
+          <el-descriptions-item label="客户ID">{{ detailInfo.customId }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ detailInfo.phoneNumber }}</el-descriptions-item>
+          <el-descriptions-item label="所属台区">{{ detailInfo.towerName }}</el-descriptions-item>
+          <el-descriptions-item label="台区容量">{{ detailInfo.towerVolume }}</el-descriptions-item>
+          <el-descriptions-item label="台区ID">{{ detailInfo.towerId }}</el-descriptions-item>
+          <el-descriptions-item :span="2" label="详细地址">{{ detailInfo.address }}</el-descriptions-item>
+          <el-descriptions-item label="设备用户名称">{{ detailInfo.deviceUserName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="设备用户电话">{{ detailInfo.deviceUserPhoneNumber || '-' }}</el-descriptions-item>
         </el-descriptions>
-      </div>
-    </el-dialog>
+
+        <!-- 动态表单数据展示 -->
+        <div class="mt-4" v-if="detailInfo.formWidgetList">
+          <div class="font-bold mb-2">表单数据</div>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item v-for="item in detailInfo.formWidgetList" :key="item.prop" :label="item.label">
+              {{ item.value || '-' }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </el-dialog>
+    </template>
   </div>
 </template>
 
 <script>
+import NoFormList from './noForm.vue'
 import { asyncGetVisitList, asyncGetWorkOrderType, asyncGetSourceForm, asyncGetFormControls, asyncGetDetail } from "@/api/synthesize";
 import { deptTreeSelect } from "@/api/system/user";
 import Treeselect from "@riophae/vue-treeselect";
@@ -223,7 +233,10 @@ import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
   name: "SynthesizePage",
-  components: { Treeselect },
+  components: {
+    Treeselect,
+    NoFormList
+  },
   data() {
     return {
       // 激活的标签页
@@ -512,6 +525,10 @@ export default {
     },
     /** 处理查询类型变化 */
     async handleTypeChange() {
+      if (this.queryParams.type === 'wd') {
+        return; // 无单查询不需要加载工单类型
+      }
+
       // 先清空工单类型相关数据
       this.formTypeOptions = [];
       this.queryParams.formType = '';
@@ -775,77 +792,3 @@ export default {
   }
 };
 </script>
-
-<style lang="scss" scoped>
-.column-settings-dialog {
-  .column-settings-content {
-    max-height: 400px;
-    overflow-y: auto;
-  }
-
-  .column-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-  }
-
-  .column-item {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-
-    &:hover {
-      background-color: #f5f7fa;
-    }
-  }
-}
-
-/* 详情弹窗样式 */
-:deep(.el-dialog__body) {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-:deep(.el-descriptions-item__label) {
-  width: 120px;
-  background-color: #fafafa;
-}
-
-/* 表格内容和动态列表头样式 */
-:deep(.el-table) {
-  .flex-col {
-    span {
-      line-height: 1.4;
-
-      &:not(:last-child) {
-        border-bottom: 1px dashed #ebeef5;
-      }
-    }
-
-    span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 100%;
-    }
-  }
-
-  /* 动态列样式 */
-  .dynamic-column {
-    .dynamic-column-header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-
-    .dynamic-column-icon {
-      font-size: 14px;
-      color: #409EFF;
-    }
-  }
-}
-</style>

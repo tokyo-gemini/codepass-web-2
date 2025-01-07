@@ -53,6 +53,7 @@ import DictData from '@/components/DictData';
 
 import Vant from 'vant';
 import VmForm from '@/vform/VmFormDesigner.umd.min.js'; //引入VForm库
+import 'vant/lib/index.css';	//引入vant样式
 
 import 'vant/lib/index.css';
 import '@/vform/VmFormDesigner.css';
