@@ -71,18 +71,23 @@
                 <el-descriptions-item label="网格员编号">{{ detailInfo.gridNo || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="网格员名称">{{ detailInfo.gridName || '-' }}</el-descriptions-item>
             </el-descriptions>
-            <vm-form-render :form-json="detailInfo.formJson" :formConfig="detailInfo.formConfig" view-mode
-                :form-data="detailInfo.formData" ref="vmFormRef">
+            <!-- 添加图片预览区域 -->
+            <div v-if="imageList.length > 0" class="image-preview mt-4">
+                <div class="mb-2">走访图片</div>
+                <div class="image-list ">
+                    <el-image v-for="(img, index) in imageList" :key="index" :src="baseURL + img.url"
+                        :preview-src-list="previewList" fit="cover" class="preview-image">
+                        <div slot="error" class="image-slot">
+                            <i class="el-icon-picture-outline"></i>
+                        </div>
+                    </el-image>
+                </div>
+            </div>
+
+            <!-- 修改表单渲染,添加组件过滤 -->
+            <vm-form-render :form-json="filterUploadWidgets(detailInfo.formJson)" :form-config="detailInfo.formConfig"
+                view-mode :form-data="detailInfo.formData" ref="vmFormRef">
             </vm-form-render>
-            <!-- 动态表单数据展示 -->
-            <!-- <div class="mt-4" v-if="detailInfo.jsonData">
-                <div class="font-bold mb-2">表单数据</div>
-                <el-descriptions :column="2" border>
-                    <el-descriptions-item v-for="item in detailInfo.jsonData" :key="item.prop" :label="item.label">
-                        {{ item.value || '-' }}
-                    </el-descriptions-item>
-                </el-descriptions>
-            </div> -->
         </el-dialog>
     </div>
 </template>
@@ -112,6 +117,9 @@ export default {
             },
             detailVisible: false, // 详情弹窗显示状态
             detailInfo: {}, // 详情数据
+            imageList: [], // 存储图片列表
+            previewList: [], // 图片预览列表
+            baseURL: process.env.VUE_APP_BASE_API // 基础URL
         };
     },
     created() {
@@ -157,6 +165,17 @@ export default {
         getFormTypeText(type) {
             return this.formTypeMap[type] || `未知类型(${type})`;
         },
+        // 添加过滤上传组件的方法
+        filterUploadWidgets(formJson) {
+            if (!formJson?.widgetList) return formJson
+
+            return {
+                ...formJson,
+                widgetList: formJson.widgetList.filter(widget =>
+                    widget.type !== 'm-picture-upload'
+                )
+            }
+        },
         /** 查看按钮操作 */
         async handleView(row) {
             try {
@@ -166,15 +185,25 @@ export default {
 
                 const res = await asyncGetNoFormDetail(params);
                 if (res.code === 200) {
+                    // 解析表单数据
+                    const formData = JSON.parse(res.data.jsonData || '{}')
+
                     this.detailInfo = {
                         ...res.data.custom,
-                        formJson: { widgetList: JSON.parse(res.data.widgetList), formConfig: JSON.parse(res.data.formConfig) },
-                        formData: JSON.parse(res.data.jsonData),
+                        formJson: {
+                            widgetList: JSON.parse(res.data.widgetList),
+                            formConfig: JSON.parse(res.data.formConfig)
+                        },
+                        formData,
                         optionData: JSON.parse(res.data.optionData),
                     };
+
+                    // 处理图片数据
+                    this.imageList = formData.mpictureupload97342 || []
+                    this.previewList = this.imageList.map(img => this.baseURL + img.url)
+
                     this.$nextTick(() => {
                         this.$refs.vmFormRef?.disableForm();
-
                     });
                     this.detailVisible = true;
                 } else {
@@ -200,5 +229,31 @@ export default {
 
 .mb-2 {
     margin-bottom: 0.5rem;
+}
+
+.image-preview {
+    .image-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .preview-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .image-slot {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        background: #f5f7fa;
+        color: #909399;
+        font-size: 30px;
+    }
 }
 </style>
