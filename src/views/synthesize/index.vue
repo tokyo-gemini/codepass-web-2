@@ -4,11 +4,13 @@
       <el-tab-pane label="无单查询" name="wd"></el-tab-pane>
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
+      <el-tab-pane label="自主填报" name="zz"></el-tab-pane>
     </el-tabs>
 
     <!-- 无单查询组件 -->
     <no-form-list v-if="queryParams.type === 'wd'" />
-
+    <!-- 自主填报组件 -->
+    <self-report-list v-else-if="queryParams.type === 'zz'" />
     <!-- 原有的走访和巡视查询内容 -->
     <template v-else>
       <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="100px">
@@ -196,7 +198,7 @@
       <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
         @pagination="getList" />
 
-      <!-- 查看详情弹窗 -->
+      <!-- 修改查看详情弹窗 -->
       <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
@@ -210,15 +212,23 @@
           <el-descriptions-item label="设备用户电话">{{ detailInfo.deviceUserPhoneNumber || '-' }}</el-descriptions-item>
         </el-descriptions>
 
-        <!-- 动态表单数据展示 -->
-        <div class="mt-4" v-if="detailInfo.formWidgetList">
-          <div class="font-bold mb-2">表单数据</div>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item v-for="item in detailInfo.formWidgetList" :key="item.prop" :label="item.label">
-              {{ item.value || '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
+        <!-- 添加图片预览区域 -->
+        <div v-if="imageList.length > 0" class="image-preview mt-4">
+          <div class="mb-2">走访图片</div>
+          <div class="image-list">
+            <el-image v-for="(img, index) in imageList" :key="index" :src="baseURL + img.url"
+              :preview-src-list="previewList" fit="cover" class="preview-image">
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+              </div>
+            </el-image>
+          </div>
         </div>
+
+        <!-- 使用 vm-form-render 并过滤上传组件 -->
+        <vm-form-render :form-json="filterUploadWidgets(detailInfo.formJson)" :form-config="detailInfo.formConfig"
+          view-mode :form-data="detailInfo.formData" ref="vmFormRef">
+        </vm-form-render>
       </el-dialog>
     </template>
   </div>
@@ -226,6 +236,7 @@
 
 <script>
 import NoFormList from './noForm.vue'
+import SelfReportList from './selfReport.vue'
 import { asyncGetVisitList, asyncGetWorkOrderType, asyncGetSourceForm, asyncGetFormControls, asyncGetDetail } from "@/api/synthesize";
 import { deptTreeSelect } from "@/api/system/user";
 import Treeselect from "@riophae/vue-treeselect";
@@ -235,7 +246,8 @@ export default {
   name: "SynthesizePage",
   components: {
     Treeselect,
-    NoFormList
+    NoFormList,
+    SelfReportList
   },
   data() {
     return {
@@ -306,6 +318,9 @@ export default {
         '7': '默认走访',
         '8': '默认巡视',
       },
+      imageList: [], // 添加图片列表
+      previewList: [], // 添加预览列表
+      baseURL: process.env.VUE_APP_BASE_API, // 添加基础URL
     };
   },
   async created() {
@@ -484,14 +499,35 @@ export default {
           formType: row.formType,
           type: this.queryParams.type
         };
-
         const res = await asyncGetDetail(params);
-        this.detailInfo = res.data;
-        this.detailVisible = true;
+        if (res.code === 200) {
+          const formData = JSON.parse(res.data.jsonData || '{}');
+          const widgetList = JSON.parse(res.data.widgetList || '[]');
 
+          this.detailInfo = {
+            ...res.data,
+          };
+
+          // 查找类型为 'm-picture-upload' 的组件ID
+          const pictureWidget = widgetList.find(widget => widget.type === 'm-picture-upload');
+          if (pictureWidget) {
+            this.imageList = formData[pictureWidget.id] || [];
+            this.previewList = this.imageList.map(img => this.baseURL + img.url);
+          } else {
+            this.imageList = [];
+            this.previewList = [];
+          }
+
+          this.$nextTick(() => {
+            this.$refs.vmFormRef?.disableForm();
+          });
+          this.detailVisible = true;
+        } else {
+          this.$message.error(res.msg || '获取详情失败');
+        }
       } catch (error) {
         console.error('获取详情失败:', error);
-        // this.$modal.msgError('获取详情失败');
+        this.$message.error('获取详情失败');
       }
     },
     /** 显示标签选择弹窗 */
@@ -525,8 +561,8 @@ export default {
     },
     /** 处理查询类型变化 */
     async handleTypeChange() {
-      if (this.queryParams.type === 'wd') {
-        return; // 无单查询不需要加载工单类型
+      if (this.queryParams.type === 'wd' || this.queryParams.type === 'zz') {
+        return; // 无单查询和自主填报不需要加载工单类型
       }
 
       // 先清空工单类型相关数据
@@ -789,6 +825,54 @@ export default {
     getFormTypeText(type) {
       return this.formTypeMap[type] || `未知类型(${type})`;
     },
+    // 添加过滤上传组件的方法
+    filterUploadWidgets(formJson) {
+      if (!formJson?.widgetList) return formJson;
+
+      return {
+        ...formJson,
+        widgetList: formJson.widgetList.filter(widget =>
+          widget.type !== 'm-picture-upload'
+        )
+      }
+    },
   }
 };
 </script>
+
+<style scoped>
+/* 添加图片预览相关样式 */
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.image-preview {
+  .image-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .preview-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .image-slot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    background: #f5f7fa;
+    color: #909399;
+    font-size: 30px;
+  }
+}
+</style>

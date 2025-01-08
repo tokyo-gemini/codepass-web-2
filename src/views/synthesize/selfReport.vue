@@ -1,13 +1,17 @@
 <template>
     <div class="app-container">
-        <!-- 添加查询表单 -->
-        <div class="w-full flex justify-end">
-            <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
-                <el-form-item>
-                    <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
-                </el-form-item>
-            </el-form>
-        </div>
+        <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
+            <el-form-item label="表单类型" prop="formType">
+                <el-select v-model="queryParams.formType" placeholder="请选择表单类型" clearable @change="handleQuery">
+                    <el-option label="自主填报日常走访" :value="5" />
+                    <el-option label="自主填报特殊走访" :value="6" />
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+                <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
+            </el-form-item>
+        </el-form>
 
         <el-table v-loading="loading" :data="visitList">
             <!-- 没有数据时显示的提示 -->
@@ -22,16 +26,6 @@
                     <el-tooltip :content="getFormTypeText(scope.row.formType)" placement="top">
                         <span>{{ getFormTypeText(scope.row.formType) }}</span>
                     </el-tooltip>
-                </template>
-            </el-table-column>
-
-            <!-- 动态列 -->
-            <el-table-column v-for="col in dynamicColumns.filter(col => col.visible)" :key="col.prop" align="center"
-                class-name="dynamic-column">
-                <template slot="header">
-                    <div class="dynamic-column-header">
-                        <span>{{ col.label }}</span>
-                    </div>
                 </template>
             </el-table-column>
 
@@ -66,7 +60,8 @@
             </el-table-column>
         </el-table>
 
-        <pagination v-show="total > 0" :total="total" :page.sync="page" :limit.sync="size" @pagination="getList" />
+        <pagination v-show="total > 0" :total="total" :page.sync="queryParams.pageNum"
+            :limit.sync="queryParams.pageSize" @pagination="getList" />
 
         <!-- 查看详情弹窗 -->
         <el-dialog title="详情查看" :visible.sync="detailVisible" width="700px" append-to-body destroy-on-close>
@@ -80,10 +75,11 @@
                 <el-descriptions-item label="网格员编号">{{ detailInfo.gridNo || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="网格员名称">{{ detailInfo.gridName || '-' }}</el-descriptions-item>
             </el-descriptions>
+
             <!-- 添加图片预览区域 -->
             <div v-if="imageList.length > 0" class="image-preview mt-4">
                 <div class="mb-2">走访图片</div>
-                <div class="image-list ">
+                <div class="image-list">
                     <el-image v-for="(img, index) in imageList" :key="index" :src="baseURL + img.url"
                         :preview-src-list="previewList" fit="cover" class="preview-image">
                         <div slot="error" class="image-slot">
@@ -93,7 +89,7 @@
                 </div>
             </div>
 
-            <!-- 修改表单渲染,添加组件过滤 -->
+            <!-- 使用 vm-form-render 并过滤上传组件 -->
             <vm-form-render :form-json="filterUploadWidgets(detailInfo.formJson)" :form-config="detailInfo.formConfig"
                 view-mode :form-data="detailInfo.formData" ref="vmFormRef">
             </vm-form-render>
@@ -102,39 +98,29 @@
 </template>
 
 <script>
-import { asyncGetNoFormList, asyncGetNoFormDetail } from "@/api/synthesize"; // 需要新增这个API
+import { asyncGetNoFormList, asyncGetNoFormDetail } from "@/api/synthesize";
 
 export default {
-    name: "NoFormList",
+    name: "SelfReportList",
     data() {
         return {
             loading: false,
+            showSearch: true,
             visitList: [],
             total: 0,
-            page: 1,
-            size: 10,
-            dynamicColumns: [], // 与主页面相同的动态列配置
-            formTypeMap: {
-                '1': '日常巡视',
-                '2': '特殊巡视',
-                '3': '日常走访',
-                '4': '特殊走访',
-                '5': '工单走访',
-                '6': '工单巡视',
-                '7': '默认走访',
-                '8': '默认巡视',
-            },
-            detailVisible: false, // 详情弹窗显示状态
-            detailInfo: {}, // 详情数据
-            imageList: [], // 存储图片列表
-            previewList: [], // 图片预览列表
-            baseURL: process.env.VUE_APP_BASE_API, // 基础URL
-            showSearch: true,
             queryParams: {
-                formDataId: '',
                 pageNum: 1,
                 pageSize: 10,
-                formType: 7, // 默认的 formType
+                formType: 5, // 默认选中自主填报日常走访
+            },
+            detailVisible: false,
+            detailInfo: {},
+            imageList: [],
+            previewList: [],
+            baseURL: process.env.VUE_APP_BASE_API,
+            formTypeMap: {
+                '5': '自主填报日常走访',
+                '6': '自主填报特殊走访'
             }
         };
     },
@@ -146,53 +132,27 @@ export default {
             this.loading = true;
             try {
                 const res = await asyncGetNoFormList({
-                    pageNum: this.page,
-                    pageSize: this.size,
-                    formType: 7,
-                    formDataId: this.queryParams.formDataId // 添加搜索条件
+                    ...this.queryParams,
+                    type: 'zz' // 自主填报类型
                 });
                 this.visitList = res.rows || [];
                 this.total = res.total || 0;
             } catch (error) {
-                console.error('获取无单列表失败:', error);
+                console.error('获取自主填报列表失败:', error);
                 this.$modal.msgError('获取列表失败');
             } finally {
                 this.loading = false;
             }
         },
-        getFormStatusType(status) {
-            const statusMap = {
-                '0': 'danger',    // 超时未完成
-                '1': 'info',      // 已创建
-                '2': 'warning',   // 进行中
-                '3': 'success',   // 按时完成
-                '4': 'warning'    // 超时完成
-            };
-            return statusMap[status] || 'info';
+        // 查询按钮操作
+        handleQuery() {
+            this.queryParams.pageNum = 1;
+            this.getList();
         },
-        getFormStatusText(status) {
-            const statusMap = {
-                '0': '超时未完成',
-                '1': '已创建',
-                '2': '进行中',
-                '3': '按时完成',
-                '4': '超时完成'
-            };
-            return statusMap[status] || '未知状态';
-        },
-        getFormTypeText(type) {
-            return this.formTypeMap[type] || `未知类型(${type})`;
-        },
-        // 添加过滤上传组件的方法
-        filterUploadWidgets(formJson) {
-            if (!formJson?.widgetList) return formJson
-
-            return {
-                ...formJson,
-                widgetList: formJson.widgetList.filter(widget =>
-                    widget.type !== 'm-picture-upload'
-                )
-            }
+        // 重置按钮操作
+        resetQuery() {
+            this.resetForm("queryForm");
+            this.handleQuery();
         },
         /** 查看按钮操作 */
         async handleView(row) {
@@ -238,17 +198,38 @@ export default {
                 this.$message.error('获取详情失败');
             }
         },
-        /** 搜索按钮操作 */
-        handleQuery() {
-            this.page = 1;
-            this.getList();
+        getFormStatusType(status) {
+            const statusMap = {
+                '0': 'danger',    // 超时未完成
+                '1': 'info',      // 已创建
+                '2': 'warning',   // 进行中
+                '3': 'success',   // 按时完成
+                '4': 'warning'    // 超时完成
+            };
+            return statusMap[status] || 'info';
         },
+        getFormStatusText(status) {
+            const statusMap = {
+                '0': '超时未完成',
+                '1': '已创建',
+                '2': '进行中',
+                '3': '按时完成',
+                '4': '超时完成'
+            };
+            return statusMap[status] || '未知状态';
+        },
+        getFormTypeText(type) {
+            return this.formTypeMap[type] || `未知类型(${type})`;
+        },
+        filterUploadWidgets(formJson) {
+            if (!formJson?.widgetList) return formJson;
 
-        /** 重置按钮操作 */
-        resetQuery() {
-            this.resetForm("queryForm");
-            this.queryParams.formDataId = '';
-            this.handleQuery();
+            return {
+                ...formJson,
+                widgetList: formJson.widgetList.filter(widget =>
+                    widget.type !== 'm-picture-upload'
+                )
+            }
         },
     }
 };
@@ -257,10 +238,6 @@ export default {
 <style scoped>
 .mt-4 {
     margin-top: 1rem;
-}
-
-.font-bold {
-    font-weight: bold;
 }
 
 .mb-2 {
