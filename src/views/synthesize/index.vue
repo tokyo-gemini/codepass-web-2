@@ -276,8 +276,8 @@ export default {
         twoTypeId: '',
         threeTypeId: '',
         customName: '',
-        current: 1,
-        size: 10
+        pageNum: 1,
+        pageSize: 10
       },
       dispatchTimeRange: [], // 用于日期范围选择
       formTypeOptions: [], // 表单类型选项
