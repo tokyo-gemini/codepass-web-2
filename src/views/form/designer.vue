@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container flex flex-col w-full">
+  <div class="app-container flex flex-col w-full bg-white" ref="appContainer">
     <el-page-header @back="handleBack">
       <template #title>
         <div class="w-full h-full flex items-center">返回表单列表</div>
@@ -29,7 +29,10 @@
                   </div>
                   <div class="w-full flex-1">
                     <el-button type="primary" @click="handleSave" class="mr-2">保存</el-button>
-                    <el-button v-if="!$route.query.copyData" @click="handleReset">重置</el-button>
+                    <el-button v-if="!$route.query.copyData" @click="handleReset" class="mr-2">重置</el-button>
+                    <el-button @click="toggleFullScreen">
+                      <i :class="isFullScreen ? 'el-icon-close' : 'el-icon-full-screen'"></i>
+                    </el-button>
                   </div>
                 </div>
               </el-form>
@@ -38,7 +41,7 @@
         </div>
       </template>
     </el-page-header>
-    <el-divider></el-divider>
+    <el-divider v-show="!isFullScreen"></el-divider>
 
     <div class="designer">
       <vm-form-designer ref="designerRef" :designer-config="designerConfig" @save="handleSave">
@@ -56,6 +59,8 @@ import {
 
 export default {
   name: 'FormDesigner',
+  components: {
+  },
   // 声明需要使用的字典
   dicts: ['form_type_option'],
   data() {
@@ -114,6 +119,7 @@ export default {
           onFormDataChange: '',
         },
       },
+      isFullScreen: false,
     };
   },
   mounted() {
@@ -121,6 +127,23 @@ export default {
     this.$nextTick(() => {
       this.initPage();
     });
+
+    // 添加全屏变化事件监听
+    document.addEventListener('fullscreenchange', () => {
+      this.isFullScreen = !!document.fullscreenElement;
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      this.isFullScreen = !!document.webkitFullscreenElement;
+    });
+    document.addEventListener('msfullscreenchange', () => {
+      this.isFullScreen = !!document.msFullscreenElement;
+    });
+  },
+  beforeUnmount() {
+    // 清理事件监听
+    document.removeEventListener('fullscreenchange', () => { });
+    document.removeEventListener('webkitfullscreenchange', () => { });
+    document.removeEventListener('msfullscreenchange', () => { });
   },
   computed: {
     pageTitle() {
@@ -298,8 +321,26 @@ export default {
     handleBack() {
       this.$tab.closeOpenPage({ path: '/form/index', title: '表单管理' });
     },
-    handleCancel() {
-      this.handleBack();
+    toggleFullScreen() {
+      const container = this.$refs.appContainer;
+      if (!this.isFullScreen) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        } else if (container.msRequestFullscreen) {
+          container.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
+      this.isFullScreen = !this.isFullScreen;
     },
   },
 };
