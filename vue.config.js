@@ -28,20 +28,19 @@ module.exports = {
   transpileDependencies: ['quill'],
   // webpack-dev-server 相关配置
   devServer: {
-    host: '0.0.0.0',
     port: port,
     open: true,
     proxy: {
       // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
-        target: `http://172.20.10.9:9876`,
+        target: `http://192.168.2.17:9876`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_API]: '',
         },
       },
       [process.env.VUE_APP_BASE_UPLOAD]: {
-        target: `http://172.20.10.9:9876`,
+        target: `http://192.168.2.17:9876`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_UPLOAD]: '',
