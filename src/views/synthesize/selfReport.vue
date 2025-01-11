@@ -1,17 +1,24 @@
 <template>
     <div class="app-container">
         <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
-            <el-form-item label="表单类型" prop="formType">
+            <!-- <el-form-item label="表单类型" prop="formType">
                 <el-select v-model="queryParams.formType" placeholder="请选择表单类型" clearable @change="handleQuery">
                     <el-option label="自主填报日常走访" :value="5" />
                     <el-option label="自主填报特殊走访" :value="6" />
                 </el-select>
-            </el-form-item>
-            <el-form-item>
-                <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
-                <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-            </el-form-item>
+            </el-form-item> -->
+            <div class="w-full flex justify-end">
+                <el-form-item>
+                    <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+                    <!-- <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button> -->
+                </el-form-item>
+            </div>
         </el-form>
+
+        <!-- 在搜索表单后添加导出按钮 -->
+        <div class="mb-2">
+            <el-button type="warning" plain icon="el-icon-download" size="mini" @click="handleExport">导出</el-button>
+        </div>
 
         <el-table v-loading="loading" :data="visitList">
             <!-- 没有数据时显示的提示 -->
@@ -98,7 +105,8 @@
 </template>
 
 <script>
-import { asyncGetNoFormList, asyncGetNoFormDetail } from "@/api/synthesize";
+// 修改引入的API
+import { asyncGetSelfReportList, asyncGetNoFormDetail } from "@/api/synthesize";
 
 export default {
     name: "SelfReportList",
@@ -119,8 +127,14 @@ export default {
             previewList: [],
             baseURL: process.env.VUE_APP_BASE_API,
             formTypeMap: {
-                '5': '自主填报日常走访',
-                '6': '自主填报特殊走访'
+                '1': '日常巡视',
+                '2': '特殊巡视',
+                '3': '日常走访',
+                '4': '特殊走访',
+                '5': '工单走访',
+                '6': '工单巡视',
+                '7': '默认走访',
+                '8': '默认巡视'
             }
         };
     },
@@ -131,9 +145,9 @@ export default {
         async getList() {
             this.loading = true;
             try {
-                const res = await asyncGetNoFormList({
-                    ...this.queryParams,
-                    type: 'zz' // 自主填报类型
+                const res = await asyncGetSelfReportList({
+                    ...this.queryParams
+                    // 移除 type: 'zz', 因为新接口不需要这个参数
                 });
                 this.visitList = res.rows || [];
                 this.total = res.total || 0;
@@ -191,11 +205,11 @@ export default {
                     });
                     this.detailVisible = true;
                 } else {
-                    this.$message.error(res.msg || '获取详情失败');
+                    // this.$message.error(res.msg || '获取详情失败');
                 }
             } catch (error) {
                 console.error('获取详情失败:', error);
-                this.$message.error('获取详情失败');
+                // this.$message.error('获取详情失败');
             }
         },
         getFormStatusType(status) {
@@ -231,42 +245,40 @@ export default {
                 )
             }
         },
+        /** 导出按钮操作 */
+        handleExport() {
+            this.$modal.confirm('导出数据可能需要较长时间，是否继续?').then(() => {
+                const loading = this.$loading({
+                    lock: true,
+                    text: '正在导出数据，请耐心等待...',
+                    spinner: 'el-icon-loading',
+                    background: 'rgba(0, 0, 0, 0.7)'
+                });
+
+                // 使用download方法，添加超时设置和错误处理
+                this.download('/search/export/autonomous/page', {
+                    ...this.queryParams
+                }, `自主填报数据_${new Date().getTime()}.xlsx`, {
+                    timeout: 300000,  // 设置5分钟超时
+                    onDownloadProgress: (progressEvent) => {
+                        if (progressEvent.lengthComputable) {
+                            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                            loading.text = `正在导出数据，已完成 ${percentCompleted}%`;
+                        }
+                    }
+                }).then(() => {
+                    loading.close();
+                    this.$modal.msgSuccess('导出成功');
+                }).catch((error) => {
+                    loading.close();
+                    if (error.code === 'ECONNABORTED') {
+                        this.$modal.msgError('导出超时，请稍后重试或减少导出数据量');
+                    } else {
+                        this.$modal.msgError('导出失败，请稍后重试');
+                    }
+                });
+            });
+        }
     }
 };
 </script>
-
-<style scoped>
-.mt-4 {
-    margin-top: 1rem;
-}
-
-.mb-2 {
-    margin-bottom: 0.5rem;
-}
-
-.image-preview {
-    .image-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .preview-image {
-        width: 120px;
-        height: 120px;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .image-slot {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-        background: #f5f7fa;
-        color: #909399;
-        font-size: 30px;
-    }
-}
-</style>

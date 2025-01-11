@@ -1,10 +1,10 @@
 <template>
   <div class="app-container">
     <el-tabs v-model="queryParams.type" class="mb-4" @tab-click="handleTypeChange">
+      <el-tab-pane label="自主填报" name="zz"></el-tab-pane>
       <el-tab-pane label="无单查询" name="wd"></el-tab-pane>
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
-      <el-tab-pane label="自主填报" name="zz"></el-tab-pane>
     </el-tabs>
 
     <!-- 无单查询组件 -->
@@ -269,7 +269,7 @@ export default {
       customerTagOptions: [],
       // 查询参数
       queryParams: {
-        type: 'wd', // 默认走访
+        type: 'zz', // 默认走访
         formType: '',
         formId: '',
         cityId: '',

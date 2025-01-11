@@ -55,3 +55,12 @@ export const asyncGetNoFormDetail = (params) => {
     params,
   });
 };
+
+//自主填报综合查询分页查询
+export const asyncGetSelfReportList = (params) => {
+  return request({
+    url: '/search/get/autonomous/page',
+    method: 'get',
+    params,
+  });
+};
