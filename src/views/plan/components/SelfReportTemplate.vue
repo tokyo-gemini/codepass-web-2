@@ -30,7 +30,12 @@
                         <i class="el-icon-upload mr-1"></i>上传文件
                     </el-button>
                     <template #tip>
-                        <div class="text-xs text-gray-500 mt-1">上传格式: .xlsx, .xls</div>
+                        <div>
+                            <div class="text-xs text-gray-500 mt-1">上传格式: .xlsx, .xls</div>
+                            <div v-if="uploadProgress > 0" class="mt-2 w-full">
+                                <el-progress :percentage="uploadProgress" :format="progressFormat" />
+                            </div>
+                        </div>
                     </template>
                 </el-upload>
             </div>
@@ -193,7 +198,8 @@ export default {
                 pageSize: 10
             },
             activeTab: 'exist',
-            multipleSelection: []
+            multipleSelection: [],
+            uploadProgress: 0,
         }
     },
 
@@ -249,9 +255,20 @@ export default {
             return true
         },
 
+        progressFormat(percentage) {
+            return percentage === 100 ? '解析中...' : `${percentage}%`;
+        },
+
         async handleFileChange(file) {
             if (file) {
                 try {
+                    this.uploadProgress = 0
+                    const interval = setInterval(() => {
+                        if (this.uploadProgress < 90) {
+                            this.uploadProgress += 10
+                        }
+                    }, 200)
+
                     this.uploadFile = file.raw
 
                     // 创建 FormData 对象用于上传
@@ -261,24 +278,32 @@ export default {
                     // 调用自主填报上传接口
                     const res = await asyncUploadSelfInfo(formData)
 
+                    clearInterval(interval)
+                    this.uploadProgress = 100
+
                     if (res.code === 200) {
                         // 重置分页参数
                         this.currentPage = 1
                         this.uploadedData = res.data || []
-                        // 通过 v-model 更新到父组件时,传递所有数据
                         this.$emit('input', this.uploadedData)
                         this.$emit('file-change', this.uploadFile)
                         this.$modal.msgSuccess('文件解析成功')
-                        // 自动切换到「上传模版数据」tab
                         this.activeTab = 'uploaded'
+
+                        // 成功后3秒清除进度条
+                        setTimeout(() => {
+                            this.uploadProgress = 0
+                        }, 3000)
                     } else {
                         this.$modal.msgError(res.msg || '文件解析失败')
-                        this.handleFileRemove() // 失败时清空文件
+                        this.handleFileRemove()
                     }
                 } catch (error) {
+                    clearInterval(interval)
+                    this.uploadProgress = 0
                     console.error('文件上传失败:', error)
                     this.$modal.msgError('文件上传失败')
-                    this.handleFileRemove() // 失败时清空文件
+                    this.handleFileRemove()
                 }
             }
         },
@@ -287,6 +312,7 @@ export default {
             this.uploadFile = null
             this.uploadedData = []
             this.currentPage = 1
+            this.uploadProgress = 0
             this.$emit('file-change', null)
             this.$emit('input', [])
         },

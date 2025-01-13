@@ -11,7 +11,12 @@
                     <i class="el-icon-upload mr-1"></i>上传文件
                 </el-button>
                 <template #tip>
-                    <div class="text-xs text-gray-500 mt-1">上传格式: .xlsx, .xls</div>
+                    <div>
+                        <div class="text-xs text-gray-500 mt-1">上传格式: .xlsx, .xls</div>
+                        <div v-if="uploadProgress > 0" class="mt-2 w-full">
+                            <el-progress :percentage="uploadProgress" :format="progressFormat" />
+                        </div>
+                    </div>
                 </template>
             </el-upload>
         </div>
@@ -77,7 +82,8 @@ export default {
             selectedItems: [], // 新增选中项数组
             uploadFile: null, // 新增:保存上传的文件
             fileList: [], // 新增文件列表
-            uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload'
+            uploadUrl: process.env.VUE_APP_BASE_API + '/plan/upload',
+            uploadProgress: 0 // 新增上传进度
         }
     },
 
@@ -129,17 +135,36 @@ export default {
             return true
         },
 
+        progressFormat(percentage) {
+            return percentage === 100 ? '解析中...' : `${percentage}%`;
+        },
+
         handleFileChange(file) {
             if (file) {
                 // 保存文件对象供后续使用
                 this.uploadFile = file.raw
+                // 模拟上传进度
+                this.uploadProgress = 0
+                const interval = setInterval(() => {
+                    if (this.uploadProgress < 90) {
+                        this.uploadProgress += 10
+                    }
+                }, 200)
+
                 // 触发事件通知父组件
                 this.$emit('file-change', this.uploadFile)
+
+                // 上传完成后
+                setTimeout(() => {
+                    clearInterval(interval)
+                    this.uploadProgress = 100
+                }, 2000)
             }
         },
 
         handleFileRemove() {
             this.uploadFile = null
+            this.uploadProgress = 0
             this.$emit('file-change', null)
         },
 
