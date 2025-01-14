@@ -1,5 +1,5 @@
 <template>
-    <div class="app-container">
+    <div>
         <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
             <!-- <el-form-item label="表单类型" prop="formType">
                 <el-select v-model="queryParams.formType" placeholder="请选择表单类型" clearable @change="handleQuery">
@@ -10,15 +10,10 @@
             <div class="w-full flex justify-end">
                 <el-form-item>
                     <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
-                    <!-- <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button> -->
+                    <el-button type="warning" plain icon="el-icon-download" @click="handleExport">导出</el-button>
                 </el-form-item>
             </div>
         </el-form>
-
-        <!-- 在搜索表单后添加导出按钮 -->
-        <div class="mb-2">
-            <el-button type="warning" plain icon="el-icon-download" size="mini" @click="handleExport">导出</el-button>
-        </div>
 
         <el-table v-loading="loading" :data="visitList">
             <!-- 没有数据时显示的提示 -->

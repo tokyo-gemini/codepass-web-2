@@ -1,5 +1,5 @@
 <template>
-    <div class="app-container">
+    <div>
         <!-- 添加查询表单 -->
         <div class="w-full flex justify-end">
             <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
