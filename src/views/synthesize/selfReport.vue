@@ -96,12 +96,38 @@
                 view-mode :form-data="detailInfo.formData" ref="vmFormRef">
             </vm-form-render>
         </el-dialog>
+
+        <!-- 添加导出配置弹窗 -->
+        <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+            <el-form :model="exportForm" label-width="120px">
+                <el-form-item label="单次导出数量">
+                    <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
+                        <el-radio :label="1000">1000条/次</el-radio>
+                        <el-radio :label="3000">3000条/次</el-radio>
+                        <el-radio :label="5000">5000条/次</el-radio>
+                        <el-radio :label="10000">10000条/次</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="导出页数选择">
+                    <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
+                        <el-option v-for="page in totalPages" :key="page"
+                            :label="`第${page}页 (${(page - 1) * exportForm.pageSize + 1}-${Math.min(page * exportForm.pageSize, total)}条)`"
+                            :value="page" />
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="exportVisible = false">取 消</el-button>
+                <el-button type="primary" @click="handleConfirmExport" :loading="exporting">确 定</el-button>
+            </div>
+        </el-dialog>
     </div>
 </template>
 
 <script>
 // 修改引入的API
 import { asyncGetSelfReportList, asyncGetNoFormDetail } from "@/api/synthesize";
+import { exportFile } from "@/utils/request";
 
 export default {
     name: "SelfReportList",
@@ -130,8 +156,19 @@ export default {
                 '6': '工单巡视',
                 '7': '默认走访',
                 '8': '默认巡视'
+            },
+            exportVisible: false,
+            exporting: false,
+            exportForm: {
+                page: 1,
+                pageSize: 1000
             }
         };
+    },
+    computed: {
+        totalPages() {
+            return Math.ceil(this.total / this.exportForm.pageSize);
+        }
     },
     created() {
         this.getList();
@@ -242,38 +279,50 @@ export default {
         },
         /** 导出按钮操作 */
         handleExport() {
-            this.$modal.confirm('导出数据可能需要较长时间，是否继续?').then(() => {
-                const loading = this.$loading({
-                    lock: true,
-                    text: '正在导出数据，请耐心等待...',
-                    spinner: 'el-icon-loading',
-                    background: 'rgba(0, 0, 0, 0.7)'
-                });
+            if (this.total === 0) {
+                this.$modal.msgError('当前没有数据可供导出');
+                return;
+            }
+            this.exportForm.page = 1;
+            this.exportVisible = true;
+        },
 
-                // 使用download方法，添加超时设置和错误处理
-                this.download('/search/export/autonomous/page', {
-                    ...this.queryParams
-                }, `自主填报数据_${new Date().getTime()}.xlsx`, {
-                    timeout: 300000,  // 设置5分钟超时
-                    onDownloadProgress: (progressEvent) => {
-                        if (progressEvent.lengthComputable) {
-                            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                            loading.text = `正在导出数据，已完成 ${percentCompleted}%`;
+        /** 确认导出操作 */
+        handleConfirmExport() {
+            this.$modal.confirm('是否确认导出当前页数据?').then(() => {
+                this.exporting = true;
+
+                // 使用新的exportFile方法
+                exportFile(
+                    '/search/export/autonomous/page',
+                    {
+                        page: this.exportForm.page,
+                        pageSize: this.exportForm.pageSize,
+                        // 其他需要的参数...
+                    },
+                    `自主填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
+                    {
+                        timeout: 300000,  // 设置5分钟超时
+                        onDownloadProgress: (progressEvent) => {
+                            if (progressEvent.lengthComputable) {
+                                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                                downloadLoadingInstance.text = `正在导出数据，已完成 ${percentCompleted}%`;
+                            }
                         }
                     }
-                }).then(() => {
-                    loading.close();
+                ).then(() => {
+                    this.exporting = false;
+                    this.exportVisible = false;
                     this.$modal.msgSuccess('导出成功');
-                }).catch((error) => {
-                    loading.close();
-                    if (error.code === 'ECONNABORTED') {
-                        this.$modal.msgError('导出超时，请稍后重试或减少导出数据量');
-                    } else {
-                        this.$modal.msgError('导出失败，请稍后重试');
-                    }
+                }).catch(() => {
+                    this.exporting = false;
                 });
             });
-        }
+        },
+        /** 处理单次导出数量变化 */
+        handlePageSizeChange() {
+            this.exportForm.page = 1; // 重置页码选择
+        },
     }
 };
 </script>
