@@ -5,6 +5,7 @@
             <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
                 <el-form-item>
                     <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+                    <el-button type="warning" plain icon="el-icon-download" @click="handleExport">导出</el-button>
                 </el-form-item>
             </el-form>
         </div>
@@ -98,11 +99,37 @@
                 view-mode :form-data="detailInfo.formData" ref="vmFormRef">
             </vm-form-render>
         </el-dialog>
+
+        <!-- 添加导出配置弹窗 -->
+        <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+            <el-form :model="exportForm" label-width="120px">
+                <el-form-item label="单次导出数量">
+                    <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
+                        <el-radio :label="1000">1000条/次</el-radio>
+                        <el-radio :label="3000">3000条/次</el-radio>
+                        <el-radio :label="5000">5000条/次</el-radio>
+                        <el-radio :label="10000">10000条/次</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="导出页数选择">
+                    <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
+                        <el-option v-for="page in totalPages" :key="page"
+                            :label="`第${page}页 (${(page - 1) * exportForm.pageSize + 1}-${Math.min(page * exportForm.pageSize, total)}条)`"
+                            :value="page" />
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="exportVisible = false">取 消</el-button>
+                <el-button type="primary" @click="handleConfirmExport" :loading="exporting">确 定</el-button>
+            </div>
+        </el-dialog>
     </div>
 </template>
 
 <script>
 import { asyncGetNoFormList, asyncGetNoFormDetail } from "@/api/synthesize"; // 需要新增这个API
+import { exportFile } from "@/utils/request";
 
 export default {
     name: "NoFormList",
@@ -135,11 +162,23 @@ export default {
                 pageNum: 1,
                 pageSize: 10,
                 formType: 7, // 默认的 formType
+            },
+            // 添加导出相关数据
+            exportVisible: false,
+            exporting: false,
+            exportForm: {
+                page: 1,
+                pageSize: 1000
             }
         };
     },
     created() {
         this.getList();
+    },
+    computed: {
+        totalPages() {
+            return Math.ceil(this.total / this.exportForm.pageSize);
+        }
     },
     methods: {
         async getList() {
@@ -249,6 +288,55 @@ export default {
             this.resetForm("queryForm");
             this.queryParams.formDataId = '';
             this.handleQuery();
+        },
+
+        /** 导出按钮操作 */
+        handleExport() {
+            if (this.total === 0) {
+                this.$modal.msgError('当前没有数据可供导出');
+                return;
+            }
+            this.exportForm.page = 1;
+            this.exportVisible = true;
+        },
+
+        /** 确认导出操作 */
+        handleConfirmExport() {
+            this.$modal.confirm('是否确认导出当前页数据?').then(() => {
+                this.exporting = true;
+
+                // 使用无单填报的导出接口
+                exportFile(
+                    '/search/export/noForm/page',
+                    {
+                        page: this.exportForm.page,
+                        pageSize: this.exportForm.pageSize,
+                        // 其他需要的参数...
+                        formType: 7 // 无单固定formType为7
+                    },
+                    `无单填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
+                    {
+                        timeout: 300000,  // 设置5分钟超时
+                        onDownloadProgress: (progressEvent) => {
+                            if (progressEvent.lengthComputable) {
+                                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                                downloadLoadingInstance.text = `正在导出数据，已完成 ${percentCompleted}%`;
+                            }
+                        }
+                    }
+                ).then(() => {
+                    this.exporting = false;
+                    this.exportVisible = false;
+                    this.$modal.msgSuccess('导出成功');
+                }).catch(() => {
+                    this.exporting = false;
+                });
+            });
+        },
+
+        /** 处理单次导出数量变化 */
+        handlePageSizeChange() {
+            this.exportForm.page = 1; // 重置页码选择
         },
     }
 };
