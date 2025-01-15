@@ -307,7 +307,7 @@ export default {
 
                 // 使用无单填报的导出接口
                 exportFile(
-                    '/search/export/noForm/page',
+                    '/search/get/self/page/export',
                     {
                         page: this.exportForm.page,
                         pageSize: this.exportForm.pageSize,
