@@ -17,7 +17,7 @@ const service = axios.create({
   // axios中请求配置有baseURL选项，表示请求URL公共部分
   baseURL: process.env.VUE_APP_BASE_API,
   // 超时
-  timeout: 10000
+  timeout: 60000
 })
 
 // request拦截器
@@ -52,10 +52,10 @@ service.interceptors.request.use(config => {
     if (sessionObj === undefined || sessionObj === null || sessionObj === '') {
       cache.session.setJSON('sessionObj', requestObj)
     } else {
-      const s_url = sessionObj.url;                  // 请求地址
-      const s_data = sessionObj.data;                // 请求数据
-      const s_time = sessionObj.time;                // 请求时间
-      const interval = 1000;                         // 间隔时间(ms)，小于此时间视为重复提交
+      const s_url = sessionObj.url;
+      const s_data = sessionObj.data;
+      const s_time = sessionObj.time;
+      const interval = 1000;
       if (s_data === requestObj.data && requestObj.time - s_time < interval && s_url === requestObj.url) {
         const message = '数据正在处理，请勿重复提交';
         console.warn(`[${s_url}]: ` + message)

@@ -206,6 +206,7 @@ export default {
                 const res = this.isSelfReport
                     ? await asyncGetSelfPlanDetail(id)
                     : await asyncGetPlanDetail(id)
+                console.log(res);
 
                 if (res.code === 200 && res.data) {
                     const data = res.data
