@@ -104,8 +104,11 @@
             </vm-form-render>
         </el-dialog>
 
-        <!-- 添加导出配置弹窗 -->
+        <!-- 修改导出配置弹窗 -->
         <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+            <div class="mb-4 text-gray-600">
+                可导出数据总量：{{ completedTotal }}条
+            </div>
             <el-form :model="exportForm" label-width="120px">
                 <el-form-item label="单次导出数量">
                     <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
@@ -117,8 +120,7 @@
                 </el-form-item>
                 <el-form-item label="导出页数选择">
                     <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
-                        <el-option v-for="page in totalPages" :key="page"
-                            :label="`第${page}页 (${(page - 1) * exportForm.pageSize + 1}-${Math.min(page * exportForm.pageSize, total)}条)`"
+                        <el-option v-for="page in totalPages" :key="page" :label="getPageRangeLabel(page)"
                             :value="page" />
                     </el-select>
                 </el-form-item>
@@ -178,12 +180,14 @@ export default {
                 page: 1,
                 pageSize: 1000
             },
-            deptOptions: [] // 部门选项
+            deptOptions: [], // 部门选项
+            completedTotal: 0 // 添加已完成工单的总数
         };
     },
     computed: {
         totalPages() {
-            return Math.ceil(this.total / this.exportForm.pageSize);
+            // 使用已完成工单的总数来计算总页数
+            return Math.ceil(this.completedTotal / this.exportForm.pageSize);
         }
     },
     async created() {
@@ -297,10 +301,28 @@ export default {
                 )
             }
         },
+        /** 获取已完成工单的总数 */
+        async getCompletedTotal() {
+            try {
+                const res = await asyncGetSelfReportList({
+                    ...this.queryParams,
+                    pageNum: 1,
+                    pageSize: 1,
+                    formStatus: '3' // 添加已完成状态筛选
+                });
+                this.completedTotal = res.total || 0;
+            } catch (error) {
+                console.error('获取已完成工单总数失败:', error);
+                this.$modal.msgError('获取已完成工单总数失败');
+            }
+        },
         /** 导出按钮操作 */
-        handleExport() {
-            if (this.total === 0) {
-                this.$modal.msgError('当前没有数据可供导出');
+        async handleExport() {
+            // 先获取已完成工单的总数
+            await this.getCompletedTotal();
+
+            if (this.completedTotal === 0) {
+                this.$modal.msgError('当前没有已完成的工单可供导出');
                 return;
             }
             this.exportForm.page = 1;
@@ -318,7 +340,7 @@ export default {
                     {
                         page: this.exportForm.page,
                         pageSize: this.exportForm.pageSize,
-                        // 其他需要的参数...
+                        formStatus: '3' // 添加已完成状态筛选
                     },
                     `自主填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
                     {
@@ -355,6 +377,15 @@ export default {
                 label: node.label,
                 children: node.children
             };
+        },
+        /** 获取页码范围标签 */
+        getPageRangeLabel(page) {
+            const start = (page - 1) * this.exportForm.pageSize;
+            const remainingItems = this.completedTotal - start;
+            const itemsInThisPage = Math.min(this.exportForm.pageSize, remainingItems);
+            const end = start + itemsInThisPage;
+
+            return `第${page}页 (${start + 1}-${end}条)`;
         },
     }
 };

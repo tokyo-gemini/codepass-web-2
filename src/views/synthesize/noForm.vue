@@ -106,8 +106,11 @@
             </vm-form-render>
         </el-dialog>
 
-        <!-- 添加导出配置弹窗 -->
+        <!-- 修改导出配置弹窗 -->
         <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+            <div class="mb-4 text-gray-600">
+                可导出数据总量：{{ total }}条
+            </div>
             <el-form :model="exportForm" label-width="120px">
                 <el-form-item label="单次导出数量">
                     <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
@@ -119,8 +122,7 @@
                 </el-form-item>
                 <el-form-item label="导出页数选择">
                     <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
-                        <el-option v-for="page in totalPages" :key="page"
-                            :label="`第${page}页 (${(page - 1) * exportForm.pageSize + 1}-${Math.min(page * exportForm.pageSize, total)}条)`"
+                        <el-option v-for="page in totalPages" :key="page" :label="getPageRangeLabel(page)"
                             :value="page" />
                     </el-select>
                 </el-form-item>
@@ -355,6 +357,15 @@ export default {
         handlePageSizeChange() {
             this.exportForm.page = 1; // 重置页码选择
         },
+        /** 获取页码范围标签 */
+        getPageRangeLabel(page) {
+            const start = (page - 1) * this.exportForm.pageSize;
+            const remainingItems = this.total - start;
+            const itemsInThisPage = Math.min(this.exportForm.pageSize, remainingItems);
+            const end = start + itemsInThisPage;
+
+            return `第${page}页 (${start + 1}-${end}条)`;
+        },
         /** 获取部门树 */
         async getDeptTree() {
             const response = await deptTreeSelect();
@@ -371,43 +382,3 @@ export default {
     }
 };
 </script>
-
-<style scoped>
-.mt-4 {
-    margin-top: 1rem;
-}
-
-.font-bold {
-    font-weight: bold;
-}
-
-.mb-2 {
-    margin-bottom: 0.5rem;
-}
-
-.image-preview {
-    .image-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .preview-image {
-        width: 120px;
-        height: 120px;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .image-slot {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-        background: #f5f7fa;
-        color: #909399;
-        font-size: 30px;
-    }
-}
-</style>
