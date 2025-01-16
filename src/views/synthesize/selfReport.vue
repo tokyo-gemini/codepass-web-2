@@ -340,7 +340,8 @@ export default {
                     {
                         page: this.exportForm.page,
                         pageSize: this.exportForm.pageSize,
-                        formStatus: '3' // 添加已完成状态筛选
+                        formStatus: '3',
+                        deptId: this.queryParams.deptId
                     },
                     `自主填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
                     {
