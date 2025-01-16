@@ -324,16 +324,22 @@ export default {
             this.$modal.confirm('是否确认导出当前页数据?').then(() => {
                 this.exporting = true;
 
-                // 使用无单填报的导出接口
+                // 构建导出参数
+                const exportParams = {
+                    page: this.exportForm.page,
+                    pageSize: this.exportForm.pageSize,
+                    formStatus: '3' // 添加已完成状态筛选
+                };
+
+                // 如果有归属部门，添加到导出参数中
+                if (this.queryParams.deptId) {
+                    exportParams.deptId = this.queryParams.deptId;
+                }
+
                 exportFile(
-                    '/search/get/self/page/export',
-                    {
-                        page: this.exportForm.page,
-                        pageSize: this.exportForm.pageSize,
-                        // 其他需要的参数...
-                        formType: 7 // 无单固定formType为7
-                    },
-                    `无单填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
+                    '/search/export/autonomous/page',
+                    exportParams,
+                    `自主填报数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
                     {
                         timeout: 300000,  // 设置5分钟超时
                         onDownloadProgress: (progressEvent) => {
