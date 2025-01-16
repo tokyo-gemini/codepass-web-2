@@ -1,15 +1,22 @@
 <template>
     <div>
         <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
-            <!-- <el-form-item label="表单类型" prop="formType">
-                <el-select v-model="queryParams.formType" placeholder="请选择表单类型" clearable @change="handleQuery">
-                    <el-option label="自主填报日常走访" :value="5" />
-                    <el-option label="自主填报特殊走访" :value="6" />
+            <!-- 添加部门筛选 -->
+            <el-form-item label="归属部门" prop="deptId">
+                <treeselect v-model="queryParams.deptId" :options="deptOptions" :normalizer="normalizer"
+                    :show-count="true" :disable-branch-nodes="true" placeholder="请选择归属部门" class="w-60" />
+            </el-form-item>
+            <!-- 添加执行状态筛选 -->
+            <el-form-item label="执行状态" prop="formStatus">
+                <el-select v-model="queryParams.formStatus" placeholder="请选择执行状态" clearable>
+                    <el-option label="进行中" value="2" />
+                    <el-option label="已完成" value="3" />
                 </el-select>
-            </el-form-item> -->
+            </el-form-item>
             <div class="w-full flex justify-end">
                 <el-form-item>
                     <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+                    <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
                     <el-button type="warning" plain icon="el-icon-download" @click="handleExport">导出</el-button>
                 </el-form-item>
             </div>
@@ -128,9 +135,15 @@
 // 修改引入的API
 import { asyncGetSelfReportList, asyncGetNoFormDetail } from "@/api/synthesize";
 import { exportFile } from "@/utils/request";
+import { deptTreeSelect } from "@/api/system/user";
+import Treeselect from "@riophae/vue-treeselect";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
     name: "SelfReportList",
+    components: {
+        Treeselect
+    },
     data() {
         return {
             loading: false,
@@ -141,6 +154,8 @@ export default {
                 pageNum: 1,
                 pageSize: 10,
                 formType: 5, // 默认选中自主填报日常走访
+                deptId: undefined,
+                formStatus: undefined
             },
             detailVisible: false,
             detailInfo: {},
@@ -162,7 +177,8 @@ export default {
             exportForm: {
                 page: 1,
                 pageSize: 1000
-            }
+            },
+            deptOptions: [] // 部门选项
         };
     },
     computed: {
@@ -170,7 +186,9 @@ export default {
             return Math.ceil(this.total / this.exportForm.pageSize);
         }
     },
-    created() {
+    async created() {
+        // 获取部门树数据
+        await this.getDeptTree();
         this.getList();
     },
     methods: {
@@ -198,6 +216,8 @@ export default {
         // 重置按钮操作
         resetQuery() {
             this.resetForm("queryForm");
+            this.queryParams.deptId = undefined;
+            this.queryParams.formStatus = undefined;
             this.handleQuery();
         },
         /** 查看按钮操作 */
@@ -322,6 +342,19 @@ export default {
         /** 处理单次导出数量变化 */
         handlePageSizeChange() {
             this.exportForm.page = 1; // 重置页码选择
+        },
+        /** 获取部门树 */
+        async getDeptTree() {
+            const response = await deptTreeSelect();
+            this.deptOptions = response.data;
+        },
+        /** 转换部门数据结构 */
+        normalizer(node) {
+            return {
+                id: node.id,
+                label: node.label,
+                children: node.children
+            };
         },
     }
 };

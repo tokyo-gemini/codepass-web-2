@@ -1,14 +1,20 @@
 <template>
     <div>
         <!-- 添加查询表单 -->
-        <div class="w-full flex justify-end">
-            <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
+        <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
+            <!-- 添加部门筛选 -->
+            <el-form-item label="归属部门" prop="deptId">
+                <treeselect v-model="queryParams.deptId" :options="deptOptions" :normalizer="normalizer"
+                    :show-count="true" :disable-branch-nodes="true" placeholder="请选择归属部门" class="w-60" />
+            </el-form-item>
+            <div class="w-full flex justify-end">
                 <el-form-item>
                     <el-button type="primary" icon="el-icon-search" @click="handleQuery">搜索</el-button>
+                    <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
                     <el-button type="warning" plain icon="el-icon-download" @click="handleExport">导出</el-button>
                 </el-form-item>
-            </el-form>
-        </div>
+            </div>
+        </el-form>
 
         <el-table v-loading="loading" :data="visitList">
             <!-- 没有数据时显示的提示 -->
@@ -130,9 +136,15 @@
 <script>
 import { asyncGetNoFormList, asyncGetNoFormDetail } from "@/api/synthesize"; // 需要新增这个API
 import { exportFile } from "@/utils/request";
+import { deptTreeSelect } from "@/api/system/user";
+import Treeselect from "@riophae/vue-treeselect";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
     name: "NoFormList",
+    components: {
+        Treeselect
+    },
     data() {
         return {
             loading: false,
@@ -162,6 +174,7 @@ export default {
                 pageNum: 1,
                 pageSize: 10,
                 formType: 7, // 默认的 formType
+                deptId: undefined
             },
             // 添加导出相关数据
             exportVisible: false,
@@ -169,10 +182,12 @@ export default {
             exportForm: {
                 page: 1,
                 pageSize: 1000
-            }
+            },
+            deptOptions: [] // 部门选项
         };
     },
-    created() {
+    async created() {
+        await this.getDeptTree();
         this.getList();
     },
     computed: {
@@ -287,6 +302,7 @@ export default {
         resetQuery() {
             this.resetForm("queryForm");
             this.queryParams.formDataId = '';
+            this.queryParams.deptId = undefined;
             this.handleQuery();
         },
 
@@ -337,6 +353,19 @@ export default {
         /** 处理单次导出数量变化 */
         handlePageSizeChange() {
             this.exportForm.page = 1; // 重置页码选择
+        },
+        /** 获取部门树 */
+        async getDeptTree() {
+            const response = await deptTreeSelect();
+            this.deptOptions = response.data;
+        },
+        /** 转换部门数据结构 */
+        normalizer(node) {
+            return {
+                id: node.id,
+                label: node.label,
+                children: node.children
+            };
         },
     }
 };
