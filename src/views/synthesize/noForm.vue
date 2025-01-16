@@ -203,7 +203,8 @@ export default {
                     pageNum: this.page,
                     pageSize: this.size,
                     formType: 7,
-                    formDataId: this.queryParams.formDataId // 添加搜索条件
+                    formDataId: this.queryParams.formDataId, // 添加搜索条件
+                    deptId: this.queryParams.deptId // 添加搜索条件
                 });
                 this.visitList = res.rows || [];
                 this.total = res.total || 0;
