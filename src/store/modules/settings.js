@@ -1,18 +1,20 @@
 import defaultSettings from '@/settings'
 
-const { sideTheme, showSettings, topNav, tagsView, fixedHeader, sidebarLogo, dynamicTitle } = defaultSettings
+const { sideTheme, showSettings, topNav, tagsView, fixedHeader, sidebarLogo, dynamicTitle } =
+  defaultSettings
 
 const storageSetting = JSON.parse(localStorage.getItem('layout-setting')) || ''
 const state = {
   title: '',
-  theme: storageSetting.theme || '#00706B',
+  theme: storageSetting.theme || (sideTheme === 'theme-dark' ? '#00706B' : '#12b2bd'),
   sideTheme: storageSetting.sideTheme || sideTheme,
   showSettings: showSettings,
   topNav: storageSetting.topNav === undefined ? topNav : storageSetting.topNav,
   tagsView: storageSetting.tagsView === undefined ? tagsView : storageSetting.tagsView,
   fixedHeader: storageSetting.fixedHeader === undefined ? fixedHeader : storageSetting.fixedHeader,
   sidebarLogo: storageSetting.sidebarLogo === undefined ? sidebarLogo : storageSetting.sidebarLogo,
-  dynamicTitle: storageSetting.dynamicTitle === undefined ? dynamicTitle : storageSetting.dynamicTitle
+  dynamicTitle:
+    storageSetting.dynamicTitle === undefined ? dynamicTitle : storageSetting.dynamicTitle
 }
 const mutations = {
   CHANGE_SETTING: (state, { key, value }) => {
@@ -26,6 +28,13 @@ const actions = {
   // 修改布局设置
   changeSetting({ commit }, data) {
     commit('CHANGE_SETTING', data)
+    // 当切换主题风格时,同步更新主题色
+    if (data.key === 'sideTheme') {
+      commit('CHANGE_SETTING', {
+        key: 'theme',
+        value: data.value === 'theme-dark' ? '#00706B' : '#12b2bd'
+      })
+    }
   },
   // 设置网页标题
   setTitle({ commit }, title) {
@@ -39,4 +48,3 @@ export default {
   mutations,
   actions
 }
-

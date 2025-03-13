@@ -3,7 +3,7 @@
 **/
 
 /* 主题色 */
-$--color-primary: #00706B; // 国网绿作为主色调
+$--color-primary: #00706b; // 国网绿作为主色调
 $--color-success: #00a98f; // 成功色，接近国网绿的深绿色
 $--color-warning: #ffc107; // 警告色，使用柔和的琥珀色
 $--color-danger: #ff5252; // 危险色，使用柔和的红色
@@ -34,7 +34,7 @@ $--table-border: 1px solid #dfe6ec;
 $--font-path: '~element-ui/lib/theme-chalk/fonts';
 
 /* 引入 Element UI 默认样式 */
-@import "~element-ui/packages/theme-chalk/src/index";
+@import '~element-ui/packages/theme-chalk/src/index';
 
 /* 导出主题色供 JavaScript 使用 */
 :export {
