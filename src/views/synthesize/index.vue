@@ -779,7 +779,7 @@
       /** 获取工单类型选项 */
       async getWorkOrderType() {
         try {
-          // 传入当前选中的类型作为参数
+          // 根据当前选中的类型（zf或xs）获取对应的工单类型
           const res = await asyncGetWorkOrderType(this.queryParams.type)
           if (res.data?.length) {
             this.formTypeOptions = res.data.map((item) => ({
@@ -795,22 +795,17 @@
               this.queryParams.formType = this.formTypeOptions[0].value
               // 获取来源表单选项
               await this.getFormOptions()
-              // 获取表单控件配置
-              if (this.queryParams.formId) {
-                await this.getFormControls()
-              }
             }
           } else {
             this.formTypeOptions = []
             this.queryParams.formType = ''
-            // 清空相关数据
             this.formOptions = []
             this.statusOptions = []
             this.formStatusOptions = []
             this.visitList = []
             this.total = 0
             this.hasFormList = false
-            this.emptyText = '暂无可用的工单类型'
+            this.emptyText = `当前${this.queryParams.type === 'zf' ? '走访' : '巡视'}类型下没有可用的工单类型`
           }
         } catch (error) {
           console.error('获取工单类型失败:', error)
@@ -826,11 +821,12 @@
         if (!this.queryParams.formType) return
 
         try {
+          // 根据工单类型获取来源表单列表
           const res = await asyncGetSourceForm(this.queryParams.formType)
-          if (res.data.formBaseInfoList?.length) {
+          if (res.data?.formBaseInfoList?.length) {
             // 有可用的来源表单
             this.hasFormList = true
-            this.emptyText = '暂无数据' // 重置为默认提示文本
+            this.emptyText = '暂无数据'
             this.formOptions = res.data.formBaseInfoList.map((item) => ({
               value: item.id,
               label: item.name
@@ -852,17 +848,18 @@
               }))
             }
 
-            // 所有数据准备就绪后，再调用查询列表
+            // 获取表单控件配置并查询列表
+            await this.getFormControls()
             await this.getList()
           } else {
             // 没有可用的来源表单
             this.hasFormList = false
-            this.emptyText = '当前工单类型下没有可用的来源表单'
+            this.emptyText = `当前${this.queryParams.type === 'zf' ? '走访' : '巡视'}类型下没有可用的来源表单`
             this.formOptions = []
             this.queryParams.formId = ''
             this.statusOptions = []
             this.formStatusOptions = []
-            this.visitList = [] // 清空表格数据
+            this.visitList = []
             this.total = 0
           }
         } catch (error) {
@@ -873,7 +870,6 @@
           this.total = 0
         }
       },
-
       /** 获取表单控件配置 */
       async getFormControls() {
         try {
