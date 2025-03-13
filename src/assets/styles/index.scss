@@ -204,3 +204,30 @@ aside {
   background-color: #0e8e97 !important;
   color: #fff !important;
 }
+/* 自定义 Loading 样式 */
+.custom-loading {
+  .el-loading-spinner {
+    .el-loading-text {
+      color: var(--theme-loading-color, #409eff);
+      font-size: 14px;
+      margin: 3px 0;
+    }
+    .el-icon-loading {
+      color: var(--theme-loading-color, #409eff);
+      font-size: 24px;
+    }
+  }
+  .el-loading-mask {
+    background-color: var(--theme-loading-bg, rgba(255, 255, 255, 0.9));
+  }
+}
+/* 主题变量 */
+.theme-dark {
+  --theme-loading-color: #0e8e97;
+  --theme-loading-bg: rgba(1, 56, 49, 0.9);
+}
+
+.theme-light {
+  --theme-loading-color: #1c663e;
+  --theme-loading-bg: rgba(255, 255, 255, 0.9);
+}
