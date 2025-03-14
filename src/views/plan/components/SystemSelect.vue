@@ -17,30 +17,6 @@
         />
       </div>
 
-      <!-- 走访类型时显示台区选择 -->
-      <div v-if="isVisit" class="flex-1 min-w-[220px]">
-        <treeselect
-          v-model="towerIdList"
-          :options="towerIdListOption"
-          :normalizer="normalizer"
-          placeholder="选择台区"
-          multiple
-          @input="handleTowerChange"
-        />
-      </div>
-
-      <!-- 搜索输入框 -->
-      <div class="flex-1 min-w-[220px]">
-        <el-input
-          v-model="searchKeyword"
-          :placeholder="isVisit ? '搜索客户名称' : '搜索台区名称'"
-          clearable
-          @keyup.enter.native="handleSearch"
-        >
-          <el-button slot="append" icon="el-icon-search" @click="handleSearch"></el-button>
-        </el-input>
-      </div>
-
       <!-- 全选控制 - 添加禁用条件 -->
       <div class="flex items-center ml-auto">
         <el-checkbox
@@ -72,16 +48,25 @@
       />
       <!-- 走访类型表格列 -->
       <template v-if="isVisit">
-        <el-table-column prop="consName" label="客户名称" />
-        <el-table-column prop="consNo" label="客户编号" />
-        <el-table-column prop="towerName" label="所属台区" />
+        <el-table-column prop="customName" label="客户名称" />
+        <el-table-column prop="customId" label="客户编号" />
+        <!-- 所属城市 -->
+        <el-table-column prop="areaName" label="所属供电单位" />
+        <el-table-column prop="companyName" label="所属城市" />
         <el-table-column prop="powerName" label="所属供电所" />
+        <el-table-column prop="towerName" label="所属台区" />
+        <el-table-column prop="userName" label="客户经理" />
+        <el-table-column prop="visit" label="走访状态" />
       </template>
       <!-- 巡视类型表格列 -->
       <template v-else>
         <el-table-column prop="towerName" label="台区名称" />
-        <el-table-column prop="towerNo" label="台区编号" />
+        <el-table-column prop="towerId" label="台区编号" />
+        <el-table-column prop="provinceName" label="所属省份" />
+        <el-table-column prop="areaName" label="所属供电单位" />
+        <el-table-column prop="companyName" label="所属城市" />
         <el-table-column prop="powerName" label="所属供电所" />
+        <el-table-column prop="userName" label="台区经理" />
       </template>
     </el-table>
 
@@ -142,9 +127,7 @@
         total: 0,
         tableData: [],
         powerSupplyTree: [],
-        towerIdListOption: [],
         towerIdList: [],
-        searchKeyword: '',
         selectedCount: 0,
         isSelectAll: 0,
         isSelectAllChecked: false,
@@ -161,7 +144,6 @@
 
           if (val?.length) {
             this.getPowerSupplyTree()
-            this.getAreaOptions()
           }
         },
         immediate: true
@@ -224,12 +206,9 @@
               pageSize: pagination?.limit || this.queryParams.pageSize,
               planId: '', // 新建时无需传planId
               // 修改这里：使用localPowerDepts
-              deptIdList: this.localPowerDepts.toString(), // 供电所ID
-              towerIdList:
-                Array.isArray(this.towerIdList) && this.towerIdList.length
-                  ? this.towerIdList.join(',')
-                  : '', // 台区ID列表
-              customName: this.searchKeyword // 客户名称搜索
+              userId: this.localPowerDepts.toString(), // 供电所ID
+              towerIdList: '', // 不再传递台区ID
+              customName: '' // 不再传递搜索关键字
             }
 
             const customerRes = await asyncGetCustomerList(customerParams)
@@ -252,7 +231,7 @@
               // 修改这里：使用localPowerDepts
               deptIdList: this.localPowerDepts.toString(),
               planId: '',
-              towerName: this.searchKeyword
+              towerName: '' // 不再传递台区名称搜索
             }
 
             const res = await asyncGetAreaList(params)
@@ -338,53 +317,15 @@
         }
       },
 
-      // 处理搜索
-      handleSearch() {
-        this.queryParams.pageNum = 1
-        this.getObjectTable()
-      },
-
       // 获取供电所树形数据
       async getPowerSupplyTree() {
         try {
-          const res = await deptTreeSelect()
+          // 根据是否是走访类型设置type值
+          const type = this.isVisit ? '1' : '2'
+          const res = await deptTreeSelect({ type })
           this.powerSupplyTree = res.data || []
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)
-        }
-      },
-
-      // 获取台区选项
-      async getAreaOptions() {
-        // 修改这里：使用localPowerDepts
-        if (this.isVisit && this.localPowerDepts?.length) {
-          try {
-            const areaParams = {
-              pageNum: 1,
-              pageSize: 9999,
-              // 修改这里：使用localPowerDepts
-              deptIdList: this.localPowerDepts.toString()
-            }
-
-            const areaRes = await asyncGetAreaList(areaParams)
-            if (areaRes.code === 200) {
-              const seen = new Set()
-              this.towerIdListOption = (areaRes.rows || [])
-                .filter((item) => {
-                  if (!item?.towerId || seen.has(item.towerId)) return false
-                  seen.add(item.towerId)
-                  return true
-                })
-                .map((item) => ({
-                  id: item.towerId,
-                  label: item.towerName,
-                  isDisabled: false,
-                  isLeaf: true
-                }))
-            }
-          } catch (error) {
-            console.error('获取台区数据失败:', error)
-          }
         }
       },
 
@@ -394,24 +335,7 @@
           // 通知父组件更新 powerDepts
           this.$emit('update:power-depts', value)
 
-          this.towerIdList = [] // 清空台区选择
           this.queryParams.pageNum = 1
-          this.searchKeyword = ''
-
-          if (this.isVisit) {
-            this.getAreaOptions() // 重新获取台区选项
-          }
-
-          this.getObjectTable() // 重新加载表格数据
-        }
-      },
-
-      // 处理台区变化
-      handleTowerChange(value) {
-        // 修改这里：使用localPowerDepts
-        if (this.isVisit && this.localPowerDepts?.length) {
-          this.queryParams.pageNum = 1
-          this.searchKeyword = ''
           this.getObjectTable() // 重新加载表格数据
         }
       },

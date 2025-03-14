@@ -449,7 +449,9 @@
       // 获取供电所树形数据
       async getPowerSupplyTree() {
         try {
-          const res = await deptTreeSelect()
+          // 根据是否是走访类型设置type值
+          const type = this.isVisit ? '1' : '2'
+          const res = await deptTreeSelect({ type })
           this.powerSupplyTree = res.data || []
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)
@@ -468,7 +470,7 @@
               pageNum: pagination?.page || this.queryParams.pageNum,
               pageSize: pagination?.limit || this.queryParams.pageSize,
               planId: this.$route.params.id || '', // 编辑时传入planId
-              deptIdList: this.formData.powerSupply.toString(), // 供电所ID
+              userId: this.formData.powerSupply.toString(), // 修改这里：使用 userId
               towerIdList: Array.isArray(this.formData.towerIdList)
                 ? this.formData.towerIdList.join(',')
                 : '', // 台区ID列表
@@ -563,7 +565,7 @@
             const areaParams = {
               pageNum: 1,
               pageSize: 9999,
-              deptIdList: value.toString()
+              userId: value.toString() // 修改这里：走访类型使用userId
             }
             const areaRes = await asyncGetAreaList(areaParams)
             if (areaRes.code === 200) {

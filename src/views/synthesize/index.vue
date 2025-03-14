@@ -27,15 +27,19 @@
             v-model="queryParams.powerId"
             :options="powerSupplyOptions"
             :normalizer="normalizer"
-            placeholder="请选择供电所"
-            class="w-48"
-            :disableBranchNodes="true"
-            :limit="1"
-            :limitText="treeselectLimitText"
-            @input="handlePowerSupplyChange"
             :clearable="true"
             :searchable="true"
+            :disable-branch-nodes="true"
             :default-expand-level="0"
+            :disable-fuzzy-matching="true"
+            :multiple="false"
+            :flat="false"
+            :always-show-clear="true"
+            :append-to-body="true"
+            :close-on-select="true"
+            :show-count="true"
+            placeholder="请选择供电所"
+            class="w-48"
           />
         </el-form-item>
 
@@ -387,7 +391,8 @@
     asyncGetWorkOrderType,
     asyncGetSourceForm,
     asyncGetFormControls,
-    asyncGetDetail
+    asyncGetDetail,
+    asyncGetAreaList
   } from '@/api/synthesize'
   import { deptTreeSelect } from '@/api/system/user'
   import Treeselect from '@riophae/vue-treeselect'
@@ -478,7 +483,7 @@
       // 1. 获取站所数据
       await this.getPowerSupplyOptions()
       // 2. 获取工单类型并设置默认值
-      // await this.getWorkOrderType();
+      await this.getWorkOrderType()
       // getList 会在 getFormOptions 成功后自动调用
     },
     computed: {
@@ -507,21 +512,55 @@
             this.emptyText = '获取数据失败'
           })
       },
-      /** 获取站所数据 */
+      /** 获取站所数据并处理重复ID */
       getPowerSupplyOptions() {
-        deptTreeSelect().then((response) => {
-          this.powerSupplyOptions = response.data
+        // 根据当前查询类型设置type值
+        const type = this.queryParams.type === 'zf' ? '1' : '2'
+        deptTreeSelect({ type }).then((response) => {
+          // 处理数据,为每个节点生成唯一ID
+          const processTreeData = (nodes, parentId = '') => {
+            return nodes.map((node, index) => {
+              // 使用父ID和当前索引生成唯一ID
+              const uniqueId = parentId ? `${parentId}-${index}` : `${index}`
+              const processed = {
+                ...node,
+                // 保留原始ID用于提交数据
+                originalId: node.id,
+                // 使用生成的唯一ID作为treeselect的id
+                id: uniqueId,
+                label: node.label
+              }
+
+              if (node.children && node.children.length) {
+                processed.children = processTreeData(node.children, uniqueId)
+              }
+
+              return processed
+            })
+          }
+
+          this.powerSupplyOptions = processTreeData(response.data)
         })
       },
-      /** 监听站所选择变化并获取对应台区数据 */
+
+      /** 处理供电所选择变化并获取对应台区数据 */
       async handlePowerSupplyChange(value) {
-        if (value && value.length > 0) {
+        if (value) {
           try {
-            // 这里需要根据实际 API 调整
-            const res = await getAreaList({
-              deptIdList: Array.isArray(value) ? value.join(',') : value
-            })
-            // 转换为 treeselect 需要的数据结构
+            // 根据不同的查询类型使用不同的参数
+            const params = {
+              pageNum: 1,
+              pageSize: 9999
+            }
+
+            // 走访类型使用 userId，巡视类型使用 deptIdList
+            if (this.queryParams.type === 'zf') {
+              params.userId = value
+            } else {
+              params.deptIdList = value
+            }
+
+            const res = await asyncGetAreaList(params)
             this.towerOptions = this.formatTowerOptions(res.data || [])
           } catch (error) {
             console.error('获取台区数据失败:', error)
@@ -529,7 +568,7 @@
           }
         } else {
           this.towerOptions = []
-          this.queryParams.tower = undefined
+          this.queryParams.towerId = null
         }
       },
 
@@ -750,7 +789,7 @@
         // 重新获取工单类型选项和默认值
         this.emptyText = '加载中...' // 切换类型时显示加载提示
         await this.getWorkOrderType()
-        // getList 会在 getFormOptions 成功后自动调用
+        // 注意：getList 会在 getFormOptions 成功后自动调用
       },
 
       /** 处理表单类型变化 */
@@ -758,12 +797,16 @@
         this.queryParams.formId = ''
         if (value) {
           await this.getFormOptions()
+          // 注意：getFormOptions 会在最后调用 getList，所以这里不需要再调用
         } else {
           // 清空相关选项
           this.formOptions = []
           this.statusOptions = []
           this.formStatusOptions = []
           this.queryParams.formId = ''
+          // 由于清空了表单类型，需要清空列表数据
+          this.visitList = []
+          this.total = 0
         }
       },
 
@@ -793,8 +836,9 @@
             // 默认选中第一个选项
             if (this.formTypeOptions.length > 0) {
               this.queryParams.formType = this.formTypeOptions[0].value
-              // 获取来源表单选项
+              // 获取来源表单选项，确保等待其完成
               await this.getFormOptions()
+              // 不需要在这里调用 getList，因为 getFormOptions 最后会调用 getList
             }
           } else {
             this.formTypeOptions = []
@@ -805,7 +849,9 @@
             this.visitList = []
             this.total = 0
             this.hasFormList = false
-            this.emptyText = `当前${this.queryParams.type === 'zf' ? '走访' : '巡视'}类型下没有可用的工单类型`
+            this.emptyText = `当前${
+              this.queryParams.type === 'zf' ? '走访' : '巡视'
+            }类型下没有可用的工单类型`
           }
         } catch (error) {
           console.error('获取工单类型失败:', error)
@@ -848,13 +894,17 @@
               }))
             }
 
-            // 获取表单控件配置并查询列表
+            // 获取表单控件配置
             await this.getFormControls()
+
+            // 确保表单控件配置获取完成后再调用列表
             await this.getList()
           } else {
             // 没有可用的来源表单
             this.hasFormList = false
-            this.emptyText = `当前${this.queryParams.type === 'zf' ? '走访' : '巡视'}类型下没有可用的来源表单`
+            this.emptyText = `当前${
+              this.queryParams.type === 'zf' ? '走访' : '巡视'
+            }类型下没有可用的来源表单`
             this.formOptions = []
             this.queryParams.formId = ''
             this.statusOptions = []

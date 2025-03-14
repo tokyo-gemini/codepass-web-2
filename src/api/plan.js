@@ -1,50 +1,50 @@
-import request from '../utils/request';
+import request from '../utils/request'
 
 // 获取计划管理列表
 export function asyncGetPlanList(data) {
   return request({
     url: '/plannedManage/page',
     method: 'get',
-    params: data,
-  });
+    params: data
+  })
 }
 // 获取计划表单的可选项
 export function asyncGetPlanOptions(type) {
   return request({
     url: `/plannedManage/get/form/info/by/plan/type/${type}`,
-    method: 'get',
-  });
+    method: 'get'
+  })
 }
 // 获取台区列表
 export function asyncGetAreaList(data) {
   return request({
-    url: '/plannedManage/page/to/user',
+    url: '/plannedManage/page/to/tower',
     method: 'get',
-    params: data,
-  });
+    params: data
+  })
 }
 // 根据id查询计划详情
 export function asyncGetPlanDetail(id) {
   return request({
     url: `/plannedManage/get/${id}`,
-    method: 'get',
-  });
+    method: 'get'
+  })
 }
 // 获取客户标签可选项
 export function asyncGetCustomerTags(params) {
   return request({
     url: '/sys/tag/get/page',
     method: 'get',
-    params,
-  });
+    params
+  })
 }
 // 根据所属供电所和台区查询客户列表
 export function asyncGetCustomerList(data) {
   return request({
-    url: '/plannedManage/page/to/custom',
+    url: '/plannedManage/page/to/system/custom',
     method: 'get',
-    params: data,
-  });
+    params: data
+  })
 }
 
 // 新增计划保存
@@ -53,8 +53,8 @@ export function asyncAddPlan(data) {
     url: '/plannedManage/add',
     method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data,
-  });
+    data
+  })
 }
 
 // 编辑计划保存
@@ -63,16 +63,16 @@ export function asyncEditPlan(data) {
     url: '/plannedManage/update',
     method: 'put',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data,
-  });
+    data
+  })
 }
 // 是否启用
 
 export function asyncEnabledPlan(data) {
   return request({
     url: `/plannedManage/update/enabled/${data.id}/${data.enabled}`,
-    method: 'get',
-  });
+    method: 'get'
+  })
 }
 
 // 下载模版
@@ -81,8 +81,8 @@ export function asyncDownLoadTemplate(data) {
     url: '/resource/download/template',
     method: 'get',
     responseType: 'blob',
-    params: data,
-  });
+    params: data
+  })
 }
 // 下载自主填报模版
 export function asyncDownLoadSelfTemplate(data) {
@@ -90,8 +90,8 @@ export function asyncDownLoadSelfTemplate(data) {
     url: '/selfPlanned/downloadTemplate',
     method: 'post',
     responseType: 'blob',
-    params: data,
-  });
+    params: data
+  })
 }
 // 上传自主填报信息
 export function asyncUploadSelfInfo(data) {
@@ -99,23 +99,23 @@ export function asyncUploadSelfInfo(data) {
     url: '/selfPlanned/upload/file',
     method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data,
-  });
+    data
+  })
 }
 // 查询分类计划总数
 export function asyncGetPlanCount() {
   return request({
     url: '/plannedManage/get/type',
-    method: 'get',
-  });
+    method: 'get'
+  })
 }
 // 删除计划
 export function asyncDeletePlan(data) {
   return request({
     url: '/plannedManage/del',
     method: 'delete',
-    params: data,  // 使用 params 而不是直接传值
-  });
+    params: data // 使用 params 而不是直接传值
+  })
 }
 // 自主填报新增
 export function asyncAddSelfPlan(data) {
@@ -123,8 +123,8 @@ export function asyncAddSelfPlan(data) {
     url: '/selfPlanned/add',
     method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data,
-  });
+    data
+  })
 }
 // 自主填报编辑
 export function asyncEditSelfPlan(data) {
@@ -132,13 +132,13 @@ export function asyncEditSelfPlan(data) {
     url: '/selfPlanned/update',
     method: 'post',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data,
-  });
+    data
+  })
 }
 // 自主填报详情
 export function asyncGetSelfPlanDetail(id) {
   return request({
     url: `/selfPlanned/get/${id}`,
-    method: 'get',
-  });
+    method: 'get'
+  })
 }
