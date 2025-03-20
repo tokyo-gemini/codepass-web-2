@@ -343,7 +343,7 @@
       // Tree格式化
       normalizer(node) {
         return {
-          id: `${node.id}_${node.label}`, // 将ID和标签拼接确保唯一性id}-${node.label}`, // 修改后的实现
+          id: node.id, // 只使用原始ID，不再拼接label
           label: node.label,
           children: node.children
         }
