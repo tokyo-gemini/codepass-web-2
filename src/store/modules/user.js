@@ -11,6 +11,7 @@ const user = {
     avatar: '',
     roles: [],
     permissions: [],
+    deptId: '', // 添加部门ID
     defaultRoute: '/performance' // 确保默认路由配置正确
   },
 
@@ -32,6 +33,10 @@ const user = {
     },
     SET_PERMISSIONS: (state, permissions) => {
       state.permissions = permissions
+    },
+    SET_DEPT_ID: (state, deptId) => {
+      // 添加部门ID的mutation
+      state.deptId = deptId
     }
   },
 
@@ -75,6 +80,7 @@ const user = {
             commit('SET_ID', user.userId)
             commit('SET_NAME', user.userName)
             commit('SET_AVATAR', avatar)
+            commit('SET_DEPT_ID', user.deptId) // 保存部门ID
             resolve(res)
           })
           .catch((error) => {
