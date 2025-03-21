@@ -64,34 +64,24 @@ export const constantRoutes = [
   {
     path: '',
     component: Layout,
-    redirect: '/performance/visit'
+    redirect: '/performance'
   },
   {
     path: '/',
     component: Layout,
-    redirect: '/performance/visit',
+    redirect: '/performance',
     hidden: true
   },
   {
     path: '/performance',
     component: Layout,
-    name: 'Performance',
-    redirect: '/performance/visit',
-    meta: { title: '成效看板', icon: 'dashboard', affix: true },
     children: [
       {
-        path: 'visit',
+        path: '',
         component: () => import('@/views/kanban/performance/components/BaseStats'),
-        name: 'VisitStats',
-        props: { type: 'visit' },
-        meta: { title: '走访统计' }
-      },
-      {
-        path: 'inspection',
-        component: () => import('@/views/kanban/performance/components/BaseStats'),
-        name: 'InspectionStats',
-        props: { type: 'inspection' },
-        meta: { title: '巡视统计' }
+        name: 'Performance',
+        props: { type: 'visit' }, // 默认显示走访统计
+        meta: { title: '成效看板', icon: 'dashboard', affix: true }
       }
     ]
   },

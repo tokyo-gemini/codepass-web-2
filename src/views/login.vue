@@ -135,11 +135,7 @@
             this.$store
               .dispatch('Login', this.loginForm)
               .then(() => {
-                this.$router
-                  .push({ path: this.redirect || '/kanban/performance/index' })
-                  .catch((error) => {
-                    console.error('Router push error:', error)
-                  })
+                this.$router.push({ path: this.redirect || '/performance' }) // 修改为新的成效看板路径
               })
               .catch(() => {
                 this.loading = false
