@@ -196,14 +196,15 @@ aside {
 }
 
 .theme-dark .el-menu-item.is-active {
-  background-color: #005752 !important; // 深色主题菜单激活状态，更深的国网绿
+  background-color: #007a6b !important; // 深色主题菜单激活状态，比国网绿更深
   color: #fff !important;
 }
 
 .theme-light .el-menu-item.is-active {
-  background-color: #0e8e97 !important;
+  background-color: #2470d8 !important; // 浅色主题菜单激活状态，比国网蓝更深
   color: #fff !important;
 }
+
 /* 自定义 Loading 样式 */
 .custom-loading {
   .el-loading-spinner {

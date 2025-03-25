@@ -2,7 +2,7 @@
   <div
     class="navbar"
     :style="{
-      background: $store.state.settings.sideTheme === 'theme-dark' ? '#00706b' : '#12b2bd'
+      background: $store.state.settings.sideTheme === 'theme-dark' ? '#00907F' : '#3490FB'
     }"
   >
     <hamburger

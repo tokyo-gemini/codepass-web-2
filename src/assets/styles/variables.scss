@@ -3,25 +3,25 @@ $blue: #324157;
 $light-blue: #3a71a8;
 $red: #c03639;
 $pink: #e65d6e;
-$green: #00706b; // 国网绿
+$green: #00907f; // 国网绿
 $tiffany: #4ab7bd;
 $yellow: #fec171;
-$panGreen: #00706b; // 国网绿
-$gwBlue: #12b2bd; // 国网蓝
+$panGreen: #00907f; // 国网绿
+$gwBlue: #3490fb; // 国网蓝
 
 // 默认菜单主题风格
 $base-menu-color: #ffffff; // 菜单文字颜色，白色
 $base-menu-color-active: #ffffff !important; // 菜单激活状态文字颜色，白色
-$base-menu-background: #00706b; // 菜单背景色，国网绿
+$base-menu-background: #00907f; // 菜单背景色，国网绿
 $base-menu-active-background: #ffffff !important; // 菜单激活状态背景色，稍深的国网绿
 $base-logo-title-color: #ffffff; // Logo 文字颜色，白色
-$base-menu-dark-active: #005752; // 深色主题菜单激活状态背景色，更深的国网绿
+$base-menu-dark-active: #007a6b; // 深色主题菜单激活状态背景色，比国网绿更深
 
 // 浅色菜单主题风格
 $base-menu-light-color: #ffffff; // 浅色菜单文字颜色，修改为白色
 $base-menu-light-background: $gwBlue; // 浅色菜单背景色，国网蓝
 $base-logo-light-title-color: #ffffff; // 浅色 Logo 文字颜色
-$base-menu-light-active: #0e8e97; // 浅色主题菜单激活状态背景色
+$base-menu-light-active: #2470d8; // 浅色主题菜单激活状态背景色，比国网蓝更深
 
 // 子菜单背景色
 $base-sub-menu-background: #007a75; // 子菜单背景色，稍深的国网绿

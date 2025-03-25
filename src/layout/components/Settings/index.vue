@@ -249,11 +249,11 @@
         }
 
         .theme-button-dark {
-          background-color: #00706b;
+          background-color: #00907f;
         }
 
         .theme-button-light {
-          background-color: #12b2bd;
+          background-color: #3490fb;
         }
 
         .active-indicator {

@@ -25,21 +25,24 @@
       }
 
       :root {
-        /* 默认使用深色主题变量 */
-        --theme-bg: #013831;
+        /* 默认使用深色主题变量，国网绿 */
+        --theme-bg: #00907f;
         --theme-color: #fff;
+        --theme-primary: #00907f;
       }
 
-      /* 浅色主题变量 */
+      /* 浅色主题变量，国网蓝 */
       :root[data-theme='theme-light'] {
-        --theme-bg: #f0f2f5;
-        --theme-color: #1c663e;
+        --theme-bg: #3490fb;
+        --theme-color: #fff;
+        --theme-primary: #3490fb;
       }
 
-      /* 深色主题变量 */
+      /* 深色主题变量，国网绿 */
       :root[data-theme='theme-dark'] {
-        --theme-bg: #013831;
+        --theme-bg: #00907f;
         --theme-color: #fff;
+        --theme-primary: #00907f;
       }
 
       #loader-wrapper {
@@ -67,7 +70,7 @@
       .dot {
         width: 16px;
         height: 16px;
-        background: var(--theme-color);
+        background: var(--theme-primary); /* 使用主题色变量 */
         border-radius: 50%;
         animation: bounce 0.5s ease-in-out infinite;
       }
@@ -121,6 +124,39 @@
       const theme = localStorage.getItem('theme') || 'theme-dark'
       // 设置根元素的data-theme属性
       document.documentElement.setAttribute('data-theme', theme)
+
+      // 根据主题设置主题色
+      const primaryColor = theme === 'theme-dark' ? '#00907F' : '#3490FB'
+      document.documentElement.style.setProperty('--theme-primary', primaryColor)
+
+      // 额外设置Element UI主题变量，确保刷新页面后立即应用
+      document.documentElement.style.setProperty('--el-color-primary', primaryColor)
+
+      // 设置其他相关主题颜色
+      const themeColors = {
+        'theme-dark': {
+          '--el-color-primary-dark-2': '#007a6b',
+          '--el-color-primary-light-3': '#33a696',
+          '--el-color-primary-light-5': '#66bfb2',
+          '--el-color-primary-light-7': '#99d9cf',
+          '--el-color-primary-light-8': '#b3e5dd',
+          '--el-color-primary-light-9': '#ccf2ec'
+        },
+        'theme-light': {
+          '--el-color-primary-dark-2': '#2c7ad4',
+          '--el-color-primary-light-3': '#5ca6fc',
+          '--el-color-primary-light-5': '#85bdfd',
+          '--el-color-primary-light-7': '#add4fe',
+          '--el-color-primary-light-8': '#c2e0fe',
+          '--el-color-primary-light-9': '#d6ebfe'
+        }
+      }
+
+      // 应用当前主题的颜色变量
+      const currentThemeColors = themeColors[theme]
+      for (const [key, value] of Object.entries(currentThemeColors)) {
+        document.documentElement.style.setProperty(key, value)
+      }
     </script>
   </body>
 </html>
