@@ -1,0 +1,276 @@
+<template>
+  <div class="chart-container">
+    <div class="chart-header">
+      <el-radio-group v-model="specialType" size="small" @change="handleSpecialTypeChange">
+        <el-radio-button label="visit">近7日日常巡视完成率</el-radio-button>
+        <el-radio-button label="inspection">近7日特殊巡视完成率</el-radio-button>
+      </el-radio-group>
+    </div>
+    <div ref="chartRef" class="chart"></div>
+  </div>
+</template>
+
+<script>
+  import * as echarts from 'echarts'
+  import { getWeeklyCompletionRate } from '@/api/kanban'
+
+  export default {
+    name: 'CompletionRateChart',
+    props: {
+      searchParams: {
+        type: Object,
+        default: () => ({})
+      },
+      deptId: {
+        type: [Number, String],
+        default: ''
+      },
+      isSeniorManager: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data() {
+      return {
+        chart: null,
+        specialType: 'visit', // 默认类型：日常巡视完成率
+        specialData: {
+          visit: [], // 日常巡视完成率数据
+          inspection: [] // 特殊巡视完成率数据
+        }
+      }
+    },
+    mounted() {
+      this.initChart()
+      this.getCompletionData()
+      window.addEventListener('resize', this.resizeChart)
+    },
+    beforeDestroy() {
+      if (this.chart) {
+        this.chart.dispose()
+        this.chart = null
+      }
+      window.removeEventListener('resize', this.resizeChart)
+    },
+    methods: {
+      initChart() {
+        if (!this.$refs.chartRef) return
+
+        if (this.chart) {
+          this.chart.dispose()
+        }
+
+        this.chart = echarts.init(this.$refs.chartRef)
+        this.updateChart()
+      },
+
+      // 更新图表数据
+      updateChart() {
+        if (!this.chart) return
+
+        const data = this.specialData[this.specialType] || []
+
+        // 从对象中提取值，处理 null 值
+        const values = data.map((item) => (item.value !== null ? item.value : 0))
+        const average =
+          values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2) : 0
+
+        const option = {
+          title: {
+            text: this.specialType === 'visit' ? '近7日日常巡视完成率' : '近7日特殊巡视完成率'
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: (params) => {
+              const item = params[0]
+              const dataItem = data[item.dataIndex] || {}
+              return `<div style="padding: 8px">
+              <div style="font-weight: bold; margin-bottom: 8px; color: #333">${
+                dataItem.companyName
+              }</div>
+              <div style="color: #666; margin-bottom: 4px">
+                ${
+                  this.specialType === 'visit' ? '日常巡视完成率' : '特殊巡视完成率'
+                } <span style="float: right; color: #67a651; font-weight: bold">${
+                item.value
+              }%</span>
+              </div>
+              <div style="color: #666">
+                总次数 <span style="float: right; color: #67a651; font-weight: bold">${
+                  dataItem.totalNum
+                }</span>
+              </div>
+            </div>`
+            }
+          },
+          legend: {
+            data: ['完成率', '平均值'],
+            top: 25
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            top: '15%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: data.map((item) => item.companyName || '未知区域'),
+            axisLabel: { rotate: 45 }
+          },
+          yAxis: {
+            type: 'value',
+            name: '完成率',
+            axisLabel: { formatter: '{value}%' },
+            min: 0,
+            max: 100
+          },
+          series: [
+            {
+              name: '完成率',
+              type: 'bar',
+              data: values.map((value) => ({
+                value,
+                label: {
+                  show: true,
+                  position: 'top',
+                  formatter: '{c}%'
+                }
+              })),
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#83bff6' },
+                  { offset: 0.5, color: '#188df0' },
+                  { offset: 1, color: '#188df0' }
+                ])
+              }
+            },
+            {
+              name: '平均值',
+              type: 'line',
+              data: new Array(data.length).fill(average),
+              symbol: 'none',
+              lineStyle: {
+                type: 'dashed',
+                color: '#FF9800',
+                width: 2
+              },
+              itemStyle: {
+                color: '#FF9800'
+              }
+            }
+          ]
+        }
+
+        this.chart.setOption(option, true)
+      },
+
+      // 调整图表大小
+      resizeChart() {
+        if (this.chart) {
+          this.chart.resize()
+        }
+      },
+
+      // 处理巡视类型切换
+      async handleSpecialTypeChange(value) {
+        this.specialType = value
+        await this.getCompletionData()
+      },
+
+      // 获取巡视完成率数据
+      async getCompletionData() {
+        try {
+          const params = {
+            ...this.getLastWeekDateRange()
+          }
+
+          // 设置巡视类型参数
+          params.xsType = this.specialType === 'visit' ? 1 : 0 // 1: 日常巡视, 0: 特殊巡视
+
+          // 添加区域筛选参数
+          if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
+            params.companyId = this.searchParams.powerSupply.join(',')
+          } else {
+            // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
+            const deptIdStr = this.deptId.toString()
+            if (deptIdStr.length <= 5) {
+              params.cityId = this.deptId
+            } else if (deptIdStr.length >= 7) {
+              params.companyId = this.deptId
+            }
+          }
+
+          const res = await getWeeklyCompletionRate(params)
+
+          if (res.code === 200 && res.data) {
+            const processedData = res.data.map((item) => ({
+              value: Number(item.completionRate || 0),
+              totalNum: item.totalTourNum || 0,
+              companyName: item.companyName || '未知区域'
+            }))
+
+            // 更新对应类型的数据
+            this.specialData[this.specialType] = processedData
+
+            // 发出数据更新事件
+            this.$emit('data-updated', {
+              type: this.specialType,
+              data: processedData
+            })
+
+            // 更新图表
+            this.updateChart()
+          }
+        } catch (error) {
+          console.error('获取巡视完成率数据失败:', error)
+        }
+      },
+
+      // 获取近7天日期范围的方法
+      getLastWeekDateRange() {
+        const end = new Date()
+        const start = new Date()
+        start.setDate(start.getDate() - 6) // 获取7天前的日期（包含今天）
+        // 格式化日期为 YYYY-MM-DD
+        const formatDate = (date) => {
+          return date.toISOString().split('T')[0]
+        }
+        return {
+          startTime: formatDate(start),
+          endTime: formatDate(end)
+        }
+      },
+
+      // 暴露给父组件的重新获取数据方法
+      refresh() {
+        this.getCompletionData()
+      }
+    },
+    watch: {
+      searchParams: {
+        handler() {
+          this.getCompletionData()
+        },
+        deep: true
+      }
+    }
+  }
+</script>
+
+<style scoped>
+  .chart-container {
+    width: 100%;
+    height: 100%;
+  }
+  .chart {
+    height: 400px;
+  }
+  .chart-header {
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+</style>

@@ -92,7 +92,11 @@
       },
       multiple: {
         type: Boolean,
-        default: true
+        default: true // 保持默认值为true，这样可以显示复选框
+      },
+      singleSelect: {
+        type: Boolean,
+        default: false // 添加新属性控制是否强制单选
       },
       placeholder: {
         type: String,
@@ -100,7 +104,7 @@
       },
       checkStrictly: {
         type: Boolean,
-        default: false
+        default: true // 修改默认值为true，使父子节点选择不关联
       },
       // 用户部门ID，用于判断可选节点
       userDeptId: {
@@ -238,15 +242,45 @@
         }
         return null
       },
-      handleCheck(data, { checkedNodes }) {
-        // 过滤掉不可选的节点，并且只返回必要的数据
-        this.selectedNodes = checkedNodes
-          .filter((node) => this.isNodeSelectable(node))
-          .map((node) => ({
-            id: node.id,
-            label: node.label
-          }))
+      handleCheck(data, { checkedNodes, checkedKeys }) {
+        // 实现单选逻辑
+        if (this.singleSelect && checkedNodes.length > 0) {
+          // 如果启用单选模式，只保留当前选中的节点
+          const currentNode = data
+          // 如果当前节点不可选，不进行任何操作
+          if (!this.isNodeSelectable(currentNode)) {
+            // 恢复到之前的选择状态
+            if (this.selectedNodes.length > 0) {
+              this.$refs.tree.setCheckedKeys([this.selectedNodes[0].id])
+            } else {
+              this.$refs.tree.setCheckedKeys([])
+            }
+            return
+          }
 
+          // 清空之前的选择
+          this.$refs.tree.setCheckedKeys([])
+          // 只选择当前节点
+          this.$refs.tree.setCheckedKeys([currentNode.id])
+
+          // 更新选中节点数组
+          this.selectedNodes = [
+            {
+              id: currentNode.id,
+              label: currentNode.label
+            }
+          ]
+        } else {
+          // 多选模式维持原有逻辑
+          this.selectedNodes = checkedNodes
+            .filter((node) => this.isNodeSelectable(node))
+            .map((node) => ({
+              id: node.id,
+              label: node.label
+            }))
+        }
+
+        // 发出事件
         this.$emit(
           'input',
           this.selectedNodes.map((node) => node.id)

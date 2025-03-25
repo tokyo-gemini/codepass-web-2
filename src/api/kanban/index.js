@@ -35,3 +35,12 @@ export function getCompletionRateHistory(params) {
     params
   })
 }
+
+// 获取走访巡视信息表格数据
+export function getVisitInspectionInfo(params) {
+  return request({
+    url: '/result/kan/ban/get/zfXsInfo',
+    method: 'get',
+    params
+  })
+}
