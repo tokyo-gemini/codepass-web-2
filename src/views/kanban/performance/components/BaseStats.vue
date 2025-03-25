@@ -150,7 +150,7 @@
       return {
         searchForm: {
           powerSupply: [],
-          dateRange: this.getDefaultDateRange() // 初始化时就设置默认日期范围
+          dateRange: null // 修改为 null，不再设置默认值
         },
         listSearchForm: {
           powerSupply: [] // 修改为供电所选择
@@ -572,21 +572,20 @@
 
       // 点击重置时清空条件并重新查询
       resetForm() {
-        const dateRange = this.getDefaultDateRange() // 保存当前日期范围
         if (this.isFixedPowerSupply) {
           this.searchForm = {
             powerSupply: [this.deptId],
-            dateRange: dateRange // 使用默认日期范围
+            dateRange: null
           }
         } else if (this.isSeniorManager) {
           this.searchForm = {
             powerSupply: [this.deptId],
-            dateRange: dateRange // 使用默认日期范围
+            dateRange: null
           }
         } else {
           this.searchForm = {
             powerSupply: [],
-            dateRange: dateRange // 使用默认日期范围
+            dateRange: null
           }
         }
         // 重置后重新查询数据
@@ -732,12 +731,9 @@
         return dates
       },
       // 处理覆盖率类型切换
-      handleCoverageTypeChange(value) {
+      async handleCoverageTypeChange(value) {
         this.coverageType = value
-        // 更新图表
-        if (this.charts.vertical) {
-          this.initCoverageChart(this.charts.vertical)
-        }
+        await this.getCoverageData()
       },
       // 处理横向覆盖率类型切换
       handleHorizontalCoverageTypeChange(value) {
@@ -747,12 +743,9 @@
         }
       },
       // 处理特殊类型切换
-      handleSpecialTypeChange(value) {
+      async handleSpecialTypeChange(value) {
         this.specialType = value
-        // 更新图表
-        if (this.charts.vertical2) {
-          this.initSpecialChart(this.charts.vertical2)
-        }
+        await this.getSpecialData()
       },
       // 处理横向特殊类型切换
       handleHorizontalSpecialTypeChange(value) {
@@ -764,75 +757,18 @@
       // 获取覆盖率数据
       async getCoverageData() {
         try {
-          // 处理请求参数
-          let params = {
-            zfType: this.coverageType === 'visit' ? 0 : 1,
-            xsType: this.coverageType === 'visit' ? 0 : 1
+          const params = {
+            ...this.getLastWeekDateRange() // 添加近7天的时间范围参数
           }
 
-          // 只有当选择了时间范围时才添加时间参数
-          if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
-            params.startTime = this.searchForm.dateRange[0].toISOString().split('T')[0]
-            params.endTime = this.searchForm.dateRange[1].toISOString().split('T')[0]
-          }
-
-          // 如果是5位数部门ID用户
-          if (this.isSeniorManager) {
-            if (
-              !this.searchForm.powerSupply?.length ||
-              this.searchForm.powerSupply[0] === this.deptId
-            ) {
-              params.cityId = this.deptId
-            } else {
-              params.companyId = this.searchForm.powerSupply.join(',')
-            }
+          // 根据当前选择的类型设置参数
+          if (this.coverageType === 'visit') {
+            params.zfType = 0 // 日常走访
           } else {
-            params.companyId = this.searchForm.powerSupply?.join(',') || ''
+            params.xsType = 0 // 日常巡视
           }
 
-          const res = await getWeeklyCoverageRate(params)
-
-          if (res.code === 200 && res.data) {
-            const processedData = res.data.map((item) => ({
-              value: Number(item.coverageRate || 0), // 确保是数字
-              totalNum: item.totalVisitNum || 0,
-              companyName: item.companyName || '未知区域'
-            }))
-
-            // 更新数据存储
-            if (this.coverageType === 'visit') {
-              this.coverageData.visit = processedData
-              this.horizontalCoverageData.visit = processedData
-            } else {
-              this.coverageData.inspection = processedData
-              this.horizontalCoverageData.inspection = processedData
-            }
-
-            // 重新初始化图表
-            this.initCoverageChart(this.charts.vertical)
-            this.initHorizontalCoverageChart(this.charts.horizontal)
-          }
-        } catch (error) {
-          console.error('获取覆盖率数据失败:', error)
-        }
-      },
-
-      // 获取特殊完成率数据
-      async getSpecialData() {
-        try {
-          // 处理请求参数
-          let params = {
-            zfType: this.specialType === 'visit' ? 0 : 1,
-            xsType: this.specialType === 'visit' ? 0 : 1
-          }
-
-          // 只有当选择了时间范围时才添加时间参数
-          if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
-            params.startTime = this.searchForm.dateRange[0].toISOString().split('T')[0]
-            params.endTime = this.searchForm.dateRange[1].toISOString().split('T')[0]
-          }
-
-          // 如果是5位数部门ID用户
+          // 添加区域筛选参数
           if (this.isSeniorManager) {
             if (
               !this.searchForm.powerSupply?.length ||
@@ -849,31 +785,65 @@
           const res = await getWeeklyCompletionRate(params)
 
           if (res.code === 200 && res.data) {
-            // 根据不同的类型处理数据
-            if (this.specialType === 'visit') {
-              // 处理特殊走访数据 - 使用完成率
-              this.specialData.visit = res.data.map((item) => ({
-                value: item.completionRate || 0,
-                totalNum: item.totalVisitNum || 0,
-                companyName: item.companyName || '未知区域'
-              }))
-            } else {
-              // 处理特殊巡视数据 - 使用完成率
-              this.specialData.inspection = res.data.map((item) => ({
-                value: item.completionRate || 0,
-                totalNum: item.totalTourNum || 0,
-                companyName: item.companyName || '未知区域'
-              }))
-            }
-
-            // 处理横向图表数据 - 特殊走访/巡视覆盖率
-            this.horizontalSpecialData[this.specialType] = res.data.map((item) => ({
-              value:
-                this.specialType === 'visit' ? item.completionRate || 0 : item.completionRate || 0,
-              totalNum:
-                this.specialType === 'visit' ? item.totalVisitNum || 0 : item.totalTourNum || 0,
+            const processedData = res.data.map((item) => ({
+              value: Number(item.completionRate || 0),
+              totalNum: this.coverageType === 'visit' ? item.totalVisitNum : item.totalTourNum || 0,
               companyName: item.companyName || '未知区域'
             }))
+
+            // 更新对应类型的数据
+            this.coverageData[this.coverageType] = processedData
+            this.horizontalCoverageData[this.coverageType] = processedData
+
+            // 更新图表
+            this.initCoverageChart(this.charts.vertical)
+            this.initHorizontalCoverageChart(this.charts.horizontal)
+          }
+        } catch (error) {
+          console.error('获取覆盖率数据失败:', error)
+        }
+      },
+
+      // 获取特殊完成率数据
+      async getSpecialData() {
+        try {
+          const params = {
+            ...this.getLastWeekDateRange() // 添加近7天的时间范围参数
+          }
+
+          // 根据当前选择的类型设置参数
+          if (this.specialType === 'visit') {
+            params.zfType = 1 // 特殊走访
+          } else {
+            params.xsType = 1 // 特殊巡视
+          }
+
+          // 添加区域筛选参数
+          if (this.isSeniorManager) {
+            if (
+              !this.searchForm.powerSupply?.length ||
+              this.searchForm.powerSupply[0] === this.deptId
+            ) {
+              params.cityId = this.deptId
+            } else {
+              params.companyId = this.searchForm.powerSupply.join(',')
+            }
+          } else {
+            params.companyId = this.searchForm.powerSupply?.join(',') || ''
+          }
+
+          const res = await getWeeklyCompletionRate(params)
+
+          if (res.code === 200 && res.data) {
+            const processedData = res.data.map((item) => ({
+              value: Number(item.completionRate || 0),
+              totalNum: this.specialType === 'visit' ? item.totalVisitNum : item.totalTourNum || 0,
+              companyName: item.companyName || '未知区域'
+            }))
+
+            // 更新对应类型的数据
+            this.specialData[this.specialType] = processedData
+            this.horizontalSpecialData[this.specialType] = processedData
 
             // 更新图表
             this.initSpecialChart(this.charts.vertical2)
@@ -897,22 +867,28 @@
         this.listSearchForm.powerSupply = selectedNodes.map((node) => node.id)
         this.handleListSearch()
       },
-      // 添加获取默认日期范围的方法
-      getDefaultDateRange() {
+      // 移除 getDefaultDateRange 方法，因为不再需要
+      // 添加获取近7天日期范围的方法
+      getLastWeekDateRange() {
         const end = new Date()
         const start = new Date()
         start.setDate(start.getDate() - 6) // 获取7天前的日期（包含今天）
-        return [start, end]
+        // 格式化日期为 YYYY-MM-DD
+        const formatDate = (date) => {
+          return date.toISOString().split('T')[0]
+        }
+        return {
+          startTime: formatDate(start),
+          endTime: formatDate(end)
+        }
       }
     },
     created() {
-      // 初始化搜索表单的供电所ID和日期范围
+      // 初始化搜索表单的供电所ID
       if (this.isFixedPowerSupply) {
         this.searchForm.powerSupply = [this.deptId]
       }
-      // 确保日期范围有默认值
-      this.searchForm.dateRange = this.getDefaultDateRange()
-
+      // 移除设置默认日期范围的代码
       this.getPowerSupplyTree()
       this.getCoverageData()
       this.getSpecialData()
