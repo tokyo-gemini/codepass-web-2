@@ -37,8 +37,8 @@
         <el-col :span="12">
           <div class="chart-header">
             <el-radio-group v-model="coverageType" size="small" @change="handleCoverageTypeChange">
-              <el-radio-button label="visit">近7日常走访覆盖率</el-radio-button>
-              <el-radio-button label="inspection">近7日常巡视覆盖率</el-radio-button>
+              <el-radio-button label="visit">近7日特殊走访覆盖率</el-radio-button>
+              <el-radio-button label="inspection">近7日日常走访覆盖率</el-radio-button>
             </el-radio-group>
           </div>
           <div ref="verticalChart" class="chart"></div>
@@ -46,15 +46,15 @@
         <el-col :span="12">
           <div class="chart-header">
             <el-radio-group
-              v-model="horizontalCoverageType"
+              v-model="historyCoverageType"
               size="small"
-              @change="handleHorizontalCoverageTypeChange"
+              @change="handleHistoryCoverageTypeChange"
             >
-              <el-radio-button label="visit">历史日常走访覆盖率</el-radio-button>
-              <el-radio-button label="inspection">历史日常巡视覆盖率</el-radio-button>
+              <el-radio-button label="visit">历史特殊走访覆盖率</el-radio-button>
+              <el-radio-button label="inspection">历史日常走访覆盖率</el-radio-button>
             </el-radio-group>
           </div>
-          <div ref="horizontalChart" class="chart"></div>
+          <div ref="historyChart" class="chart"></div>
         </el-col>
       </el-row>
     </el-card>
@@ -65,7 +65,7 @@
         <el-col :span="12">
           <div class="chart-header">
             <el-radio-group v-model="specialType" size="small" @change="handleSpecialTypeChange">
-              <el-radio-button label="visit">近7日特殊走访完成率</el-radio-button>
+              <el-radio-button label="visit">近7日日常巡视完成率</el-radio-button>
               <el-radio-button label="inspection">近7日特殊巡视完成率</el-radio-button>
             </el-radio-group>
           </div>
@@ -78,8 +78,8 @@
               size="small"
               @change="handleHorizontalSpecialTypeChange"
             >
-              <el-radio-button label="visit">历史特殊走访覆盖率</el-radio-button>
-              <el-radio-button label="inspection">历史特殊巡视覆盖率</el-radio-button>
+              <el-radio-button label="visit">历史日常巡视完成率</el-radio-button>
+              <el-radio-button label="inspection">历史特殊巡视完成率</el-radio-button>
             </el-radio-group>
           </div>
           <div ref="horizontalChart2" class="chart"></div>
@@ -132,7 +132,12 @@
   import { deptTreeSelect } from '@/api/system/user'
   import { mapGetters } from 'vuex'
   import CustomTreeSelect from '@/components/TreeSelect'
-  import { getWeeklyCoverageRate, getWeeklyCompletionRate } from '@/api/kanban'
+  import {
+    getWeeklyCoverageRate,
+    getWeeklyCompletionRate,
+    getHistoryCoverageRate,
+    getCompletionRateHistory
+  } from '@/api/kanban'
 
   export default {
     name: 'BaseStats',
@@ -166,18 +171,19 @@
           vertical: null,
           horizontal: null,
           vertical2: null,
-          horizontal2: null
+          horizontal2: null,
+          history: null
         },
         loading: false, // 添加loading状态
-        coverageType: 'visit', // 覆盖率类型：走访/巡视
+        coverageType: 'visit', // 默认类型：特殊走访覆盖率
+        specialType: 'visit', // 默认类型：特殊巡视完成率
         coverageData: {
-          visit: [], // 走访覆盖率数据
-          inspection: [] // 巡视覆盖率数据
+          visit: [], // 特殊走访覆盖率数据
+          inspection: [] // 日常走访覆盖率数据
         },
-        specialType: 'visit', // 特殊类型：走访/巡视
         specialData: {
-          visit: [], // 特殊走访完成率数据
-          inspection: [] // 特殊巡视完成率数据
+          visit: [], // 特殊巡视完成率数据
+          inspection: [] // 日常巡视完成率数据
         },
         horizontalCoverageType: 'visit', // 横向图表的类型
         horizontalCoverageData: {
@@ -188,6 +194,11 @@
         horizontalSpecialData: {
           visit: [],
           inspection: []
+        },
+        historyCoverageType: 'visit', // 默认类型：历史特殊走访覆盖率
+        historyCoverageData: {
+          visit: [], // 历史特殊走访覆盖率数据
+          inspection: [] // 历史日常走访覆盖率数据
         }
       }
     },
@@ -248,6 +259,10 @@
             this.charts.horizontal2 = echarts.init(this.$refs.horizontalChart2)
             this.initHorizontalSpecialChart(this.charts.horizontal2)
           }
+          if (this.$refs.historyChart) {
+            this.charts.history = echarts.init(this.$refs.historyChart)
+            this.initHistoryCoverageChart(this.charts.history)
+          }
         } catch (error) {
           console.error('图表初始化失败:', error)
         }
@@ -264,7 +279,7 @@
 
         const option = {
           title: {
-            text: this.coverageType === 'visit' ? '近7日常走访覆盖率' : '近7日常巡视覆盖率'
+            text: this.coverageType === 'visit' ? '近7日特殊走访覆盖率' : '近7日日常走访覆盖率'
           },
           tooltip: {
             trigger: 'axis',
@@ -345,14 +360,14 @@
         if (!chart) return
         const data = this.specialData[this.specialType] || []
 
-        // 从对象中提取值
-        const values = data.map((item) => item.value)
+        // 从对象中提取值，处理 null 值
+        const values = data.map((item) => (item.value !== null ? item.value : 0))
         const average =
           values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2) : 0
 
         const option = {
           title: {
-            text: this.specialType === 'visit' ? '近7日特殊走访完成率' : '近7日特殊巡视完成率'
+            text: this.specialType === 'visit' ? '近7日特殊巡视完成率' : '近7日日常巡视完成率'
           },
           tooltip: {
             trigger: 'axis',
@@ -366,7 +381,7 @@
                       }</div>
                       <div style="color: #666; margin-bottom: 4px">
                         ${
-                          this.specialType === 'visit' ? '特殊走访完成率' : '特殊巡视完成率'
+                          this.specialType === 'visit' ? '特殊巡视完成率' : '日常巡视完成率'
                         } <span style="float: right; color: #67a651; font-weight: bold">${
                 item.value
               }%</span>
@@ -379,25 +394,66 @@
                     </div>`
             }
           },
-          // ...其余option保持不变...
+          legend: {
+            data: ['完成率', '平均值'],
+            top: 25
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            top: '15%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: data.map((item) => item.companyName || '未知区域'),
+            axisLabel: { rotate: 45 }
+          },
+          yAxis: {
+            type: 'value',
+            name: '完成率',
+            axisLabel: { formatter: '{value}%' },
+            min: 0,
+            max: 100
+          },
           series: [
             {
               name: '完成率',
               type: 'bar',
-              data: data.map((item) => ({
-                value: item.value,
+              data: values.map((value) => ({
+                value,
                 label: {
                   show: true,
                   position: 'top',
                   formatter: '{c}%'
                 }
-              }))
-              // ...其余样式保持不变...
+              })),
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#83bff6' },
+                  { offset: 0.5, color: '#188df0' },
+                  { offset: 1, color: '#188df0' }
+                ])
+              }
+            },
+            {
+              name: '平均值',
+              type: 'line',
+              data: new Array(data.length).fill(average),
+              symbol: 'none',
+              lineStyle: {
+                type: 'dashed',
+                color: '#FF9800',
+                width: 2
+              },
+              itemStyle: {
+                color: '#FF9800'
+              }
             }
-            // 平均线保持不变
           ]
         }
-        chart.setOption(option)
+        chart.setOption(option, true)
       },
       // 初始化横向覆盖率图表
       initHorizontalCoverageChart(chart) {
@@ -557,6 +613,82 @@
         }
         chart.setOption(option)
       },
+      // 初始化历史覆盖率图表
+      initHistoryCoverageChart(chart) {
+        if (!chart) return
+        const data = this.historyCoverageData[this.historyCoverageType] || []
+
+        const option = {
+          title: {
+            text: this.historyCoverageType === 'visit' ? '历史特殊走访覆盖率' : '历史日常走访覆盖率'
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: (params) => {
+              const item = params[0]
+              const dataItem = data[item.dataIndex] || {}
+              return `<div style="padding: 8px">
+                      <div style="font-weight: bold; margin-bottom: 8px; color: #333">${
+                        dataItem.companyName
+                      }</div>
+                      <div style="color: #666; margin-bottom: 4px">
+                        ${
+                          this.historyCoverageType === 'visit' ? '特殊走访覆盖率' : '日常走访覆盖率'
+                        } <span style="float: right; color: #67a651; font-weight: bold">${
+                item.value
+              }%</span>
+                      </div>
+                      <div style="color: #666">
+                        总次数 <span style="float: right; color: #67a651; font-weight: bold">${
+                          dataItem.totalNum
+                        }</span>
+                      </div>
+                    </div>`
+            }
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: data.map((item) => item.companyName || '未知区域'),
+            axisLabel: { rotate: 45 }
+          },
+          yAxis: {
+            type: 'value',
+            name: '覆盖率',
+            axisLabel: { formatter: '{value}%' },
+            min: 0,
+            max: 100
+          },
+          series: [
+            {
+              name: '覆盖率',
+              type: 'bar',
+              data: data.map((item) => ({
+                value: item.value,
+                label: {
+                  show: true,
+                  position: 'top',
+                  formatter: '{c}%'
+                }
+              })),
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#83bff6' },
+                  { offset: 0.5, color: '#188df0' },
+                  { offset: 1, color: '#188df0' }
+                ])
+              }
+            }
+          ]
+        }
+        chart.setOption(option, true)
+      },
       // 调整图表大小
       resizeCharts() {
         Object.values(this.charts).forEach((chart) => {
@@ -568,6 +700,8 @@
         // 点击查询时，重新获取所有数据
         this.getCoverageData()
         this.getSpecialData()
+        this.getHistoryCoverageData() // 查询时更新历史覆盖率数据
+        this.getHistoryCompletionRate()
       },
 
       // 点击重置时清空条件并重新查询
@@ -591,6 +725,8 @@
         // 重置后重新查询数据
         this.getCoverageData()
         this.getSpecialData()
+        this.getHistoryCoverageData() // 查询时更新历史覆盖率数据
+        this.getHistoryCompletionRate()
       },
 
       // 移除不需要的 fetchData 方法，因为我们直接使用 getCoverageData 和 getSpecialData
@@ -745,14 +881,17 @@
       // 处理特殊类型切换
       async handleSpecialTypeChange(value) {
         this.specialType = value
-        await this.getSpecialData()
+        await this.getSpecialData() // 切换 Tab 时重新获取数据
       },
       // 处理横向特殊类型切换
-      handleHorizontalSpecialTypeChange(value) {
+      async handleHorizontalSpecialTypeChange(value) {
         this.horizontalSpecialType = value
-        if (this.charts.horizontal2) {
-          this.initHorizontalSpecialChart(this.charts.horizontal2)
-        }
+        await this.getHistoryCompletionRate()
+      },
+      // 处理历史覆盖率类型切换
+      async handleHistoryCoverageTypeChange(value) {
+        this.historyCoverageType = value
+        await this.getHistoryCoverageData() // 切换 Tab 时重新获取数据
       },
       // 获取覆盖率数据
       async getCoverageData() {
@@ -763,9 +902,9 @@
 
           // 根据当前选择的类型设置参数
           if (this.coverageType === 'visit') {
-            params.zfType = 0 // 日常走访
+            params.zfType = 1 // 特殊走访
           } else {
-            params.xsType = 0 // 日常巡视
+            params.zfType = 0 // 日常走访
           }
 
           // 添加区域筛选参数
@@ -786,8 +925,8 @@
 
           if (res.code === 200 && res.data) {
             const processedData = res.data.map((item) => ({
-              value: Number(item.completionRate || 0),
-              totalNum: this.coverageType === 'visit' ? item.totalVisitNum : item.totalTourNum || 0,
+              value: Number(item.coverageRate || 0), // 使用 coverageRate 绘制覆盖率图表
+              totalNum: item.totalVisitNum || 0,
               companyName: item.companyName || '未知区域'
             }))
 
@@ -811,12 +950,8 @@
             ...this.getLastWeekDateRange() // 添加近7天的时间范围参数
           }
 
-          // 根据当前选择的类型设置参数
-          if (this.specialType === 'visit') {
-            params.zfType = 1 // 特殊走访
-          } else {
-            params.xsType = 1 // 特殊巡视
-          }
+          // 根据当前选择的类型设置 xsType 参数
+          params.xsType = this.specialType === 'visit' ? 1 : 0 // 1: 特殊巡视, 0: 日常巡视
 
           // 添加区域筛选参数
           if (this.isSeniorManager) {
@@ -836,22 +971,120 @@
 
           if (res.code === 200 && res.data) {
             const processedData = res.data.map((item) => ({
-              value: Number(item.completionRate || 0),
-              totalNum: this.specialType === 'visit' ? item.totalVisitNum : item.totalTourNum || 0,
+              value: Number(item.completionRate || 0), // 使用 completionRate 绘制完成率图表
+              totalNum: item.totalTourNum || 0,
               companyName: item.companyName || '未知区域'
             }))
 
             // 更新对应类型的数据
             this.specialData[this.specialType] = processedData
-            this.horizontalSpecialData[this.specialType] = processedData
 
             // 更新图表
             this.initSpecialChart(this.charts.vertical2)
-            this.initHorizontalSpecialChart(this.charts.horizontal2)
           }
         } catch (error) {
           console.error('获取特殊完成率数据失败:', error)
         }
+      },
+
+      // 获取历史覆盖率数据
+      async getHistoryCoverageData() {
+        try {
+          const params = {
+            xsType: this.historyCoverageType === 'visit' ? 1 : 0 // 1: 特殊走访, 0: 日常走访
+          }
+
+          // 如果用户选择了时间范围，则添加日期筛选参数
+          if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
+            const [start, end] = this.searchForm.dateRange
+            params.startTime = this.formatDate(start)
+            params.endTime = this.formatDate(end)
+          }
+
+          // 添加区域筛选参数
+          if (this.isSeniorManager) {
+            if (
+              !this.searchForm.powerSupply?.length ||
+              this.searchForm.powerSupply[0] === this.deptId
+            ) {
+              params.cityId = this.deptId
+            } else {
+              params.companyId = this.searchForm.powerSupply.join(',')
+            }
+          } else {
+            params.companyId = this.searchForm.powerSupply?.join(',') || ''
+          }
+
+          const res = await getHistoryCoverageRate(params) // 修改这里，使用正确的接口
+
+          if (res.code === 200 && res.data) {
+            const processedData = res.data.map((item) => ({
+              value: Number(item.coverageRate || 0),
+              totalNum: item.totalVisitNum || 0,
+              companyName: item.companyName || '未知区域'
+            }))
+
+            this.historyCoverageData[this.historyCoverageType] = processedData
+            this.initHistoryCoverageChart(this.charts.history)
+          }
+        } catch (error) {
+          console.error('获取历史覆盖率数据失败:', error)
+        }
+      },
+
+      // 获取历史完成率数据
+      async getHistoryCompletionRate() {
+        try {
+          const params = {
+            xsType: this.horizontalSpecialType === 'visit' ? 0 : 1 // 0: 日常巡视, 1: 特殊巡视
+          }
+
+          // 如果用户选择了时间范围，则添加日期筛选参数
+          if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
+            const [start, end] = this.searchForm.dateRange
+            params.startTime = this.formatDate(start)
+            params.endTime = this.formatDate(end)
+          }
+
+          // 添加区域筛选参数
+          if (this.isSeniorManager) {
+            if (
+              !this.searchForm.powerSupply?.length ||
+              this.searchForm.powerSupply[0] === this.deptId
+            ) {
+              params.cityId = this.deptId
+            } else {
+              params.companyId = this.searchForm.powerSupply.join(',')
+            }
+          } else {
+            params.companyId = this.searchForm.powerSupply?.join(',') || ''
+          }
+
+          const res = await getCompletionRateHistory(params)
+
+          if (res.code === 200 && res.data) {
+            const processedData = res.data.map((item) => ({
+              value: Number(item.completionRate || 0),
+              totalNum: item.totalTourNum || 0,
+              companyName: item.companyName || '未知区域'
+            }))
+
+            this.horizontalSpecialData[this.horizontalSpecialType] = processedData
+            this.initHorizontalSpecialChart(this.charts.horizontal2)
+          }
+        } catch (error) {
+          console.error('获取历史巡视完成率数据失败:', error)
+        }
+      },
+
+      // 添加日期格式化方法
+      formatDate(date) {
+        if (!date) return ''
+        const d = new Date(date)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
       },
 
       // 添加一个用于处理供电所选择变化的方法
@@ -860,6 +1093,8 @@
         // 每次选择变化时重新获取数据
         this.getCoverageData()
         this.getSpecialData()
+        this.getHistoryCoverageData() // 查询时更新历史覆盖率数据
+        this.getHistoryCompletionRate()
       },
 
       // 添加处理列表筛选区域供电所选择变化的方法
@@ -883,6 +1118,16 @@
         }
       }
     },
+    watch: {
+      'searchForm.dateRange': {
+        handler(newVal) {
+          // 当日期范围变化时，重新获取历史覆盖率数据
+          this.getHistoryCoverageData()
+          this.getHistoryCompletionRate()
+        },
+        deep: true
+      }
+    },
     created() {
       // 初始化搜索表单的供电所ID
       if (this.isFixedPowerSupply) {
@@ -892,6 +1137,8 @@
       this.getPowerSupplyTree()
       this.getCoverageData()
       this.getSpecialData()
+      this.getHistoryCoverageData() // 初始化获取历史覆盖率数据
+      this.getHistoryCompletionRate()
     }
   }
 </script>

@@ -17,3 +17,21 @@ export function getWeeklyCompletionRate(params) {
     params
   })
 }
+
+// 获取历史覆盖率数据
+export function getHistoryCoverageRate(params) {
+  return request({
+    url: '/result/kan/ban/get/coverage/history',
+    method: 'get',
+    params
+  })
+}
+
+// 获取历史完成率数据
+export function getCompletionRateHistory(params) {
+  return request({
+    url: '/result/kan/ban/get/completion/history',
+    method: 'get',
+    params
+  })
+}
