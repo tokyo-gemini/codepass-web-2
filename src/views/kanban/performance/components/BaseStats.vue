@@ -90,7 +90,8 @@
       <!-- 添加列表筛选区域 -->
       <div class="filter-section">
         <el-form :inline="true" :model="listSearchForm">
-          <el-form-item label="区域筛选">
+          <!-- 只有当用户部门ID小于7位数时才显示区域筛选 -->
+          <el-form-item label="区域筛选" v-if="!isRestrictedUser">
             <custom-tree-select
               v-model="listSearchForm.powerSupply"
               :options="powerSupplyTree"
@@ -134,10 +135,45 @@
         style="width: 100%"
       >
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column prop="date" label="日期" />
-        <el-table-column prop="type" label="类型" />
-        <el-table-column prop="area" label="区域" />
-        <el-table-column prop="count" label="数量" />
+        <el-table-column prop="companyName" label="区域名称" show-overflow-tooltip />
+        <el-table-column prop="towerName" label="变压器名称" show-overflow-tooltip />
+        <el-table-column
+          :label="tableActiveTab === 'visit' ? '日常走访数量' : '日常巡视数量'"
+          align="center"
+        >
+          <template slot-scope="scope">
+            {{
+              tableActiveTab === 'visit'
+                ? scope.row.dailyVisitNum || '0'
+                : scope.row.dailyTourNum || '0'
+            }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="tableActiveTab === 'visit' ? '特殊走访数量' : '特殊巡视数量'"
+          align="center"
+        >
+          <template slot-scope="scope">
+            {{
+              tableActiveTab === 'visit'
+                ? scope.row.totalVisitNum || '0'
+                : scope.row.totalTourNum || '0'
+            }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="tableActiveTab === 'visit' ? '覆盖率' : '完成率'" align="center">
+          <template slot-scope="scope">
+            {{
+              tableActiveTab === 'visit'
+                ? scope.row.coverageRate !== null
+                  ? scope.row.coverageRate + '%'
+                  : '-'
+                : scope.row.completionRate !== null
+                ? scope.row.completionRate + '%'
+                : '-'
+            }}
+          </template>
+        </el-table-column>
       </el-table>
       <div class="pagination">
         <el-pagination
@@ -151,6 +187,37 @@
         />
       </div>
     </el-card>
+
+    <!-- 修改导出配置弹窗 -->
+    <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+      <div class="mb-4 text-gray-600">可导出数据总量：{{ pagination.total }}条</div>
+      <el-form :model="exportForm" label-width="120px">
+        <el-form-item label="单次导出数量">
+          <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
+            <el-radio :label="1000">1000条/次</el-radio>
+            <el-radio :label="3000">3000条/次</el-radio>
+            <el-radio :label="5000">5000条/次</el-radio>
+            <el-radio :label="10000">10000条/次</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="导出页数选择">
+          <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
+            <el-option
+              v-for="page in totalPages"
+              :key="page"
+              :label="getPageRangeLabel(page)"
+              :value="page"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="exportVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleConfirmExport" :loading="exporting"
+          >确 定</el-button
+        >
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -165,6 +232,7 @@
   import CompletionRateChart from './CompletionRateChart'
   import HistoryCompletionRateChart from './HistoryCompletionRateChart'
   import { getVisitInspectionInfo, exportVisitInspectionInfo } from '@/api/kanban'
+  import { exportFile } from '@/utils/request' // 添加导入exportFile函数
 
   export default {
     name: 'BaseStats',
@@ -223,7 +291,14 @@
         ids: [],
         // 选中的行数据
         selection: [],
-        showSearch: true
+        showSearch: true,
+        // 添加导出相关数据
+        exportVisible: false,
+        exporting: false,
+        exportForm: {
+          page: 1,
+          pageSize: 1000
+        }
       }
     },
     computed: {
@@ -236,6 +311,14 @@
       },
       isSeniorManager() {
         return this.deptId && this.deptId.toString().length === 5
+      },
+      isRestrictedUser() {
+        // 判断是否是受限用户（deptId大于等于7位）
+        return this.deptId && this.deptId.toString().length >= 7
+      },
+      // 添加计算总页数的计算属性
+      totalPages() {
+        return Math.ceil(this.pagination.total / this.exportForm.pageSize)
       }
     },
     mounted() {
@@ -317,20 +400,24 @@
           pageSize: this.pagination.pageSize
         }
 
-        // 添加区域筛选参数
-        if (this.listSearchForm.powerSupply) {
-          params.powerId = this.listSearchForm.powerSupply
-        } else {
-          // 如果没有选择，则使用当前用户部门ID
+        // 添加区域筛选参数的逻辑
+        if (this.isRestrictedUser) {
+          // deptId ≥ 7位时，必须传自己的deptId作为powerId
           params.powerId = this.deptId
+        } else {
+          // deptId < 7位时，只有用户选择了区域才传powerId
+          if (this.listSearchForm.powerSupply) {
+            params.powerId = this.listSearchForm.powerSupply
+          }
         }
 
         // 调用接口获取数据
         getVisitInspectionInfo(params)
           .then((res) => {
             if (res.code === 200) {
-              this.tableData = res.data.rows || []
-              this.pagination.total = res.data.total || 0
+              // 修复这里：rows 和 total 在顶层，而不是在 res.data 中
+              this.tableData = res.rows || []
+              this.pagination.total = res.total || 0
             } else {
               this.$message.error(res.msg || '获取数据失败')
               this.tableData = []
@@ -339,7 +426,6 @@
           })
           .catch((error) => {
             console.error('获取表格数据失败:', error)
-            this.$message.error('获取数据失败，请稍后重试')
             this.tableData = []
             this.pagination.total = 0
           })
@@ -349,8 +435,12 @@
       },
 
       resetListForm() {
-        this.listSearchForm = {
-          powerSupply: null
+        if (this.isRestrictedUser) {
+          // 受限用户重置时保持使用自己的deptId
+          this.listSearchForm.powerSupply = this.deptId
+        } else {
+          // 非受限用户可以清空选择
+          this.listSearchForm.powerSupply = null
         }
         this.pagination.currentPage = 1
         this.handleListSearch()
@@ -448,11 +538,13 @@
       },
 
       handlePowerSupplyChange(selectedNodes) {
+        // 直接使用节点ID，不需要判断数组长度
         this.searchForm.powerSupply = selectedNodes.length > 0 ? selectedNodes[0].id : null
         this.handleSearch()
       },
 
       handleListPowerSupplyChange(selectedNodes) {
+        // 直接使用节点ID，不需要判断数组长度
         this.listSearchForm.powerSupply = selectedNodes.length > 0 ? selectedNodes[0].id : null
         this.handleListSearch()
       },
@@ -470,25 +562,86 @@
 
       // 处理导出
       handleExport() {
-        const queryParams = {
-          powerId: this.listSearchForm.powerSupply || this.deptId,
-          type: this.tableActiveTab === 'visit' ? 0 : 1 // 0: 走访, 1: 巡视
+        if (this.pagination.total === 0) {
+          this.$modal.msgError('当前没有数据可供导出')
+          return
         }
+        this.exportForm.page = 1
+        this.exportVisible = true
+      },
 
-        // 如果有选择行，则只导出选中行
-        if (this.ids.length > 0) {
-          queryParams.ids = this.ids.join(',')
-        }
+      // 确认导出操作
+      handleConfirmExport() {
+        this.$modal
+          .confirm('是否确认导出当前页数据?')
+          .then(() => {
+            this.exporting = true
 
-        this.download(
-          'result/kan/ban/get/page/export',
-          {
-            ...queryParams
-          },
-          `${
-            this.tableActiveTab === 'visit' ? '走访信息' : '巡视信息'
-          }_${new Date().getTime()}.xlsx`
-        )
+            // 构建导出请求参数
+            const queryParams = {
+              page: this.exportForm.page,
+              pageSize: this.exportForm.pageSize,
+              type: this.tableActiveTab === 'visit' ? 0 : 1 // 0: 走访, 1: 巡视
+            }
+
+            // 添加区域筛选参数的逻辑，与列表查询保持一致
+            if (this.isRestrictedUser) {
+              // deptId ≥ 7位时，必须传自己的deptId作为powerId
+              queryParams.powerId = this.deptId
+            } else if (this.listSearchForm.powerSupply) {
+              // 只有用户选择了区域才传powerId
+              queryParams.powerId = this.listSearchForm.powerSupply
+            }
+
+            // 如果有选择行，则只导出选中行
+            if (this.ids.length > 0) {
+              queryParams.ids = this.ids.join(',')
+            }
+
+            // 使用exportFile函数导出
+            exportFile(
+              '/result/kan/ban/get/page/export',
+              queryParams,
+              `${this.tableActiveTab === 'visit' ? '走访信息' : '巡视信息'}_第${
+                this.exportForm.page
+              }页_${new Date().getTime()}.xlsx`,
+              {
+                timeout: 300000, // 设置5分钟超时
+                onDownloadProgress: (progressEvent) => {
+                  if (progressEvent.lengthComputable) {
+                    const percentCompleted = Math.round(
+                      (progressEvent.loaded * 100) / progressEvent.total
+                    )
+                    console.log(`导出进度: ${percentCompleted}%`)
+                  }
+                }
+              }
+            )
+              .then(() => {
+                this.exporting = false
+                this.exportVisible = false
+                this.$modal.msgSuccess('导出成功')
+              })
+              .catch(() => {
+                this.exporting = false
+              })
+          })
+          .catch(() => {})
+      },
+
+      // 处理单次导出数量变化
+      handlePageSizeChange() {
+        this.exportForm.page = 1 // 重置页码选择
+      },
+
+      // 获取页码范围标签
+      getPageRangeLabel(page) {
+        const start = (page - 1) * this.exportForm.pageSize
+        const remainingItems = this.pagination.total - start
+        const itemsInThisPage = Math.min(this.exportForm.pageSize, remainingItems)
+        const end = start + itemsInThisPage
+
+        return `第${page}页 (${start + 1}-${end}条)`
       },
 
       // 兼容RightToolbar组件
@@ -557,5 +710,13 @@
   /* 添加Tab样式 */
   .el-tabs {
     margin-bottom: 15px;
+  }
+  /* 添加导出相关样式 */
+  .mb-4 {
+    margin-bottom: 15px;
+  }
+
+  .text-gray-600 {
+    color: #666;
   }
 </style>

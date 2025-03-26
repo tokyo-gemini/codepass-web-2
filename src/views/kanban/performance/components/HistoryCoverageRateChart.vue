@@ -222,9 +222,9 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 添加区域筛选参数
-          if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
-            params.companyId = this.searchParams.powerSupply.join(',')
+          // 添加区域筛选参数 - 修改为支持单值
+          if (this.searchParams.powerSupply) {
+            params.companyId = this.searchParams.powerSupply
           } else {
             // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
             const deptIdStr = this.deptId.toString()

@@ -8,12 +8,37 @@
       ref="selectTrigger"
     >
       <div class="selected-content" v-if="selectedNodes.length">
-        <!-- 简洁模式：只显示数量 -->
-        <div v-if="!showDetail" class="selected-summary">
-          已选择 {{ selectedNodes.length }} 项
+        <!-- 3个及以下显示所有标签 -->
+        <div v-if="selectedNodes.length <= 3" class="selected-tags-simple">
+          <el-tag
+            v-for="node in selectedNodes"
+            :key="node.id"
+            size="small"
+            closable
+            @close.stop="handleRemoveTag(node)"
+            class="tag-item"
+          >
+            {{ node.label }}
+          </el-tag>
+        </div>
+        <!-- 超过3个时显示简洁模式 -->
+        <div v-else-if="!showDetail" class="selected-summary">
+          <div class="tags-preview">
+            <el-tag
+              v-for="node in displayTags"
+              :key="node.id"
+              size="small"
+              closable
+              @close.stop="handleRemoveTag(node)"
+              class="tag-item"
+            >
+              {{ node.label }}
+            </el-tag>
+            <span class="more-tag">+{{ selectedNodes.length - displayTags.length }}</span>
+          </div>
           <el-button type="text" size="mini" @click.stop="showDetail = true"> 详情 </el-button>
         </div>
-        <!-- 详细模式：显示标签 -->
+        <!-- 详细模式：显示所有标签 -->
         <div v-else class="selected-tags">
           <div class="tags-header">
             <span>已选择 {{ selectedNodes.length }} 项</span>
@@ -26,6 +51,7 @@
               size="small"
               closable
               @close.stop="handleRemoveTag(node)"
+              class="tag-item"
             >
               {{ node.label }}
             </el-tag>
@@ -83,7 +109,8 @@
     name: 'CustomTreeSelect',
     props: {
       value: {
-        type: Array,
+        // 同时支持数组和单值(数字或字符串)
+        type: [Array, Number, String],
         default: () => []
       },
       options: {
@@ -131,6 +158,7 @@
         return this.selectedNodes.map((node) => node.id)
       },
       displayTags() {
+        // 只显示前3个标签
         return this.selectedNodes.slice(0, 3)
       }
     },
@@ -224,10 +252,19 @@
         }
       },
       initSelection() {
-        if (this.value && this.value.length) {
-          this.selectedNodes = this.value
+        // 处理单值和数组两种情况
+        if (this.value) {
+          // 将单个值转换为数组处理
+          const valueArray = Array.isArray(this.value) ? this.value : [this.value]
+
+          this.selectedNodes = valueArray
             .map((id) => this.findNodeById(this.treeData, id))
             .filter(Boolean)
+
+          // 如果启用了单选模式，并且有多个选中项，则只保留第一个
+          if (this.singleSelect && this.selectedNodes.length > 1) {
+            this.selectedNodes = this.selectedNodes.slice(0, 1)
+          }
         } else {
           this.selectedNodes = []
         }
@@ -270,6 +307,12 @@
               label: currentNode.label
             }
           ]
+
+          // 发出事件时，如果原本传入的是单个值（非数组），则依然返回单个值
+          const outputValue = Array.isArray(this.value) ? [currentNode.id] : currentNode.id
+
+          this.$emit('input', outputValue)
+          this.$emit('change', this.selectedNodes)
         } else {
           // 多选模式维持原有逻辑
           this.selectedNodes = checkedNodes
@@ -278,14 +321,14 @@
               id: node.id,
               label: node.label
             }))
-        }
 
-        // 发出事件
-        this.$emit(
-          'input',
-          this.selectedNodes.map((node) => node.id)
-        )
-        this.$emit('change', this.selectedNodes)
+          // 发出事件
+          this.$emit(
+            'input',
+            this.selectedNodes.map((node) => node.id)
+          )
+          this.$emit('change', this.selectedNodes)
+        }
       },
       handleRemoveTag(node) {
         const index = this.selectedNodes.findIndex((n) => n.id === node.id)
@@ -328,7 +371,10 @@
       clearSelection() {
         this.selectedNodes = []
         this.$refs.tree.setCheckedKeys([])
-        this.$emit('input', [])
+
+        // 根据原始输入类型决定清空后的输出类型
+        const emptyValue = Array.isArray(this.value) ? [] : null
+        this.$emit('input', emptyValue)
         this.$emit('change', [])
       }
     }
@@ -339,6 +385,7 @@
   .custom-tree-select {
     position: relative;
     width: 100%;
+    min-width: 200px;
 
     .select-trigger {
       min-height: 32px;
@@ -364,6 +411,15 @@
       flex: 1;
       min-height: 32px;
       margin-right: 8px;
+      display: flex;
+      align-items: center;
+    }
+
+    .selected-tags-simple {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px 0;
     }
 
     .selected-summary {
@@ -371,6 +427,28 @@
       align-items: center;
       justify-content: space-between;
       color: #606266;
+      width: 100%;
+    }
+
+    .tags-preview {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .more-tag {
+      color: #909399;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+
+    .tag-item {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .selected-tags {
@@ -414,7 +492,7 @@
 
     .select-dropdown {
       position: fixed; // 修改为 fixed 定位
-      min-width: 300px; // 添加最小宽度
+      min-width: 600px; // 修改下拉框的最小宽度，保持与选择器宽度一致
       max-height: 300px;
       margin-top: 4px;
       background: #fff;
