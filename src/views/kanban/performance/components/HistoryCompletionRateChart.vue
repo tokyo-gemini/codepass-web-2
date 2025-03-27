@@ -6,8 +6,8 @@
         size="small"
         @change="handleHorizontalSpecialTypeChange"
       >
-        <el-radio-button label="visit">历史日常巡视完成率</el-radio-button>
-        <el-radio-button label="inspection">历史特殊巡视完成率</el-radio-button>
+        <el-radio-button label="inspection">历史日常巡视完成率</el-radio-button>
+        <el-radio-button label="visit">历史特殊巡视完成率</el-radio-button>
       </el-radio-group>
     </div>
     <div ref="chartRef" class="chart"></div>
@@ -37,7 +37,7 @@
     data() {
       return {
         chart: null,
-        horizontalSpecialType: 'visit', // 默认类型：历史日常巡视完成率
+        horizontalSpecialType: 'inspection', // 修改为默认显示历史日常巡视完成率
         horizontalSpecialData: {
           visit: [], // 历史日常巡视完成率数据
           inspection: [] // 历史特殊巡视完成率数据
@@ -230,7 +230,7 @@
       async getHistoryCompletionRate() {
         try {
           const params = {
-            xsType: this.horizontalSpecialType === 'visit' ? 0 : 1 // 0: 日常巡视, 1: 特殊巡视
+            xsType: this.horizontalSpecialType === 'inspection' ? 0 : 1 // 修改这里：inspection对应0（日常），visit对应1（特殊）
           }
 
           // 如果用户选择了时间范围，则添加日期筛选参数
@@ -240,16 +240,22 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 添加区域筛选参数
-          if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
-            params.companyId = this.searchParams.powerSupply.join(',')
-          } else {
-            // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
-            const deptIdStr = this.deptId.toString()
-            if (deptIdStr.length <= 5) {
-              params.cityId = this.deptId
-            } else if (deptIdStr.length >= 7) {
-              params.companyId = this.deptId
+          // 检查是否是超级管理员
+          const roles = this.$store.getters && this.$store.getters.roles
+          const isAdmin = roles.includes('admin')
+
+          // 只有非超级管理员时才添加区域筛选参数
+          if (!isAdmin) {
+            if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
+              params.companyId = this.searchParams.powerSupply.join(',')
+            } else {
+              // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
+              const deptIdStr = this.deptId.toString()
+              if (deptIdStr.length <= 5) {
+                params.cityId = this.deptId
+              } else if (deptIdStr.length >= 7) {
+                params.companyId = this.deptId
+              }
             }
           }
 

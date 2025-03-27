@@ -2,8 +2,8 @@
   <div class="chart-container">
     <div class="chart-header">
       <el-radio-group v-model="specialType" size="small" @change="handleSpecialTypeChange">
-        <el-radio-button label="visit">近7日日常巡视完成率</el-radio-button>
-        <el-radio-button label="inspection">近7日特殊巡视完成率</el-radio-button>
+        <el-radio-button label="inspection">近7日日常巡视完成率</el-radio-button>
+        <el-radio-button label="visit">近7日特殊巡视完成率</el-radio-button>
       </el-radio-group>
     </div>
     <div ref="chartRef" class="chart"></div>
@@ -33,7 +33,7 @@
     data() {
       return {
         chart: null,
-        specialType: 'visit', // 默认类型：日常巡视完成率
+        specialType: 'inspection', // 修改为默认显示日常巡视完成率
         specialData: {
           visit: [], // 日常巡视完成率数据
           inspection: [] // 特殊巡视完成率数据
@@ -184,22 +184,25 @@
       async getCompletionData() {
         try {
           const params = {
-            ...this.getLastWeekDateRange()
+            ...this.getLastWeekDateRange(),
+            xsType: this.specialType === 'visit' ? 1 : 0 // 0: 日常巡视, 1: 特殊巡视
           }
-
-          // 设置巡视类型参数
-          params.xsType = this.specialType === 'visit' ? 1 : 0 // 1: 日常巡视, 0: 特殊巡视
 
           // 添加区域筛选参数
           if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
             params.companyId = this.searchParams.powerSupply.join(',')
           } else {
-            // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
-            const deptIdStr = this.deptId.toString()
-            if (deptIdStr.length <= 5) {
-              params.cityId = this.deptId
-            } else if (deptIdStr.length >= 7) {
-              params.companyId = this.deptId
+            // 检查是否是超级管理员
+            const roles = this.$store.getters && this.$store.getters.roles
+            const isAdmin = roles.includes('admin')
+            if (!isAdmin) {
+              // 非超级管理员时才根据 deptId 添加参数
+              const deptIdStr = this.deptId.toString()
+              if (deptIdStr.length <= 5) {
+                params.cityId = this.deptId
+              } else if (deptIdStr.length >= 7) {
+                params.companyId = this.deptId
+              }
             }
           }
 

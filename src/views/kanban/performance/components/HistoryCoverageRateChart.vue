@@ -6,8 +6,8 @@
         size="small"
         @change="handleHistoryCoverageTypeChange"
       >
-        <el-radio-button label="visit">历史特殊走访覆盖率</el-radio-button>
         <el-radio-button label="inspection">历史日常走访覆盖率</el-radio-button>
+        <el-radio-button label="visit">历史特殊走访覆盖率</el-radio-button>
       </el-radio-group>
     </div>
     <div ref="chartRef" class="chart"></div>
@@ -37,7 +37,7 @@
     data() {
       return {
         chart: null,
-        historyCoverageType: 'visit', // 默认类型：历史特殊走访覆盖率
+        historyCoverageType: 'inspection', // 修改默认为历史日常走访覆盖率
         historyCoverageData: {
           visit: [], // 历史特殊走访覆盖率数据
           inspection: [] // 历史日常走访覆盖率数据
@@ -222,16 +222,21 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 添加区域筛选参数 - 修改为支持单值
+          // 添加区域筛选参数
           if (this.searchParams.powerSupply) {
             params.companyId = this.searchParams.powerSupply
           } else {
-            // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
-            const deptIdStr = this.deptId.toString()
-            if (deptIdStr.length <= 5) {
-              params.cityId = this.deptId
-            } else if (deptIdStr.length >= 7) {
-              params.companyId = this.deptId
+            // 检查是否是超级管理员
+            const roles = this.$store.getters && this.$store.getters.roles
+            const isAdmin = roles.includes('admin')
+            if (!isAdmin) {
+              // 非超级管理员时才根据 deptId 添加参数
+              const deptIdStr = this.deptId.toString()
+              if (deptIdStr.length <= 5) {
+                params.cityId = this.deptId
+              } else if (deptIdStr.length >= 7) {
+                params.companyId = this.deptId
+              }
             }
           }
 

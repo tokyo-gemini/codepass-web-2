@@ -395,18 +395,22 @@
 
         // 构建请求参数
         const params = {
-          type: this.tableActiveTab === 'visit' ? 1 : 2, // 1: 走访, 2: 巡视
+          type: this.tableActiveTab === 'visit' ? 0 : 1, // 0: 走访, 1: 巡视
           pageNum: this.pagination.currentPage,
           pageSize: this.pagination.pageSize
         }
 
-        // 添加区域筛选参数的逻辑
-        if (this.isRestrictedUser) {
-          // deptId ≥ 7位时，必须传自己的deptId作为powerId
-          params.powerId = this.deptId
-        } else {
-          // deptId < 7位时，只有用户选择了区域才传powerId
-          if (this.listSearchForm.powerSupply) {
+        // 检查是否是超级管理员
+        const roles = this.$store.getters && this.$store.getters.roles
+        const isAdmin = roles.includes('admin')
+
+        if (!isAdmin) {
+          // 非超级管理员时才添加区域筛选参数
+          if (this.isRestrictedUser) {
+            // deptId ≥ 7位时，必须传自己的deptId作为powerId
+            params.powerId = this.deptId
+          } else if (this.listSearchForm.powerSupply) {
+            // 只有用户选择了区域才传powerId
             params.powerId = this.listSearchForm.powerSupply
           }
         }
