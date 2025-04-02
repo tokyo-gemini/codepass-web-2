@@ -81,6 +81,9 @@
             >
             <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
           </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleGenerateQrcode">批量生成二维码</el-button>
+          </el-form-item>
         </el-form>
       </div>
 
@@ -134,6 +137,21 @@
         @pagination="getList"
       />
     </div>
+
+    <!-- 添加进度条弹窗 -->
+    <el-dialog
+      title="生成二维码"
+      :visible.sync="progressVisible"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      width="400px"
+    >
+      <div class="flex flex-col items-center">
+        <el-progress type="circle" :percentage="progressPercentage"></el-progress>
+        <div class="mt-4 text-gray-600">正在生成二维码文件...</div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -142,7 +160,8 @@
     asyncGetPlanList,
     asyncEnabledPlan,
     asyncGetPlanCount,
-    asyncDeletePlan
+    asyncDeletePlan,
+    asyncGenerateQrcode // 添加导入
   } from '@/api/plan'
   import CustomSwitch from '@/components/CustomSwitch.vue'
 
@@ -204,7 +223,9 @@
             hidden: true // 添加 hidden 属性
           }
         ],
-        planCounts: [] // 添加计划数量数据
+        planCounts: [], // 添加计划数量数据
+        progressVisible: false,
+        progressPercentage: 0
       }
     },
     created() {
@@ -309,6 +330,52 @@
       getPlanCount(type) {
         const found = this.planCounts.find((item) => item.planType === type)
         return found ? found.planTypeCounts || 0 : 0
+      },
+      /** 批量生成二维码 */
+      handleGenerateQrcode() {
+        this.$modal.confirm('是否确认生成二维码文件？').then(() => {
+          this.progressVisible = true
+          this.progressPercentage = 0
+
+          // 模拟进度增加
+          const timer = setInterval(() => {
+            if (this.progressPercentage < 90) {
+              this.progressPercentage += 10
+            }
+          }, 300)
+
+          asyncGenerateQrcode()
+            .then((res) => {
+              // 完成时直接显示100%
+              this.progressPercentage = 100
+              setTimeout(() => {
+                clearInterval(timer)
+                this.progressVisible = false
+
+                // 创建 Blob 对象
+                const blob = new Blob([res], { type: 'application/zip' })
+                const link = document.createElement('a')
+                link.href = window.URL.createObjectURL(blob)
+                link.download = `二维码_${new Date().getTime()}.zip`
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(link.href)
+
+                this.$notify({
+                  title: '生成成功',
+                  message: '二维码文件已成功生成,请检查您选择的下载目录',
+                  type: 'success',
+                  duration: 0
+                })
+              }, 200)
+            })
+            .catch(() => {
+              clearInterval(timer)
+              this.progressVisible = false
+              this.$modal.msgError('二维码生成失败')
+            })
+        })
       }
     }
   }

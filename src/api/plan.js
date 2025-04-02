@@ -142,3 +142,12 @@ export function asyncGetSelfPlanDetail(id) {
     method: 'get'
   })
 }
+
+// 修改批量生成二维码接口
+export function asyncGenerateQrcode() {
+  return request({
+    url: '/plannedManage/qrcode/generate',
+    method: 'post',
+    responseType: 'blob' // 添加responseType
+  })
+}
