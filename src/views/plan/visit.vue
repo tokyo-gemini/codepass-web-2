@@ -55,21 +55,64 @@
               <div v-else-if="formData.isSelectAll === 1" class="text-gray-600">
                 已全选当前筛选条件下的所有对象
               </div>
-              <div v-else class="grid grid-cols-4 gap-2">
-                <el-tag
-                  v-for="(item, index) in displaySelectedItems"
-                  :key="index"
-                  closable
-                  @close="removeSelectedItem(item)"
+
+              <!-- 替换标签为表格展示 -->
+              <div v-else>
+                <el-table
+                  :data="pagedSelectedObjects"
+                  border
+                  stripe
                   size="small"
-                  type="info"
-                  class="mb-1"
+                  height="250"
+                  style="width: 100%"
+                  :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
                 >
-                  {{ displayTagName(item) }}
-                </el-tag>
-                <el-tag v-if="selectedCount > 10" size="small" type="primary">
-                  +{{ selectedCount - 10 }} 项
-                </el-tag>
+                  <!-- 根据走访类型显示不同列 -->
+                  <template v-if="isVisit">
+                    <el-table-column
+                      prop="customId"
+                      label="客户编号"
+                      min-width="150"
+                    ></el-table-column>
+                    <el-table-column
+                      prop="customName"
+                      label="客户名称"
+                      min-width="200"
+                    ></el-table-column>
+                  </template>
+                  <template v-else>
+                    <el-table-column
+                      prop="towerId"
+                      label="台区编号"
+                      min-width="150"
+                    ></el-table-column>
+                    <el-table-column
+                      prop="towerName"
+                      label="台区名称"
+                      min-width="200"
+                    ></el-table-column>
+                  </template>
+                  <el-table-column label="操作" align="center" width="80">
+                    <template #default="{ row }">
+                      <el-button type="text" @click="removeSelectedItem(row)">
+                        <i class="el-icon-delete text-red-500"></i>
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <!-- 添加分页组件 -->
+                <div class="mt-2 flex justify-end">
+                  <el-pagination
+                    @current-change="handleSelectedPageChange"
+                    @size-change="handleSelectedSizeChange"
+                    :current-page="selectedObjectsQuery.pageNum"
+                    :page-size="selectedObjectsQuery.pageSize"
+                    :page-sizes="[5, 10, 20]"
+                    layout="total, sizes, prev, pager, next"
+                    :total="selectedCount"
+                  >
+                  </el-pagination>
+                </div>
               </div>
             </div>
 
@@ -239,7 +282,11 @@
         systemDialogVisible: false,
         tempTowerUserList: [], // 临时存储选择的对象列表
         tempSelectedCount: 0, // 临时存储选择的对象数量
-        tempIsSelectAll: 0 // 临时存储是否全选
+        tempIsSelectAll: 0, // 临时存储是否全选
+        selectedObjectsQuery: {
+          pageNum: 1,
+          pageSize: 5
+        }
       }
     },
     computed: {
@@ -287,6 +334,15 @@
       // 计算要展示的已选对象（最多10个）
       displaySelectedItems() {
         return this.formData.towerUserList.slice(0, 10)
+      },
+      // 计算分页后的已选对象列表
+      pagedSelectedObjects() {
+        if (this.formData.isSelectAll === 1) {
+          return []
+        }
+        const start = (this.selectedObjectsQuery.pageNum - 1) * this.selectedObjectsQuery.pageSize
+        const end = start + this.selectedObjectsQuery.pageSize
+        return this.formData.towerUserList.slice(start, end)
       }
     },
     created() {
@@ -383,6 +439,7 @@
 
               // 确保在编辑模式下正确刷新已选项
               this.$nextTick(() => {
+                // 检查 $refs.multipleTable 是否存在，避免访问 undefined 的属性
                 if (this.$refs.multipleTable) {
                   this.$refs.multipleTable.refreshSelection()
                 }
@@ -483,6 +540,12 @@
               this.total = parseInt(customerRes.total) || 0
               // 在数据加载完成后进行勾选
               this.$nextTick(() => {
+                // 检查 $refs.multipleTable 是否存在，避免访问 undefined 的属性
+                if (!this.$refs.multipleTable) {
+                  console.warn('multipleTable ref not found, skipping selection setup')
+                  return
+                }
+
                 // 清除当前页的选择
                 this.$refs.multipleTable.clearSelection()
                 // 根据不同状态进行勾选
@@ -523,6 +586,12 @@
               this.total = parseInt(res.total) || 0
               // 在数据加载完成后进行勾选
               this.$nextTick(() => {
+                // 检查 $refs.multipleTable 是否存在，避免访问 undefined 的属性
+                if (!this.$refs.multipleTable) {
+                  console.warn('multipleTable ref not found, skipping selection setup')
+                  return
+                }
+
                 // 清除当前页的选择
                 this.$refs.multipleTable.clearSelection()
                 // 根据不同状态进行勾选
@@ -848,6 +917,7 @@
         this.tempIsSelectAll = this.formData.isSelectAll
 
         this.$nextTick(() => {
+          // 检查 $refs.multipleTable 是否存在，避免访问 undefined 的属性
           if (this.$refs.multipleTable) {
             // 通知SystemSelect组件刷新选择状态
             this.$refs.multipleTable.refreshSelection()
@@ -908,6 +978,16 @@
           return item.consName || item.userName || item.customId || '未命名用户'
         }
         return item.towerName || '未命名台区'
+      },
+      // 处理已选对象分页变化
+      handleSelectedPageChange(page) {
+        this.selectedObjectsQuery.pageNum = page
+      },
+
+      // 处理已选对象每页数量变化
+      handleSelectedSizeChange(size) {
+        this.selectedObjectsQuery.pageSize = size
+        this.selectedObjectsQuery.pageNum = 1
       }
     }
   }

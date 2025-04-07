@@ -33,27 +33,45 @@
         </el-button>
       </div>
 
-      <!-- 已选对象的摘要列表 -->
+      <!-- 已选对象的摘要表格 -->
       <el-empty
         v-if="totalSelectedCount === 0"
         description="暂无已选对象"
         :image-size="60"
       ></el-empty>
-      <div v-else class="grid grid-cols-4 gap-2">
-        <el-tag
-          v-for="(item, index) in displaySelectedObjects"
-          :key="index"
-          closable
-          @close="removeObject(item)"
+      <div v-else>
+        <el-table
+          :data="pagedSelectedObjects"
+          border
+          stripe
           size="small"
-          type="info"
-          class="mb-1"
+          height="250"
+          style="width: 100%"
+          :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
         >
-          {{ item.consName || '未命名对象' }}
-        </el-tag>
-        <el-tag v-if="totalSelectedCount > 10" size="small" type="primary">
-          +{{ totalSelectedCount - 10 }} 项
-        </el-tag>
+          <el-table-column prop="consNo" label="客户编号" min-width="150"></el-table-column>
+          <el-table-column prop="consName" label="客户名称" min-width="200"></el-table-column>
+          <el-table-column label="操作" align="center" width="80">
+            <template #default="{ row }">
+              <el-button type="text" @click="removeObject(row)">
+                <i class="el-icon-delete text-red-500"></i>
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <!-- 添加分页组件 -->
+        <div class="mt-2 flex justify-end">
+          <el-pagination
+            @current-change="handleSelectedPageChange"
+            @size-change="handleSelectedSizeChange"
+            :current-page="selectedObjectsQuery.pageNum"
+            :page-size="selectedObjectsQuery.pageSize"
+            :page-sizes="[5, 10, 20]"
+            layout="total, sizes, prev, pager, next"
+            :total="totalSelectedCount"
+          >
+          </el-pagination>
+        </div>
       </div>
     </div>
 
@@ -284,7 +302,11 @@
         uploadProgress: 0,
         // 新增弹框相关的数据
         dialogVisible: false,
-        tempSelectedObjects: [] // 临时存储选择的对象
+        tempSelectedObjects: [], // 临时存储选择的对象
+        selectedObjectsQuery: {
+          pageNum: 1,
+          pageSize: 5
+        }
       }
     },
 
@@ -315,6 +337,14 @@
       displaySelectedObjects() {
         const allObjects = [...(this.customsList || []), ...(this.value || [])]
         return allObjects.slice(0, 10)
+      },
+
+      // 计算分页后的已选对象列表
+      pagedSelectedObjects() {
+        const allObjects = [...(this.customsList || []), ...(this.value || [])]
+        const start = (this.selectedObjectsQuery.pageNum - 1) * this.selectedObjectsQuery.pageSize
+        const end = start + this.selectedObjectsQuery.pageSize
+        return allObjects.slice(start, end)
       }
     },
 
@@ -513,6 +543,17 @@
       // 处理表格多选
       handleSelectionChange(rows) {
         this.multipleSelection = rows
+      },
+
+      // 处理已选对象分页变化
+      handleSelectedPageChange(page) {
+        this.selectedObjectsQuery.pageNum = page
+      },
+
+      // 处理已选对象每页数量变化
+      handleSelectedSizeChange(size) {
+        this.selectedObjectsQuery.pageSize = size
+        this.selectedObjectsQuery.pageNum = 1
       }
     }
   }
