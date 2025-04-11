@@ -250,8 +250,8 @@ export default {
     // 获取供电所树形数据
     async getPowerSupplyTree() {
       try {
-        // 根据是否是走访类型设置type值
-        const type = this.isVisit ? '1' : '2'
+        // 修改这里：固定使用 type=2 获取第四层数据，无论是特殊走访还是特殊巡视
+        const type = '2'
         const res = await deptTreeSelect({ type })
         this.powerSupplyTree = res.data || []
       } catch (error) {
