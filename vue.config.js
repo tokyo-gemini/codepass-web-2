@@ -33,14 +33,14 @@ module.exports = {
     proxy: {
       // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
-        target: `http://stvm.simulans.cn/`,
+        target: `http://o38umqyt.beesnat.com`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_API]: ''
         }
       },
       [process.env.VUE_APP_BASE_UPLOAD]: {
-        target: `http://stvm.simulans.cn/`,
+        target: `http://o38umqyt.beesnat.com`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_UPLOAD]: ''
