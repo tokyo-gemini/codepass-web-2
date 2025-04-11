@@ -10,9 +10,7 @@
           :normalizer="normalizer"
           :disable-branch-nodes="true"
           :flat="true"
-          :limit="5"
           placeholder="选择供电所"
-          multiple
           @input="handlePowerSupplyChange"
         />
       </div>

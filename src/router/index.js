@@ -127,6 +127,12 @@ export const constantRoutes = [
         component: () => import('@/views/plan/visit'),
         name: 'VisitDesigner',
         meta: { title: '计划编辑', icon: 'form' }
+      },
+      {
+        path: 'special/:type?/:id?',
+        component: () => import('@/views/plan/special'),
+        name: 'SpecialDesigner',
+        meta: { title: '特殊计划编辑', icon: 'form' }
       }
     ]
   },

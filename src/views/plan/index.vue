@@ -283,12 +283,18 @@
       },
       /** 打开新建计划页面 */
       createPlan(type) {
-        const routeUrl = `/plan/visit/${type}`
+        // 特殊走访和特殊巡视跳转到special页面
+        const routeUrl = (type === '2' || type === '4') 
+          ? `/plan/special/${type}`
+          : `/plan/visit/${type}`
         this.$tab.openPage('新建计划', routeUrl)
       },
       /** 打开编辑计划页面 */
       handleUpdate(row) {
-        const routeUrl = `/plan/visit/${row.planType}/${row.planId}`
+        // 特殊走访和特殊巡视跳转到special页面
+        const routeUrl = (row.planType === '2' || row.planType === '4')
+          ? `/plan/special/${row.planType}/${row.planId}`
+          : `/plan/visit/${row.planType}/${row.planId}`
         this.$tab.openPage('编辑计划', routeUrl)
       },
       /** 处理启动状态切换 */

@@ -151,3 +151,32 @@ export function asyncGenerateQrcode() {
     responseType: 'blob' // 添加responseType
   })
 }
+
+// 获取网格员列表
+export function asyncGetUserListByDept(deptId) {
+  return request({
+    url: `/plannedManage/get/userList/by/dept`,
+    method: 'get',
+    params: {
+      deptId
+    }
+  })
+}
+
+// 获取95598特殊走访类工单
+export function asyncGetVisitWorkOrderList(params) {
+  return request({
+    url: '/plannedManage/page/to/workOrder',
+    method: 'get',
+    params
+  })
+}
+
+// 获取95598特殊巡视类工单
+export function asyncGetInspectWorkOrderList(params) {
+  return request({
+    url: '/plannedManage/page/to/XsWorkOrder',
+    method: 'get',
+    params
+  })
+}
