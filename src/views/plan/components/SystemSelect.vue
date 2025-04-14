@@ -92,7 +92,7 @@
   import { deptTreeSelect } from '@/api/system/user' // 添加缺失的导入
   import Treeselect from '@riophae/vue-treeselect'
   import Pagination from '@/components/Pagination'
-
+  import '@riophae/vue-treeselect/dist/vue-treeselect.css'
   export default {
     name: 'SystemSelect',
     components: {

@@ -213,14 +213,14 @@
             type: '5',
             image: require('@/assets/images/box3.jpg'),
             filterStyle: 'filter: brightness(0.8) sepia(0.3)',
-            hidden: true // 添加 hidden 属性
+            hidden: false // 添加 hidden 属性
           },
           {
             name: '自主填报特殊走访',
             type: '6',
             image: require('@/assets/images/box4.jpg'),
             filterStyle: 'filter: brightness(0.8) sepia(0.3)',
-            hidden: true // 添加 hidden 属性
+            hidden: false // 添加 hidden 属性
           }
         ],
         planCounts: [], // 添加计划数量数据
