@@ -6,5 +6,3 @@
 
 ## Additional Notes
 - Use utility-first classes provided by Tailwind CSS for layout and design.  
-
-- Use the most efficient code possible, the most concise and accurate code.

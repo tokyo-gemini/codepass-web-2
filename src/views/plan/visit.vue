@@ -193,7 +193,9 @@
     asyncEditPlan,
     asyncAddSelfPlan,
     asyncEditSelfPlan,
-    asyncGetSelfPlanDetail
+    selfPlannedGetDetail,
+    plannedManagePageToFeedbackCustom,
+    plannedManagePageToTower
   } from '@/api/plan'
   import { deptTreeSelect } from '@/api/system/user'
   import Treeselect from '@riophae/vue-treeselect'
@@ -286,7 +288,8 @@
         selectedObjectsQuery: {
           pageNum: 1,
           pageSize: 5
-        }
+        },
+        loading: false // 新增:加载状态
       }
     },
     computed: {
@@ -362,7 +365,7 @@
           const { id } = this.$route.params
           // 根据是否是自主填报选择不同的详情接口
           const res = this.isSelfReport
-            ? await asyncGetSelfPlanDetail(id)
+            ? await selfPlannedGetDetail(id)
             : await asyncGetPlanDetail(id)
           console.log(res)
 
@@ -380,6 +383,12 @@
             // 处理供电所数据
             if (data.powerIdList && data.powerIdList.length > 0) {
               data.powerSupply = data.powerIdList
+              // 先等待供电所数据加载完成
+              await this.handlePowerSupplyChange(data.powerIdList)
+            }
+            // 处理网格员数据
+            if (data.gridUsers) {
+              this.formData.gridUsers = data.gridUsers
             }
             // 处理关闭时间
             if (data.closedTime) {
@@ -389,20 +398,6 @@
             if (!data.alarmTimeList || !Array.isArray(data.alarmTimeList)) {
               data.alarmTimeList = ['']
             }
-            // 更新表单数据
-            this.formData = {
-              ...data,
-              // 根据计划类型设置不同的字段名
-              towerUserList: this.isSelfReport ? [] : originalList, // 普通计划
-              customs: this.isSelfReport ? originalList : [] // 自主填报
-            }
-
-            // 明确设置selectedCount - 添加这行代码
-            this.selectedCount =
-              this.formData.isSelectAll === 1
-                ? data.total || 0
-                : this.formData.towerUserList?.length || 0
-
             // 设置基本信息
             this.formBasicInfo = {
               planName: data.planName,
@@ -421,33 +416,89 @@
               earlyWarning: data.earlyWarning || '0',
               alarmTimeList: data.alarmTimeList || ['']
             }
-            // 如果是走访类型且有供电所数据
-            if (this.isVisit && data.powerIdList?.length > 0) {
-              // 先等待供电所数据加载完成
-              await this.handlePowerSupplyChange(data.powerIdList)
-              // 如果有台区数据，等待台区数据加载
-              if (data.towerIdList?.length > 0) {
-                await this.handleTowerChange(data.towerIdList)
-              }
-              // 获取表格数据并进行勾选
-              await this.getObjectTable()
+            // 对于自主填报，依然使用原有逻辑
+            if (this.isSelfReport) {
+              this.formData.customs = originalList
+            } else {
+              // 普通计划(日常走访/日常巡视)使用新接口获取已选对象列表
+              // 保存原计划的全选状态
+              this.formData.isSelectAll = data.isSelectAll || 0
 
-              // 更新selectedCount，确保反映正确的选中数量
-              if (this.formData.isSelectAll === 1) {
-                this.selectedCount = this.total
-              }
-
-              // 确保在编辑模式下正确刷新已选项
-              this.$nextTick(() => {
-                // 检查 $refs.multipleTable 是否存在，避免访问 undefined 的属性
-                if (this.$refs.multipleTable) {
-                  this.$refs.multipleTable.refreshSelection()
-                }
-              })
+              // 不再使用 towerUserList，而是通过专用接口获取已选对象列表
+              await this.getSelectedObjectsByPlanId(id)
             }
           }
         } catch (error) {
           console.error('获取计划详情失败:', error)
+        }
+      },
+      // 新增方法：根据计划ID获取已选对象列表
+      async getSelectedObjectsByPlanId(planId) {
+        if (!planId) return
+
+        this.loading = true
+        try {
+          // 判断类型：日常走访(3)、特殊走访(4)、自主走访(5,6)使用客户接口，其余使用台区接口
+          const isVisitType = ['3', '4', '5', '6'].includes(this.planType)
+
+          // 准备查询参数
+          const params = {
+            planId: planId,
+            deptIdList: this.formData.powerSupply.toString()
+          }
+
+          // 根据类型调用不同API
+          const res = isVisitType
+            ? await plannedManagePageToFeedbackCustom(params) // 走访类型
+            : await plannedManagePageToTower(params) // 巡视类型
+
+          if (res.code === 200) {
+            // 如果是全选状态，只记录总数
+            if (this.formData.isSelectAll === 1) {
+              this.selectedCount = res.total || 0
+              this.formData.towerUserList = [] // 清空列表
+              this.total = res.total || 0
+            } else {
+              // 非全选状态，记录具体选中的对象
+              const selectedObjects = res.rows || []
+
+              // 根据不同类型设置不同的字段
+              this.formData.towerUserList = selectedObjects.map((item) => {
+                return {
+                  userId: item.userId,
+                  userName: item.userName,
+                  towerId: item.towerId,
+                  towerName: item.towerName,
+                  areaName: item.areaName,
+                  companyName: item.companyName,
+                  powerName: item.powerName,
+                  deptId: item.deptId,
+                  provinceName: item.provinceName,
+                  customId: item.customId,
+                  customName: item.customName
+                }
+              })
+
+              this.selectedCount = this.formData.towerUserList.length
+              this.total = res.total || 0
+            }
+
+            // 如果有台区ID列表数据，设置它
+            if (this.isVisit && res.data?.towerIdList) {
+              this.formData.towerIdList = res.data.towerIdList
+            }
+
+            // 刷新表格选中状态
+            this.$nextTick(() => {
+              if (this.$refs.multipleTable) {
+                this.$refs.multipleTable.refreshSelection()
+              }
+            })
+          }
+        } catch (error) {
+          console.error('获取已选对象列表失败:', error)
+        } finally {
+          this.loading = false
         }
       },
       // Modify the handleSelectionChange method

@@ -136,7 +136,7 @@ export function asyncEditSelfPlan(data) {
   })
 }
 // 自主填报详情
-export function asyncGetSelfPlanDetail(id) {
+export function selfPlannedGetDetail(id) {
   return request({
     url: `/selfPlanned/get/${id}`,
     method: 'get'
@@ -144,7 +144,7 @@ export function asyncGetSelfPlanDetail(id) {
 }
 
 // 修改批量生成二维码接口
-export function asyncGenerateQrcode() {
+export function plannedManageQrcodeGenerate() {
   return request({
     url: '/plannedManage/qrcode/generate',
     method: 'post',
@@ -153,7 +153,7 @@ export function asyncGenerateQrcode() {
 }
 
 // 获取网格员列表
-export function asyncGetUserListByDept(deptId) {
+export function plannedManageGetUserListByDept(deptId) {
   return request({
     url: `/plannedManage/get/userList/by/dept`,
     method: 'get',
@@ -164,7 +164,7 @@ export function asyncGetUserListByDept(deptId) {
 }
 
 // 获取95598特殊走访类工单
-export function asyncGetVisitWorkOrderList(params) {
+export function plannedManagePageToWorkOrder(params) {
   return request({
     url: '/plannedManage/page/to/workOrder',
     method: 'get',
@@ -173,9 +173,27 @@ export function asyncGetVisitWorkOrderList(params) {
 }
 
 // 获取95598特殊巡视类工单
-export function asyncGetInspectWorkOrderList(params) {
+export function plannedManagePageToXsWorkOrder(params) {
   return request({
     url: '/plannedManage/page/to/XsWorkOrder',
+    method: 'get',
+    params
+  })
+}
+
+// 日常走访和 特殊走访 里计划管理的 编辑后回显的列表数据
+export function plannedManagePageToFeedbackCustom(params) {
+  return request({
+    url: `/plannedManage/page/to/feedbackCustom`,
+    method: 'get',
+    params
+  })
+}
+
+// 日常巡视 和 特殊巡视 里计划管理的 编辑后回显的列表数据
+export function plannedManagePageToTower(params) {
+  return request({
+    url: `/plannedManage/page/to/tower`,
     method: 'get',
     params
   })
