@@ -45,7 +45,7 @@
           border
           stripe
           size="small"
-          height="250"
+          :height="500"
           style="width: 100%"
           :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
         >

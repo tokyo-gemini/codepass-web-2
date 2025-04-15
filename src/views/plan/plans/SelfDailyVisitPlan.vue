@@ -24,6 +24,7 @@
   import SelfReportTemplate from '../components/SelfReportTemplate.vue'
 
   export default {
+    // 自主填报日常走访计划
     name: 'SelfDailyVisitPlan',
     components: {
       BasePlan,
@@ -41,7 +42,6 @@
     methods: {
       handlePlanDataLoaded(data) {
         // 自主填报计划的数据加载处理
-        this.formData.towerUserList = []
         this.formData.customs = data.customs || []
       },
       handleReset() {
@@ -50,11 +50,39 @@
           customs: []
         }
         this.uploadFile = null
+        // 调用子组件的重置方法（如果存在）
+        this.$refs.selfReportTemplate?.handleFileRemove()
       },
-      handleBeforeSubmit(formData) {
+      async handleBeforeSubmit(formData) {
+        // 校验：必须上传文件
+        if (!this.uploadFile && this.$route.params.id === undefined) {
+          // 仅在新增时强制要求上传文件
+          this.$message.warning('请上传自主填报模板文件')
+          return false
+        }
+
+        // 从formData中获取dto字段 (由BasePlan准备的基础数据)
+        const dtoBlob = formData.get('dto')
+        const submitData = JSON.parse(await dtoBlob.text())
+
+        // 更新formData中的dto
+        formData.set(
+          'dto',
+          new Blob([JSON.stringify(submitData)], {
+            type: 'application/json'
+          })
+        )
+
+        // 清除可能存在的旧文件引用
+        if (formData.has('file')) {
+          formData.delete('file')
+        }
+        // 添加文件到formData
         if (this.uploadFile) {
           formData.append('file', this.uploadFile)
         }
+
+        return true
       },
       handleFileChange(file) {
         this.uploadFile = file

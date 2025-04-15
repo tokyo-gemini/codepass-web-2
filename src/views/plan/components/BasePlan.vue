@@ -98,7 +98,7 @@
         return '新增计划'
       },
       needFullTimeOptions() {
-        return ['1', '3', '5'].includes(this.planType)
+        return ['1', '2', '3', '4', '5'].includes(this.planType)
       },
       isSelfReport() {
         return ['5', '6'].includes(this.planType)
@@ -166,14 +166,38 @@
 
           // 处理提交数据
           const submitData = this.prepareSubmitData()
-
           const formData = new FormData()
-          const jsonBlob = new Blob([JSON.stringify(submitData)], { type: 'application/json' })
+
+          // 将 JSON 转换为二进制 blob
+          const jsonBlob = new Blob([JSON.stringify(submitData)], {
+            type: 'application/json'
+          })
           formData.append('dto', jsonBlob)
 
           // 触发子类的提交前处理
-          this.$emit('before-submit', formData)
+          // 使用同步方式处理，确保修改已应用
+          const beforeSubmitResult = await new Promise((resolve) => {
+            this.$emit('before-submit', formData, (result) => {
+              resolve(result)
+            })
+          })
 
+          // 如果子类返回false，则终止提交
+          if (beforeSubmitResult === false) {
+            return
+          }
+
+          // 在提交前打印最终要提交的数据内容，便于调试
+          const dtoBlob = formData.get('dto')
+          if (dtoBlob) {
+            const reader = new FileReader()
+            reader.onload = () => {
+              console.log('最终提交的JSON数据:', reader.result)
+            }
+            reader.readAsText(dtoBlob)
+          }
+
+          // 提交表单
           const { id } = this.$route.params
           if (this.isSelfReport) {
             if (id) {
@@ -193,6 +217,7 @@
           this.handleBack()
         } catch (error) {
           console.error('保存失败:', error)
+          this.$modal.msgError(error.message || '保存失败')
         }
       },
       prepareSubmitData() {
@@ -278,7 +303,20 @@
           towerUserList: [],
           isSelectAll: 0,
           powerSupply: null,
-          towerIdList: null
+          towerIdList: null,
+          powerIdList: null,
+          userId: null
+        }
+        this.timeSettings = {
+          cycled: '0',
+          cycledTime: null,
+          cycledTimeType: null,
+          cycledTimeUnit: 'day',
+          taskTime: [],
+          closed: '0',
+          closedTime: null,
+          earlyWarning: '0',
+          alarmTimeList: ['']
         }
         this.$emit('reset')
       },

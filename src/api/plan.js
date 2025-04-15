@@ -17,10 +17,14 @@ export function asyncGetPlanOptions(type) {
 }
 // 获取台区列表
 export function asyncGetAreaList(data) {
+  const { deptIdList, ...otherParams } = data
   return request({
     url: '/plannedManage/page/to/tower',
     method: 'get',
-    params: data
+    params: {
+      ...otherParams,
+      deptIdList: Array.isArray(deptIdList) ? deptIdList[0] : deptIdList
+    }
   })
 }
 // 根据id查询计划详情
@@ -149,5 +153,40 @@ export function asyncGenerateQrcode() {
     url: '/plannedManage/qrcode/generate',
     method: 'post',
     responseType: 'blob' // 添加responseType
+  })
+}
+
+// 获取网格员列表
+export function asyncGetUserListByDept(deptId) {
+  return request({
+    url: `/plannedManage/get/userList/by/dept`,
+    method: 'get',
+    params: { deptId: Array.isArray(deptId) ? deptId[0] : deptId }
+  })
+}
+
+// 特殊走访工单查询接口
+export function asyncGetWorkOrders(data) {
+  const { deptIdList, ...otherParams } = data
+  return request({
+    url: '/plannedManage/page/to/workOrder',
+    method: 'get',
+    params: {
+      ...otherParams,
+      deptIdList: Array.isArray(deptIdList) ? deptIdList[0] : deptIdList
+    }
+  })
+}
+
+// 特殊巡视工单查询接口
+export function asyncGetXsWorkOrders(data) {
+  const { deptIdList, ...otherParams } = data
+  return request({
+    url: '/plannedManage/page/to/XsWorkOrder',
+    method: 'get',
+    params: {
+      ...otherParams,
+      deptIdList: Array.isArray(deptIdList) ? deptIdList[0] : deptIdList
+    }
   })
 }

@@ -320,9 +320,9 @@
       // 获取供电所树形数据
       async getPowerSupplyTree() {
         try {
-          // 根据是否是走访类型设置type值
-          const type = this.isVisit ? '1' : '2'
-          const res = await deptTreeSelect({ type })
+          // 只有日常走访计划(planType=3)时传type=1,其他情况不传type
+          const params = this.planType === '3' ? { type: '1' } : {}
+          const res = await deptTreeSelect(params)
           this.powerSupplyTree = res.data || []
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)

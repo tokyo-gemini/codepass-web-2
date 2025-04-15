@@ -44,7 +44,7 @@
               border
               stripe
               size="small"
-              height="250"
+              :height="500"
               style="width: 100%"
               :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
             >
@@ -124,6 +124,7 @@
   import UploadTemplate from '../components/UploadTemplate.vue'
 
   export default {
+    // 日常走访计划
     name: 'DailyVisitPlan',
     components: {
       BasePlan,
@@ -183,10 +184,59 @@
         this.activeTab = 'system'
         this.uploadFile = null
       },
-      handleBeforeSubmit(formData) {
+      async handleBeforeSubmit(formData) {
+        // 添加校验：如果未全选，且未上传文件，则必须选择至少一个对象
+        if (
+          this.formData.isSelectAll !== 1 &&
+          !this.uploadFile &&
+          this.formData.towerUserList.length === 0
+        ) {
+          this.$message.warning('请至少选择一个走访对象、勾选全选或上传模板文件')
+          return false
+        }
+
+        // 从formData中获取dto字段
+        const dtoBlob = formData.get('dto')
+        const submitData = JSON.parse(await dtoBlob.text())
+
+        // 添加或更新特定字段
+        submitData.isSelectAll = this.formData.isSelectAll
+        // 如果是全选或上传文件，towerUserList 传空数组
+        submitData.towerUserList =
+          this.formData.isSelectAll === 1 || this.uploadFile ? [] : this.formData.towerUserList
+        submitData.powerIdList = this.formData.powerSupply // powerSupply 已经是数组
+        submitData.towerIdList = this.formData.towerIdList
+        // 添加 total 字段，当全选时需要
+        if (this.formData.isSelectAll === 1) {
+          submitData.total = this.total // 使用从 SystemSelect 获取的 total
+        } else {
+          delete submitData.total // 非全选时移除 total
+        }
+
+        // 清除可能存在的旧文件引用，避免重复添加
+        if (formData.has('file')) {
+          formData.delete('file')
+        }
+        // 如果有新文件，则添加
         if (this.uploadFile) {
           formData.append('file', this.uploadFile)
+          // 如果上传了文件，强制 isSelectAll 为 0，并清空 towerUserList
+          submitData.isSelectAll = 0
+          submitData.towerUserList = []
+          delete submitData.total
+          delete submitData.powerIdList // 上传文件时不需要传供电所
+          delete submitData.towerIdList // 上传文件时不需要传台区
         }
+
+        // 更新formData中的dto
+        formData.set(
+          'dto',
+          new Blob([JSON.stringify(submitData)], {
+            type: 'application/json'
+          })
+        )
+
+        return true
       },
       openSystemDialog() {
         this.systemDialogVisible = true

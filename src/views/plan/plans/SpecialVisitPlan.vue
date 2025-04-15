@@ -7,112 +7,103 @@
     @before-submit="handleBeforeSubmit"
   >
     <template #plan-content>
-      <div class="rounded bg-white shadow w-full p-4">
-        <div class="font-bold pb-4 flex justify-between items-center">
-          <div class="section-title">对象选择</div>
-          <el-button type="primary" size="small" @click="openSystemDialog">
-            <i class="el-icon-plus mr-1"></i>选择对象
-          </el-button>
-        </div>
-
-        <!-- 显示已选对象的摘要信息 -->
-        <div class="flex flex-col mb-4 border rounded p-4">
-          <div class="flex justify-between items-center mb-2">
-            <div class="flex items-center">
-              <span class="font-medium">已选择对象:</span>
-              <span class="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
-                共 {{ selectedCount }} 项
-              </span>
-              <span v-if="formData.isSelectAll === 1" class="ml-2 text-green-600 text-xs">
-                (全部选择)
-              </span>
+      <div class="rounded bg-white shadow w-full p-4 min-h-[650px]">
+        <div class="flex">
+          <!-- 供电所单选 -->
+          <el-form-item label="供电所" required>
+            <div class="flex-1">
+              <treeselect
+                style="width: 300px"
+                v-model="selectedDept"
+                :options="powerSupplyTree"
+                :normalizer="normalizer"
+                placeholder="选择供电所"
+                :clearable="false"
+                :disable-branch-nodes="true"
+                @input="handleDeptChange"
+              />
             </div>
-          </div>
+          </el-form-item>
 
-          <!-- 已选对象的摘要列表 -->
-          <el-empty
-            v-if="selectedCount === 0"
-            description="暂无已选对象"
-            :image-size="60"
-          ></el-empty>
-          <div v-else-if="formData.isSelectAll === 1" class="text-gray-600">
-            已全选当前筛选条件下的所有对象
-          </div>
-          <div v-else>
-            <el-table
-              :data="pagedSelectedObjects"
-              border
-              stripe
-              size="small"
-              height="250"
-              style="width: 100%"
-              :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+          <!-- 网格员选择 - 添加禁用逻辑 -->
+          <el-form-item label="网格员" required>
+            <el-select
+              v-model="selectedUser"
+              filterable
+              clearable
+              placeholder="请先选择供电所"
+              :loading="userListLoading"
+              :disabled="!selectedDept"
+              @change="handleUserChange"
             >
-              <el-table-column prop="customId" label="客户编号" min-width="150"></el-table-column>
-              <el-table-column prop="customName" label="客户名称" min-width="200"></el-table-column>
-              <el-table-column label="操作" align="center" width="80">
-                <template #default="{ row }">
-                  <el-button type="text" @click="removeSelectedItem(row)">
-                    <i class="el-icon-delete text-red-500"></i>
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <!-- 添加分页组件 -->
-            <div class="mt-2 flex justify-end">
-              <el-pagination
-                @current-change="handleSelectedPageChange"
-                @size-change="handleSelectedSizeChange"
-                :current-page="selectedObjectsQuery.pageNum"
-                :page-size="selectedObjectsQuery.pageSize"
-                :page-sizes="[5, 10, 20]"
-                layout="total, sizes, prev, pager, next"
-                :total="selectedCount"
-              >
-              </el-pagination>
-            </div>
-          </div>
+              <el-option
+                v-for="item in userList"
+                :key="item.userId"
+                :label="item.userName"
+                :value="item.userId"
+              />
+            </el-select>
+          </el-form-item>
         </div>
 
-        <!-- 系统内选择弹框 -->
-        <el-dialog
-          title="系统内对象选择"
-          :visible.sync="systemDialogVisible"
-          width="80%"
-          :before-close="handleSystemDialogClose"
-          append-to-body
-        >
-          <el-tabs v-model="activeTab">
-            <!-- 系统内选择 tab -->
-            <el-tab-pane label="系统内选择" name="system">
-              <system-select
-                v-model="tempTowerUserList"
-                :plan-type="'4'"
-                :is-visit="true"
-                :power-depts.sync="formData.powerSupply"
-                @update:selectedCount="(val) => (tempSelectedCount = val)"
-                @update:total="(val) => (total = val)"
-                @update:isSelectAll="(val) => (tempIsSelectAll = val)"
-                ref="multipleTable"
-              />
-            </el-tab-pane>
-            <!-- 上传模版-->
-            <el-tab-pane label="上传模版" name="upload">
-              <upload-template
-                v-model="tempTowerUserList"
-                :plan-type="'4'"
-                @file-change="handleFileChange"
-                @upload-success="handleUploadSuccess"
-              />
-            </el-tab-pane>
-          </el-tabs>
+        <!-- 全选复选框 -->
+        <div class="mb-4 flex items-center">
+          <el-checkbox
+            v-model="formData.isSelectAll"
+            :true-label="1"
+            :false-label="0"
+            @change="handleSelectAllChange"
+            :disabled="!tableData.length"
+            :title="!tableData.length ? '请先选择供电所并确保有查询结果' : ''"
+          >
+            全选当前筛选条件下的所有对象
+          </el-checkbox>
+        </div>
 
-          <!-- 弹框底部按钮 -->
-          <span slot="footer" class="dialog-footer">
-            <el-button @click="systemDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="confirmSystemSelection">确定</el-button>
-          </span>
-        </el-dialog>
+        <!-- 工单表格 -->
+        <el-table
+          ref="table"
+          :data="tableData"
+          :loading="tableLoading"
+          border
+          stripe
+          size="small"
+          style="width: 100%"
+          :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column
+            type="selection"
+            width="55"
+            :selectable="(row) => formData.isSelectAll !== 1"
+          />
+          <el-table-column prop="customName" label="客户名称" min-width="200" />
+          <el-table-column prop="customId" label="客户编号" min-width="150" />
+          <el-table-column prop="provinceName" label="所属省份" min-width="120" />
+          <el-table-column prop="areaName" label="所属供电单位" min-width="150" />
+          <el-table-column prop="companyName" label="所属城市" min-width="120" />
+          <el-table-column prop="powerName" label="所属供电所" min-width="150" />
+          <el-table-column prop="userName" label="台区经理" min-width="120" />
+          <el-table-column prop="visit" label="走访状态" min-width="100" />
+        </el-table>
+
+        <!-- 分页和选择信息 -->
+        <div class="mt-2 flex justify-between items-center">
+          <div class="text-sm text-gray-500">
+            已选择 <span class="text-blue-600 font-medium">{{ selectedCount }}</span> 项
+            <span v-if="formData.isSelectAll === 1" class="ml-2">(已全选)</span>
+          </div>
+          <el-pagination
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+            :current-page="pagination.pageNum"
+            :page-size="pagination.pageSize"
+            :page-sizes="[5, 10, 20]"
+            layout="total, sizes, prev, pager, next"
+            :total="pagination.total"
+            background
+          />
+        </div>
       </div>
     </template>
   </base-plan>
@@ -120,119 +111,323 @@
 
 <script>
   import BasePlan from '../components/BasePlan.vue'
-  import SystemSelect from '../components/SystemSelect.vue'
-  import UploadTemplate from '../components/UploadTemplate.vue'
+  import { deptTreeSelect } from '@/api/system/user'
+  import { asyncGetUserListByDept, asyncGetWorkOrders } from '@/api/plan'
+  import Treeselect from '@riophae/vue-treeselect'
+  import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 
   export default {
     name: 'SpecialVisitPlan',
     components: {
       BasePlan,
-      SystemSelect,
-      UploadTemplate
+      Treeselect
     },
     data() {
       return {
+        powerSupplyTree: [], // 供电所树形数据
+        selectedDept: null, // 选中的供电所
+        userList: [], // 网格员列表
+        selectedUser: null, // 选中的网格员
+        userListLoading: false, // 网格员列表加载状态
         formData: {
           towerUserList: [],
-          isSelectAll: 0,
           powerSupply: null,
-          towerIdList: []
+          isSelectAll: 0 // 添加全选状态
         },
-        selectedCount: 0,
-        total: 0,
-        systemDialogVisible: false,
-        activeTab: 'system',
-        tempTowerUserList: [],
-        tempSelectedCount: 0,
-        tempIsSelectAll: 0,
-        uploadFile: null,
-        selectedObjectsQuery: {
+        tableLoading: false,
+        tableData: [],
+        pagination: {
+          total: 0,
           pageNum: 1,
-          pageSize: 5
+          pageSize: 10
+        },
+        selectedRows: [], // 存储选中的行
+        selectedCount: 0 // 添加选中计数
+      }
+    },
+    watch: {
+      // 监听供电所变化，当供电所清空时，清空网格员选择
+      selectedDept(val) {
+        if (!val) {
+          this.selectedUser = null
+          this.userList = []
         }
       }
     },
-    computed: {
-      pagedSelectedObjects() {
-        if (this.formData.isSelectAll === 1) {
-          return []
-        }
-        const start = (this.selectedObjectsQuery.pageNum - 1) * this.selectedObjectsQuery.pageSize
-        const end = start + this.selectedObjectsQuery.pageSize
-        return this.formData.towerUserList.slice(start, end)
-      }
+    created() {
+      this.getPowerSupplyTree()
     },
     methods: {
-      handlePlanDataLoaded(data) {
-        this.formData.towerUserList = data.towerUserList || []
-        this.formData.isSelectAll = data.isSelectAll || 0
-        this.formData.powerSupply = data.powerIdList || null
-        this.formData.towerIdList = data.towerIdList || []
-        this.selectedCount =
-          data.isSelectAll === 1 ? data.total || 0 : data.towerUserList?.length || 0
+      // 获取供电所树形数据
+      async getPowerSupplyTree() {
+        try {
+          const res = await deptTreeSelect({ type: '1' })
+          this.powerSupplyTree = res.data || []
+        } catch (error) {
+          console.error('获取供电所树形数据失败:', error)
+        }
       },
+
+      // 处理供电所选择变化
+      async handleDeptChange(value) {
+        this.selectedUser = null
+        this.userList = []
+        if (!value) return
+
+        this.userListLoading = true
+        try {
+          // 确保传入的是单个ID而不是数组
+          const deptId = Array.isArray(value) ? value[0] : value
+          const res = await asyncGetUserListByDept(deptId)
+          if (res.code === 200) {
+            this.userList = res.data || []
+          }
+        } catch (error) {
+          console.error('获取网格员列表失败:', error)
+        } finally {
+          this.userListLoading = false
+        }
+
+        this.formData.powerSupply = value
+        this.$emit('update:power-depts', value)
+
+        // 查询工单列表
+        this.getWorkOrderList()
+      },
+
+      // 获取工单列表
+      async getWorkOrderList() {
+        if (!this.selectedDept) return
+
+        this.tableLoading = true
+        try {
+          const params = {
+            deptIdList: Array.isArray(this.selectedDept) ? this.selectedDept[0] : this.selectedDept,
+            pageNum: this.pagination.pageNum,
+            pageSize: this.pagination.pageSize
+          }
+
+          if (this.$route.params.id) {
+            params.planId = this.$route.params.id
+          }
+
+          const res = await asyncGetWorkOrders(params)
+
+          if (res.code === 200) {
+            this.tableData = res.rows || []
+            this.pagination.total = res.total || 0
+
+            // 修改编辑时的回显选中逻辑
+            if (this.$route.params.id) {
+              this.$nextTick(() => {
+                this.tableData.forEach((row) => {
+                  // 根据 towerUserList 判断是否选中
+                  const isSelected = this.formData.towerUserList?.some(
+                    (item) => item.customId === row.customId
+                  )
+                  if (isSelected) {
+                    this.$refs.table.toggleRowSelection(row, true)
+                  }
+                })
+              })
+            }
+
+            // 更新选中计数
+            if (this.formData.isSelectAll === 1) {
+              this.selectedCount = this.pagination.total
+            } else {
+              this.selectedCount = this.formData.towerUserList?.length || 0
+            }
+          }
+        } catch (error) {
+          console.error('获取工单列表失败:', error)
+          this.$message.error('获取工单列表失败')
+        } finally {
+          this.tableLoading = false
+        }
+      },
+
+      // 更新选中状态和表格勾选
+      updateSelectionState() {
+        if (this.formData.isSelectAll === 1) {
+          this.selectedCount = this.pagination.total
+          this.$nextTick(() => {
+            this.$refs.table?.clearSelection()
+          })
+        } else {
+          this.selectedCount = this.formData.towerUserList?.length || 0
+          this.$nextTick(() => {
+            if (this.formData.towerUserList.length && this.$refs.table) {
+              this.$refs.table.clearSelection() // 先清空
+              this.formData.towerUserList.forEach((item) => {
+                const row = this.tableData.find((r) => r.formDataId === item.formDataId)
+                if (row) {
+                  this.$refs.table.toggleRowSelection(row, true)
+                }
+              })
+            }
+          })
+        }
+      },
+
+      // 处理分页变化
+      handlePageChange(page) {
+        this.pagination.pageNum = page
+        this.getWorkOrderList()
+      },
+
+      // 处理每页条数变化
+      handleSizeChange(size) {
+        this.pagination.pageSize = size
+        this.pagination.pageNum = 1
+        this.getWorkOrderList()
+      },
+
+      // 处理网格员选择变化
+      handleUserChange(value) {
+        // 可以在这里处理网格员选择变化的逻辑
+      },
+
+      // 处理表格选择变化
+      handleSelectionChange(selection) {
+        // 只有在非全选状态下才更新 selectedRows 和 selectedCount
+        if (this.formData.isSelectAll !== 1) {
+          this.selectedRows = selection
+          this.selectedCount = selection.length
+        }
+      },
+
+      // 处理全选复选框变化
+      handleSelectAllChange(value) {
+        this.formData.isSelectAll = value // 更新 formData 中的状态
+
+        if (value === 1) {
+          // 全选模式
+          this.selectedCount = this.pagination.total
+          this.selectedRows = [] // 全选时清空具体选择项
+          this.$refs.table.clearSelection() // 清空表格勾选
+        } else {
+          // 取消全选，恢复为手动选择模式
+          this.selectedCount = 0
+          this.selectedRows = []
+          this.$refs.table.clearSelection()
+        }
+      },
+
+      handlePlanDataLoaded(data) {
+        this.formData.powerSupply = data.powerIdList || null
+        if (this.formData.powerSupply) {
+          this.selectedDept = this.formData.powerSupply
+          // 保存后台返回的userId
+          const userId = data.userId
+
+          this.handleDeptChange(this.formData.powerSupply).then(() => {
+            if (userId && this.userList.length) {
+              // 直接使用后台返回的userId
+              this.selectedUser =
+                this.userList.find((user) => String(user.userId) === String(userId))?.userId || null
+            }
+          })
+        }
+
+        // 设置其他数据
+        this.formData.towerUserList = data.towerUserList || []
+        this.formData.isSelectAll = Number(data.isSelectAll || 0)
+        this.pagination.total = Number(data.total || 0)
+        this.updateSelectionState()
+      },
+
       handleReset() {
+        this.selectedDept = null
+        this.selectedUser = null
+        this.userList = []
         this.formData = {
           towerUserList: [],
-          isSelectAll: 0,
           powerSupply: null,
-          towerIdList: []
+          isSelectAll: 0 // 重置全选状态
         }
+        this.selectedRows = []
         this.selectedCount = 0
-        this.total = 0
-        this.activeTab = 'system'
-        this.uploadFile = null
+        this.tableData = []
+        this.pagination.pageNum = 1
+        this.pagination.total = 0
+        this.$refs.table?.clearSelection()
+        this.$emit('reset') // 确保调用父组件的 reset
       },
-      handleBeforeSubmit(formData) {
-        if (this.uploadFile) {
-          formData.append('file', this.uploadFile)
-        }
-      },
-      openSystemDialog() {
-        this.systemDialogVisible = true
-        this.tempTowerUserList = [...this.formData.towerUserList]
-        this.tempSelectedCount = this.selectedCount
-        this.tempIsSelectAll = this.formData.isSelectAll
-      },
-      handleSystemDialogClose(done) {
-        this.$confirm('确认关闭？未保存的选择将会丢失')
-          .then(() => done())
-          .catch(() => {})
-      },
-      confirmSystemSelection() {
-        this.formData.towerUserList = [...this.tempTowerUserList]
-        this.selectedCount = this.tempIsSelectAll === 1 ? this.total : this.tempSelectedCount
-        this.formData.isSelectAll = this.tempIsSelectAll
-        this.systemDialogVisible = false
 
-        if (this.tempIsSelectAll === 1) {
-          this.$message.success(`已全选${this.total}项对象`)
+      async handleBeforeSubmit(formData, callback) {
+        if (!this.selectedDept || !this.selectedUser) {
+          this.$message.warning('请选择供电所和网格员')
+          callback(false)
+          return
         }
-      },
-      removeSelectedItem(item) {
-        const index = this.formData.towerUserList.findIndex((i) => i.customId === item.customId)
-        if (index !== -1) {
-          this.formData.towerUserList.splice(index, 1)
-          this.selectedCount -= 1
-          if (this.formData.isSelectAll === 1) {
-            this.formData.isSelectAll = 0
-          }
+        // 添加校验：如果未全选，则必须选择至少一个对象
+        if (this.formData.isSelectAll !== 1 && this.selectedRows.length === 0) {
+          this.$message.warning('请至少选择一个走访对象或勾选全选')
+          callback(false)
+          return
         }
+
+        // 从formData中获取dto字段
+        const dtoBlob = formData.get('dto')
+        const submitData = JSON.parse(await dtoBlob.text())
+
+        // 获取formDataId
+        const formDataId = this.$refs.basePlan.formBasicInfo.formId
+        if (!formDataId) {
+          this.$message.warning('表单ID不能为空')
+          callback(false)
+          return
+        }
+
+        // 添加或更新必要的特定字段
+        submitData.formDataId = formDataId // 添加表单ID
+        submitData.isSelectAll = this.formData.isSelectAll || 0 // 确保传递全选状态
+
+        // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
+        const deptId = Array.isArray(this.selectedDept)
+          ? this.selectedDept[0].toString()
+          : this.selectedDept.toString()
+        submitData.powerIdList = [deptId]
+        submitData.deptIdList = [deptId] // 修改为字符串数组格式
+
+        submitData.userId = this.selectedUser
+
+        // 如果是全选，传空数组，并附加total
+        if (this.formData.isSelectAll === 1) {
+          submitData.towerUserList = []
+          submitData.total = this.pagination.total
+        } else {
+          submitData.towerUserList = this.selectedRows.map((row) => ({
+            ...row,
+            userId: this.selectedUser
+          }))
+          delete submitData.total
+        }
+
+        formData.set(
+          'dto',
+          new Blob([JSON.stringify(submitData)], {
+            type: 'application/json'
+          })
+        )
+
+        callback(true)
       },
-      handleSelectedPageChange(page) {
-        this.selectedObjectsQuery.pageNum = page
-      },
-      handleSelectedSizeChange(size) {
-        this.selectedObjectsQuery.pageSize = size
-        this.selectedObjectsQuery.pageNum = 1
-      },
-      handleUploadSuccess() {
-        this.selectedCount = 0
-        this.formData.towerUserList = []
-      },
-      handleFileChange(file) {
-        this.uploadFile = file
+
+      normalizer(node) {
+        return {
+          id: node.id,
+          label: node.label,
+          children: node.children
+        }
       }
     }
   }
 </script>
+
+<style lang="scss" scoped>
+  .vue-treeselect {
+    font-size: 14px;
+  }
+</style>
