@@ -51,6 +51,19 @@ export function asyncGetCustomerList(data) {
   })
 }
 
+// 日常走访客户列表查询接口
+export function asyncGetCustomerListByDept(data) {
+  const { deptIdList, ...otherParams } = data
+  return request({
+    url: '/plannedManage/page/to/custom',
+    method: 'get',
+    params: {
+      ...otherParams,
+      deptIdList: Array.isArray(deptIdList) ? deptIdList[0] : deptIdList
+    }
+  })
+}
+
 // 新增计划保存
 export function asyncAddPlan(data) {
   return request({

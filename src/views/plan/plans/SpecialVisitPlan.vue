@@ -355,17 +355,15 @@
         this.$emit('reset') // 确保调用父组件的 reset
       },
 
-      async handleBeforeSubmit(formData, callback) {
+      async handleBeforeSubmit(formData) {
         if (!this.selectedDept || !this.selectedUser) {
           this.$message.warning('请选择供电所和网格员')
-          callback(false)
-          return
+          return false
         }
         // 添加校验：如果未全选，则必须选择至少一个对象
         if (this.formData.isSelectAll !== 1 && this.selectedRows.length === 0) {
           this.$message.warning('请至少选择一个走访对象或勾选全选')
-          callback(false)
-          return
+          return false
         }
 
         // 从formData中获取dto字段
@@ -376,8 +374,7 @@
         const formDataId = this.$refs.basePlan.formBasicInfo.formId
         if (!formDataId) {
           this.$message.warning('表单ID不能为空')
-          callback(false)
-          return
+          return false
         }
 
         // 添加或更新必要的特定字段
@@ -412,7 +409,7 @@
           })
         )
 
-        callback(true)
+        return true
       },
 
       normalizer(node) {

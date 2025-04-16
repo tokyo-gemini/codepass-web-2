@@ -174,16 +174,28 @@
           })
           formData.append('dto', jsonBlob)
 
-          // 触发子类的提交前处理
-          // 使用同步方式处理，确保修改已应用
-          const beforeSubmitResult = await new Promise((resolve) => {
-            this.$emit('before-submit', formData, (result) => {
-              resolve(result)
-            })
-          })
+          console.log('触发before-submit事件')
+
+          // 修改这部分：使用事件emitter而不是回调
+          // 原先的代码期望通过回调获得结果，但实际上子组件是直接返回值
+          const listeners = this._events['before-submit']
+          let shouldContinue = true
+
+          if (listeners && listeners.length > 0) {
+            // 如果有监听器，则直接调用并获取返回值
+            try {
+              // 直接调用第一个监听器函数并获取返回值
+              shouldContinue = await listeners[0](formData)
+              console.log('before-submit处理结果:', shouldContinue)
+            } catch (error) {
+              console.error('处理before-submit事件时出错:', error)
+              shouldContinue = false
+            }
+          }
 
           // 如果子类返回false，则终止提交
-          if (beforeSubmitResult === false) {
+          if (shouldContinue === false) {
+            console.warn('子组件通过before-submit事件返回false，终止提交')
             return
           }
 
@@ -197,21 +209,31 @@
             reader.readAsText(dtoBlob)
           }
 
+          console.log('开始调用API提交数据...')
+
           // 提交表单
           const { id } = this.$route.params
+          let res
+
           if (this.isSelfReport) {
             if (id) {
-              await asyncEditSelfPlan(formData)
+              console.log('调用编辑自主填报API')
+              res = await asyncEditSelfPlan(formData)
             } else {
-              await asyncAddSelfPlan(formData)
+              console.log('调用新增自主填报API')
+              res = await asyncAddSelfPlan(formData)
             }
           } else {
             if (id) {
-              await asyncEditPlan(formData)
+              console.log('调用编辑计划API')
+              res = await asyncEditPlan(formData)
             } else {
-              await asyncAddPlan(formData)
+              console.log('调用新增计划API')
+              res = await asyncAddPlan(formData)
             }
           }
+
+          console.log('API调用响应:', res)
 
           this.$modal.msgSuccess(id ? '修改成功' : '新增成功')
           this.handleBack()

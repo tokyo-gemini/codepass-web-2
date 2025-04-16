@@ -2,18 +2,13 @@
   <div>
     <!-- 头部过滤和搜索区域 -->
     <div class="mb-4 flex flex-wrap gap-4 items-center">
-      <!-- 供电所选择 - 使用内部状态而非直接绑定props -->
+      <!-- 供电所选择 - 使用新的 VisitTreeselect 替换原来的 Treeselect -->
       <div class="flex-1 min-w-[220px]">
-        <treeselect
+        <visit-treeselect
           v-model="localPowerDepts"
           :options="powerSupplyTree"
-          :normalizer="normalizer"
-          :disable-branch-nodes="true"
-          :flat="true"
-          :limit="5"
           placeholder="选择供电所"
-          multiple
-          @input="handlePowerSupplyChange"
+          @change="handlePowerSupplyChangeWithLabel"
         />
       </div>
 
@@ -90,13 +85,13 @@
 <script>
   import { asyncGetAreaList, asyncGetCustomerList } from '@/api/plan'
   import { deptTreeSelect } from '@/api/system/user' // 添加缺失的导入
-  import Treeselect from '@riophae/vue-treeselect'
+  import VisitTreeselect from '@/components/VisitTreeselect'
   import Pagination from '@/components/Pagination'
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
   export default {
     name: 'SystemSelect',
     components: {
-      Treeselect,
+      VisitTreeselect,
       Pagination
     },
     props: {
@@ -134,16 +129,17 @@
         // 记录当前页面的项
         currentPageItems: [],
         // 添加本地状态跟踪 powerDepts
-        localPowerDepts: []
+        localPowerDepts: [], // 存储ID
+        selectedDeptLabels: [] // 添加此行存储显示用的标签
       }
     },
     watch: {
       powerDepts: {
         handler(val) {
-          this.localPowerDepts = Array.isArray(val) ? [...val] : []
-
-          if (val?.length) {
-            this.getPowerSupplyTree()
+          // 确保 localPowerDepts 始终是数组
+          this.localPowerDepts = Array.isArray(val) ? [...val] : val ? [val] : []
+          if (this.localPowerDepts.length) {
+            this.getObjectTable()
           }
         },
         immediate: true
@@ -329,23 +325,50 @@
         }
       },
 
-      // 处理供电所变化
-      handlePowerSupplyChange(value) {
-        if (value?.length) {
-          // 通知父组件更新 powerDepts
-          this.$emit('update:power-depts', value)
+      // 处理供电所变化 - 新增方法获取和显示供电所名称
+      handlePowerSupplyChangeWithLabel(nodes) {
+        if (nodes?.length) {
+          // 获取选中节点的id和名称
+          const ids = nodes.map((node) => node.id)
 
+          // 确保传递数组给父组件
+          this.$emit('update:power-depts', ids)
+          this.localPowerDepts = ids
           this.queryParams.pageNum = 1
-          this.getObjectTable() // 重新加载表格数据
+          this.getObjectTable()
+        } else {
+          this.$emit('update:power-depts', [])
+          this.localPowerDepts = []
         }
       },
 
-      // Tree格式化
-      normalizer(node) {
+      // 递归计算节点深度
+      getNodeDepth(node, depth = 1) {
+        if (!node.children || node.children.length === 0) {
+          return depth
+        }
+        // 取最大深度
+        return Math.max(...node.children.map((child) => this.getNodeDepth(child, depth + 1)))
+      },
+
+      // Tree格式化，使只有第五层（最底层）可选
+      normalizer(node, depth = 1) {
+        // 递归处理子节点
+        let children = node.children
+        let normalizedChildren = children
+          ? children.map((child) => this.normalizer(child, depth + 1))
+          : undefined
+
+        // 只有深度为5的节点才可选，其余禁用
         return {
-          id: node.id, // 只使用原始ID，不再拼接label
+          id: node.id,
           label: node.label,
-          children: node.children
+          children: normalizedChildren,
+          // 禁用所有非第五层的节点
+          isDisabled: depth !== 5
+          // 如果需要强制第五层成为叶子节点（即使它有子节点），可以取消下面注释
+          // isDefaultExpanded: depth < 4, // 默认展开前四层方便查看
+          // children: depth === 5 ? undefined : normalizedChildren, // 第五层强制无子节点
         }
       }
     }
