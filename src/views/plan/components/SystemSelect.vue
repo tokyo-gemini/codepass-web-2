@@ -251,6 +251,9 @@
       // 处理表格选择变化
       handleSelectionChange(val) {
         if (this.isSelectAll !== 1) {
+          // 添加数据字段打印
+          console.log('SystemSelect - 选中的数据:', val)
+
           // 获取当前页的选择项的关键ID
           const currentPageSelections = val.map((item) => ({
             userId: item.userId,
@@ -262,7 +265,8 @@
             powerName: item.powerName,
             deptId: item.deptId,
             provinceName: item.provinceName,
-            customId: item.customId
+            customId: item.customId,
+            customName: item.customName || item.consName // 确保包含 customName
           }))
 
           // 从 value 中移除当前页的项

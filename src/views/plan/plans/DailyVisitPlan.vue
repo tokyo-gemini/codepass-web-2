@@ -547,20 +547,47 @@
       confirmSystemSelection() {
         // 清空供电所选择
         this.selectedDept = null
-        // 设置系统内选择的数据
-        this.formData.towerUserList = [...this.tempTowerUserList]
+
+        console.log('确认选择时的临时数据:', this.tempTowerUserList)
+
+        // 确保复制所有必要的字段，包括customName和visit
+        this.formData.towerUserList = this.tempTowerUserList.map((item) => {
+          // 打印每一项的完整数据
+          console.log('处理数据项:', {
+            original: item,
+            customName: item.customName,
+            consName: item.consName
+          })
+
+          return {
+            ...item,
+            customName: item.customName || item.consName || item.userName || '未知客户',
+            customId: item.customId || item.consNo,
+            towerId: item.towerId || item.tgNo,
+            provinceName: item.provinceName,
+            areaName: item.areaName || item.orgName,
+            companyName: item.companyName,
+            powerName: item.powerName,
+            userName: item.userName || item.gridName,
+            visit: item.visit || '未走访'
+          }
+        })
+
         this.selectedCount = this.tempIsSelectAll === 1 ? this.total : this.tempSelectedCount
         this.formData.isSelectAll = this.tempIsSelectAll
-        // 设置表格数据
-        this.tableData = this.tempTowerUserList
-        this.pagination.total = this.tempTowerUserList.length
+
+        // 设置表格数据，使用处理后的数据
+        this.tableData = [...this.formData.towerUserList]
+        this.pagination.total = this.formData.towerUserList.length
+
         // 关闭弹窗并提示
         this.systemDialogVisible = false
+
         // 添加成功消息提示
         if (this.tempIsSelectAll === 1) {
           this.$message.success(`已全选${this.total}项对象`)
-        } else if (this.tempTowerUserList.length > 0) {
-          this.$message.success(`已选择${this.tempTowerUserList.length}项对象`)
+        } else if (this.formData.towerUserList.length > 0) {
+          this.$message.success(`已选择${this.formData.towerUserList.length}项对象`)
         }
       },
 
