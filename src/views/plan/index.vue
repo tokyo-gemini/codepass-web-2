@@ -152,6 +152,50 @@
         <div class="mt-4 text-gray-600">正在生成二维码文件...</div>
       </div>
     </el-dialog>
+
+    <!-- 特殊走访选择弹窗 -->
+    <el-dialog
+      title="选择特殊走访类型"
+      :visible.sync="visitDialogVisible"
+      width="500px"
+      center
+      custom-class="visit-type-dialog"
+    >
+      <div class="visit-type-options">
+        <div class="visit-type-card" @click="handleVisitTypeSelect(false)">
+          <i class="el-icon-location-outline"></i>
+          <h3>普通特殊走访</h3>
+          <p>按照标准流程进行特殊走访计划</p>
+        </div>
+        <div class="visit-type-card" @click="handleVisitTypeSelect(true)">
+          <i class="el-icon-document"></i>
+          <h3>自主填报特殊走访</h3>
+          <p>通过模板填报进行特殊走访计划</p>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 日常走访选择弹窗 -->
+    <el-dialog
+      title="选择日常走访类型"
+      :visible.sync="dailyVisitDialogVisible"
+      width="500px"
+      center
+      custom-class="visit-type-dialog"
+    >
+      <div class="visit-type-options">
+        <div class="visit-type-card" @click="handleDailyVisitTypeSelect(false)">
+          <i class="el-icon-postcard"></i>
+          <h3>普通日常走访</h3>
+          <p>按照标准流程进行日常走访计划</p>
+        </div>
+        <div class="visit-type-card" @click="handleDailyVisitTypeSelect(true)">
+          <i class="el-icon-upload2"></i>
+          <h3>自主填报日常走访</h3>
+          <p>通过模板填报进行日常走访计划</p>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -213,19 +257,21 @@
             type: '5',
             image: require('@/assets/images/box3.jpg'),
             filterStyle: 'filter: brightness(0.8) sepia(0.3)',
-            hidden: false // 添加 hidden 属性
+            hidden: true
           },
           {
             name: '自主填报特殊走访',
             type: '6',
             image: require('@/assets/images/box4.jpg'),
             filterStyle: 'filter: brightness(0.8) sepia(0.3)',
-            hidden: false // 添加 hidden 属性
+            hidden: true
           }
         ],
         planCounts: [], // 添加计划数量数据
         progressVisible: false,
-        progressPercentage: 0
+        progressPercentage: 0,
+        visitDialogVisible: false, // 特殊走访选择弹窗
+        dailyVisitDialogVisible: false // 新增日常走访选择弹窗
       }
     },
     created() {
@@ -283,6 +329,28 @@
       },
       /** 打开新建计划页面 */
       createPlan(type) {
+        if (type === '4') {
+          // 特殊走访时显示选择对话框
+          this.visitDialogVisible = true
+        } else if (type === '3') {
+          // 日常走访时显示选择对话框
+          this.dailyVisitDialogVisible = true
+        } else {
+          const routeUrl = `/plan/visit/${type}`
+          this.$tab.openPage('新建计划', routeUrl)
+        }
+      },
+      // 处理特殊走访类型选择
+      handleVisitTypeSelect(isSelf) {
+        this.visitDialogVisible = false
+        const type = isSelf ? '6' : '4'
+        const routeUrl = `/plan/visit/${type}`
+        this.$tab.openPage('新建计划', routeUrl)
+      },
+      // 处理日常走访类型选择
+      handleDailyVisitTypeSelect(isSelf) {
+        this.dailyVisitDialogVisible = false
+        const type = isSelf ? '5' : '3'
         const routeUrl = `/plan/visit/${type}`
         this.$tab.openPage('新建计划', routeUrl)
       },
@@ -380,3 +448,76 @@
     }
   }
 </script>
+
+<style lang="scss" scoped>
+  .visit-type-dialog {
+    :deep(.el-dialog__header) {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+
+      .el-dialog__title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #303133;
+      }
+    }
+
+    :deep(.el-dialog__body) {
+      padding: 30px;
+    }
+  }
+
+  .visit-type-options {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+  }
+
+  .visit-type-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+    text-align: center;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #409eff;
+    }
+
+    i {
+      font-size: 32px;
+      color: #409eff;
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+    }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #909399;
+      line-height: 1.4;
+    }
+  }
+
+  // 移除之前的按钮样式
+  .el-button {
+    width: auto;
+    height: auto;
+    font-size: 14px;
+  }
+</style>
