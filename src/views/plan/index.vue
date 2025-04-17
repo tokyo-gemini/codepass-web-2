@@ -164,7 +164,7 @@
       <div class="visit-type-options">
         <div class="visit-type-card" @click="handleVisitTypeSelect(false)">
           <i class="el-icon-location-outline"></i>
-          <h3>普通特殊走访</h3>
+          <h3>特殊走访</h3>
           <p>按照标准流程进行特殊走访计划</p>
         </div>
         <div class="visit-type-card" @click="handleVisitTypeSelect(true)">
@@ -186,7 +186,7 @@
       <div class="visit-type-options">
         <div class="visit-type-card" @click="handleDailyVisitTypeSelect(false)">
           <i class="el-icon-postcard"></i>
-          <h3>普通日常走访</h3>
+          <h3>日常走访</h3>
           <p>按照标准流程进行日常走访计划</p>
         </div>
         <div class="visit-type-card" @click="handleDailyVisitTypeSelect(true)">
