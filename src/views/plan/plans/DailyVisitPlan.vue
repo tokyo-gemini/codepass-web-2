@@ -205,7 +205,8 @@
           total: 0
         },
         selectedRows: [],
-        isInitializing: false // 标志位：是否正在初始化
+        isInitializing: false, // 标志位：是否正在初始化
+        selectedMap: {} // 添加全局选中记录映射表
       }
     },
     created() {
@@ -223,16 +224,14 @@
       },
 
       // 添加处理计划数据加载的方法
-      handlePlanDataLoaded(data) {
+      async handlePlanDataLoaded(data) {
         console.log('DailyVisitPlan - 开始处理计划数据')
-        // 设置初始化标志位
         this.isInitializing = true
 
-        // 保存towerUserList数据，确保后续能正确使用
+        // 保存 towerUserList 数据
         if (data.towerUserList && data.towerUserList.length > 0) {
           console.log('收到towerUserList数据:', data.towerUserList.length, '条')
           this.formData.towerUserList = [...data.towerUserList]
-          // 保存到selectedRows也确保选中状态可以正确维护
           this.selectedRows = [...data.towerUserList]
         } else {
           console.log('没有接收到towerUserList数据或数据为空')
@@ -240,14 +239,19 @@
           this.selectedRows = []
         }
 
+        // 初始化 selectedMap，使用统一的键格式
+        this.selectedMap = {}
+        this.formData.towerUserList.forEach((item) => {
+          const key = `${item.customId}_${item.towerId}`
+          this.selectedMap[key] = true
+        })
+
         if (data.powerIdList?.length) {
           this.formData.powerSupply = Array.isArray(data.powerIdList)
             ? data.powerIdList
             : [data.powerIdList]
-
           const deptId = Array.isArray(data.powerIdList) ? data.powerIdList[0] : data.powerIdList
 
-          // 先不触发handleDeptChange，直接获取客户列表
           this.tableLoading = true
           const params = {
             deptIdList: deptId,
@@ -256,66 +260,48 @@
             planId: this.$route.params.id || ''
           }
 
-          // 设置选中部门但不触发watch
-          setTimeout(() => {
-            // 使用nextTick确保设置selectedDept不会触发handleDeptChange
-            this.$nextTick(() => {
-              this.selectedDept = deptId
-            })
-          }, 0)
+          // 设置 selectedDept，不触发 handleDeptChange
+          this.$nextTick(() => {
+            this.selectedDept = deptId
+          })
 
-          asyncGetCustomerListByDept(params)
-            .then((res) => {
-              if (res.code === 200) {
-                this.tableData = res.rows || []
-                this.pagination.total = res.total || 0
+          try {
+            const res = await asyncGetCustomerListByDept(params)
+            if (res.code === 200) {
+              this.tableData = res.rows || []
+              this.pagination.total = res.total || 0
 
-                // 设置其他状态
-                this.formData.isSelectAll = Number(data.isSelectAll || 0)
-                this.selectedCount =
-                  this.formData.isSelectAll === 1
-                    ? this.pagination.total
-                    : this.formData.towerUserList.length
-                this.total = this.pagination.total
+              this.formData.isSelectAll = Number(data.isSelectAll || 0)
+              this.selectedCount =
+                this.formData.isSelectAll === 1
+                  ? this.pagination.total
+                  : this.formData.towerUserList.length
+              this.total = this.pagination.total
 
-                // 使用setTimeout确保DOM已更新
-                setTimeout(() => {
-                  if (this.$refs.table && this.formData.towerUserList.length > 0) {
-                    console.log(
-                      '设置DailyVisit表格选中状态，项数:',
-                      this.formData.towerUserList.length
-                    )
-                    // 先清空所有选择
-                    this.$refs.table.clearSelection()
-
-                    // 遍历表格项，设置选中状态
-                    this.tableData.forEach((row) => {
-                      // 使用多个条件匹配，提高匹配的准确性
-                      const isSelected = this.formData.towerUserList.some((item) => {
-                        return item.customId && item.customId === row.customId
-                      })
-                      if (isSelected) {
-                        this.$refs.table.toggleRowSelection(row, true)
-                      }
-                    })
-                  }
-
-                  // 恢复初始化标志
-                  this.isInitializing = false
-                  console.log('DailyVisitPlan - 处理计划数据完成')
-                }, 100)
-              } else {
+              // 等待 DOM 更新后设置勾选状态
+              this.$nextTick(() => {
+                if (this.$refs.table && this.formData.towerUserList?.length > 0) {
+                  this.$refs.table.clearSelection()
+                  this.tableData.forEach((row) => {
+                    const rowKey = `${row.customId}_${row.towerId}`
+                    if (this.selectedMap[rowKey]) {
+                      this.$refs.table.toggleRowSelection(row, true)
+                    }
+                  })
+                }
                 this.isInitializing = false
-              }
-            })
-            .catch((error) => {
-              console.error('获取客户列表失败:', error)
-              this.$message.error('获取客户列表失败')
+                console.log('DailyVisitPlan - 处理计划数据完成')
+              })
+            } else {
               this.isInitializing = false
-            })
-            .finally(() => {
-              this.tableLoading = false
-            })
+            }
+          } catch (error) {
+            console.error('获取客户列表失败:', error)
+            this.$message.error('获取客户列表失败')
+            this.isInitializing = false
+          } finally {
+            this.tableLoading = false
+          }
         } else if (data.deptIdList?.length) {
           // 系统内选择的情况
           this.selectedDept = null
@@ -330,7 +316,7 @@
           this.total = Number(data.total || 0)
           this.isInitializing = false
         } else {
-          // 没有供电所和部门ID的情况
+          // 无供电所和部门ID的情况
           this.selectedDept = null
           this.formData.powerSupply = []
           this.tableData = this.formData.towerUserList
@@ -421,19 +407,54 @@
       handleSelectionChange(selection) {
         if (this.formData.isSelectAll !== 1) {
           this.selectedRows = selection
-          this.formData.towerUserList = selection
           this.selectedCount = selection.length
+
+          // 同步更新 formData.towerUserList，确保提交时包含最新选中数据
+          this.formData.towerUserList = [...selection]
+
+          // 更新全局选中记录
+          const currentPageIds = this.tableData.map((row) => row.customId)
+
+          // 从全局记录中移除当前页已经不再选中的项
+          currentPageIds.forEach((id) => {
+            if (!selection.some((item) => item.customId === id)) {
+              delete this.selectedMap[id]
+            }
+          })
+
+          // 添加当前页新选中的项
+          selection.forEach((row) => {
+            this.selectedMap[row.customId] = true
+          })
         }
+      },
+
+      // 新增方法：统一处理选择状态应用
+      restoreSelection() {
+        if (this.formData.isSelectAll === 1) return
+
+        this.$nextTick(() => {
+          if (this.$refs.table) {
+            // 清空当前页的所有选择
+            this.$refs.table.clearSelection()
+
+            // 遍历当前页数据，根据 selectedMap 恢复选中状态
+            this.tableData.forEach((row) => {
+              const rowKey = `${row.customId}_${row.towerId}`
+              if (this.selectedMap[rowKey]) {
+                this.$refs.table.toggleRowSelection(row, true)
+              }
+            })
+          }
+        })
       },
 
       // 处理分页变化
       handlePageChange(page) {
         this.pagination.pageNum = page
         this.getCustomerList().then(() => {
-          // 数据加载完成后重新应用选择状态
-          this.$nextTick(() => {
-            this.applySelectionState()
-          })
+          // 添加这一行来恢复选中状态
+          this.restoreSelection()
         })
       },
 
@@ -442,50 +463,9 @@
         this.pagination.pageSize = size
         this.pagination.pageNum = 1
         this.getCustomerList().then(() => {
-          // 数据加载完成后重新应用选择状态
-          this.$nextTick(() => {
-            this.applySelectionState()
-          })
+          // 添加这一行来恢复选中状态
+          this.restoreSelection()
         })
-      },
-
-      // 新增方法：统一处理选择状态应用
-      applySelectionState() {
-        if (!this.$refs.table) return
-
-        console.log(
-          '重新应用选择状态，当前模式:',
-          this.formData.isSelectAll === 1 ? '全选' : '部分选择'
-        )
-
-        if (this.formData.isSelectAll === 1) {
-          // 全选模式下清除表格选择
-          this.$refs.table.clearSelection()
-          return
-        }
-
-        // 部分选择模式，根据towerUserList设置选中状态
-        if (this.formData.towerUserList && this.formData.towerUserList.length > 0) {
-          // 先清空当前选择
-          this.$refs.table.clearSelection()
-
-          // 遍历表格数据，设置选中状态
-          this.tableData.forEach((row) => {
-            const isSelected = this.formData.towerUserList.some((item) => {
-              // 使用多个条件匹配，提高匹配的精确性
-              return (
-                (item.customId && item.customId === row.customId) ||
-                (item.towerId && item.towerId === row.towerId) ||
-                (item.towerNo && item.towerNo === row.towerNo)
-              )
-            })
-
-            if (isSelected) {
-              console.log('设置行选中:', row.customName || row.customId)
-              this.$refs.table.toggleRowSelection(row, true)
-            }
-          })
-        }
       },
 
       // Tree格式化
@@ -640,7 +620,7 @@
           submitData.towerUserList =
             this.formData.isSelectAll === 1 || this.uploadFile
               ? []
-              : [...this.formData.towerUserList]
+              : [...this.formData.towerUserList] // 确保包含最新勾选的数据
           submitData.towerIdList = this.formData.towerIdList
 
           if (this.formData.isSelectAll === 1) {

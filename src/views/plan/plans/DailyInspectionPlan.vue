@@ -119,7 +119,8 @@
         },
         selectedRows: [], // 存储选中的行
         selectedCount: 0, // 添加选中计数
-        isInitializing: false // 添加初始化状态
+        isInitializing: false, // 添加初始化状态
+        selectedMap: {} // 添加全局选中记录映射表
       }
     },
     watch: {
@@ -236,14 +237,20 @@
       // 处理分页变化
       handlePageChange(page) {
         this.pagination.pageNum = page
-        this.getAreaList()
+        this.getAreaList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
       // 处理每页条数变化
       handleSizeChange(size) {
         this.pagination.pageSize = size
         this.pagination.pageNum = 1
-        this.getAreaList()
+        this.getAreaList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
       handlePlanDataLoaded(data) {
@@ -368,6 +375,7 @@
         this.tableData = []
         this.pagination.pageNum = 1
         this.pagination.total = 0
+        this.selectedMap = {} // 清空全局选中记录
         this.$refs.table?.clearSelection()
         this.$emit('reset') // 确保调用父组件的 reset
       },
@@ -433,11 +441,44 @@
 
       // 处理表格选择变化
       handleSelectionChange(selection) {
-        // 只有在非全选状态下才更新 selectedRows 和 selectedCount
         if (this.formData.isSelectAll !== 1) {
           this.selectedRows = selection
           this.selectedCount = selection.length
+
+          // 更新全局选中记录
+          const currentPageIds = this.tableData.map((row) => row.towerId)
+
+          // 从全局记录中移除当前页已经不再选中的项
+          currentPageIds.forEach((id) => {
+            if (!selection.some((item) => item.towerId === id)) {
+              delete this.selectedMap[id]
+            }
+          })
+
+          // 添加当前页新选中的项
+          selection.forEach((row) => {
+            this.selectedMap[row.towerId] = true
+          })
         }
+      },
+
+      // 恢复选中状态
+      restoreSelection() {
+        if (this.formData.isSelectAll === 1) return
+
+        this.$nextTick(() => {
+          if (this.$refs.table) {
+            // 先清空所有选择
+            this.$refs.table.clearSelection()
+
+            // 恢复选中状态
+            this.tableData.forEach((row) => {
+              if (this.selectedMap[row.towerId]) {
+                this.$refs.table.toggleRowSelection(row, true)
+              }
+            })
+          }
+        })
       },
 
       // 处理全选复选框变化
@@ -448,11 +489,13 @@
           // 全选模式
           this.selectedCount = this.pagination.total
           this.selectedRows = [] // 全选时清空具体选择项
+          this.selectedMap = {} // 清空全局选中记录
           this.$refs.table.clearSelection() // 清空表格勾选
         } else {
           // 取消全选，恢复为手动选择模式
           this.selectedCount = 0
           this.selectedRows = []
+          this.selectedMap = {} // 清空全局选中记录
           this.$refs.table.clearSelection()
         }
       }

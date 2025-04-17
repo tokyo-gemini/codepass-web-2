@@ -110,7 +110,7 @@
 <script>
   import BasePlan from '../components/BasePlan.vue'
   import { deptTreeSelect } from '@/api/system/user'
-  import { asyncGetUserListByDept, asyncGetXsWorkOrders } from '@/api/plan'
+  import { asyncGetXsWorkOrders, asyncGetUserListByDept } from '@/api/plan'
   import Treeselect from '@riophae/vue-treeselect'
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 
@@ -122,15 +122,15 @@
     },
     data() {
       return {
-        powerSupplyTree: [], // 供电所树形数据
-        selectedDept: null, // 选中的供电所
-        userList: [], // 网格员列表
-        selectedUser: null, // 选中的网格员
-        userListLoading: false, // 网格员列表加载状态
+        powerSupplyTree: [],
+        selectedDept: null,
+        userList: [],
+        selectedUser: null,
+        userListLoading: false,
         formData: {
           towerUserList: [],
           powerSupply: null,
-          isSelectAll: 0 // 添加全选状态
+          isSelectAll: 0
         },
         tableLoading: false,
         tableData: [],
@@ -139,13 +139,14 @@
           pageNum: 1,
           pageSize: 10
         },
-        selectedRows: [], // 存储选中的行
-        selectedCount: 0, // 添加选中计数
-        isInitializing: false
+        selectedRows: [],
+        selectedCount: 0,
+        isInitializing: false,
+        // 添加全局选中记录映射表
+        selectedMap: {}
       }
     },
     watch: {
-      // 监听供电所变化，当供电所清空时，清空网格员选择
       selectedDept(val) {
         if (!val) {
           this.selectedUser = null
@@ -157,10 +158,8 @@
       this.getPowerSupplyTree()
     },
     methods: {
-      // 获取供电所树形数据
       async getPowerSupplyTree() {
         try {
-          // 特殊巡视计划不需要传入type参数
           const res = await deptTreeSelect()
           this.powerSupplyTree = res.data || []
         } catch (error) {
@@ -168,18 +167,8 @@
         }
       },
 
-      // 处理供电所选择变化
       async handleDeptChange(value) {
-        console.log(
-          'SpecialInspectionPlan - handleDeptChange被调用，初始化状态:',
-          this.isInitializing,
-          '值:',
-          value
-        )
-
-        // 如果正在初始化，直接返回，不执行任何操作
         if (this.isInitializing) {
-          console.log('SpecialInspectionPlan - 正在初始化中，跳过handleDeptChange中的请求操作')
           return
         }
 
@@ -197,11 +186,39 @@
         this.formData.powerSupply = value
         this.$emit('update:power-depts', value)
 
-        // 查询工单列表
+        await this.getUserList()
         await this.getWorkOrderList()
       },
 
-      // 获取工单列表
+      async getUserList() {
+        if (!this.selectedDept) return
+
+        this.userListLoading = true
+        try {
+          const res = await asyncGetUserListByDept(
+            Array.isArray(this.selectedDept) ? this.selectedDept[0] : this.selectedDept
+          )
+
+          if (res.code === 200) {
+            this.userList = res.data || []
+          }
+        } catch (error) {
+          console.error('获取网格员列表失败:', error)
+          this.$message.error('获取网格员列表失败')
+        } finally {
+          this.userListLoading = false
+        }
+      },
+
+      handleUserChange(value) {
+        if (value) {
+          this.selectedUser = value
+          this.getWorkOrderList()
+        } else {
+          this.selectedUser = null
+        }
+      },
+
       async getWorkOrderList() {
         if (!this.selectedDept) return
 
@@ -213,38 +230,24 @@
             pageSize: this.pagination.pageSize
           }
 
-          // 编辑时添加planId
           if (this.$route.params.id) {
             params.planId = this.$route.params.id
           }
 
           const res = await asyncGetXsWorkOrders(params)
-
           if (res.code === 200) {
             this.tableData = res.rows || []
             this.pagination.total = res.total || 0
 
-            // 修改编辑时的回显选中逻辑
-            if (this.$route.params.id) {
-              this.$nextTick(() => {
-                this.tableData.forEach((row) => {
-                  // 根据 towerUserList 判断是否选中
-                  const isSelected = this.formData.towerUserList?.some(
-                    (item) => item.towerId === row.towerId
-                  )
-                  if (isSelected) {
-                    this.$refs.table.toggleRowSelection(row, true)
-                  }
-                })
-              })
-            }
-
-            // 更新选中计数
             if (this.formData.isSelectAll === 1) {
               this.selectedCount = this.pagination.total
             } else {
               this.selectedCount = this.formData.towerUserList?.length || 0
             }
+
+            this.$nextTick(() => {
+              this.updateSelectionState()
+            })
           }
         } catch (error) {
           console.error('获取工单列表失败:', error)
@@ -254,59 +257,47 @@
         }
       },
 
-      // 处理分页变化
       handlePageChange(page) {
         this.pagination.pageNum = page
-        this.getWorkOrderList()
+        this.getWorkOrderList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
-      // 处理每页条数变化
       handleSizeChange(size) {
         this.pagination.pageSize = size
         this.pagination.pageNum = 1
-        this.getWorkOrderList()
+        this.getWorkOrderList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
-      // 处理网格员选择变化
-      handleUserChange(value) {
-        // 可以在这里处理网格员选择变化的逻辑
-      },
-
-      // 更新选中状态和表格勾选
-      updateSelectionState() {
-        if (this.formData.isSelectAll === 1) {
-          this.selectedCount = this.pagination.total
-          this.$nextTick(() => {
-            this.$refs.table?.clearSelection()
-          })
-        } else {
-          this.selectedCount = this.formData.towerUserList?.length || 0
-          this.$nextTick(() => {
-            if (this.formData.towerUserList.length && this.$refs.table) {
-              this.$refs.table.clearSelection() // 先清空
-              this.formData.towerUserList.forEach((item) => {
-                const row = this.tableData.find((r) => r.formDataId === item.formDataId)
-                if (row) {
-                  this.$refs.table.toggleRowSelection(row, true)
-                }
-              })
-            }
-          })
-        }
-      },
-
-      // 处理表格选择变化
       handleSelectionChange(selection) {
         if (this.formData.isSelectAll !== 1) {
           this.selectedRows = selection
           this.selectedCount = selection.length
+
+          // 更新全局选中记录
+          const currentPageIds = this.tableData.map((row) => row.formDataId)
+
+          // 从全局记录中移除当前页已经不再选中的项
+          currentPageIds.forEach((id) => {
+            if (!selection.some((item) => item.formDataId === id)) {
+              delete this.selectedMap[id]
+            }
+          })
+
+          // 添加当前页新选中的项
+          selection.forEach((row) => {
+            this.selectedMap[row.formDataId] = true
+          })
         }
       },
 
-      // 处理全选复选框变化
       handleSelectAllChange(value) {
         this.formData.isSelectAll = value
-
         if (value === 1) {
           this.selectedCount = this.pagination.total
           this.selectedRows = []
@@ -318,20 +309,60 @@
         }
       },
 
-      handlePlanDataLoaded(data) {
-        this.isInitializing = true
+      updateSelectionState() {
+        if (this.formData.isSelectAll === 1) {
+          this.selectedCount = this.pagination.total
+          this.$nextTick(() => {
+            this.$refs.table?.clearSelection()
+          })
+        } else {
+          this.selectedCount = this.formData.towerUserList?.length || 0
+          this.$nextTick(() => {
+            if (this.formData.towerUserList.length && this.$refs.table) {
+              this.$refs.table.clearSelection()
+              this.tableData.forEach((row) => {
+                const isSelected = this.formData.towerUserList.some((item) => {
+                  return item.formDataId === row.formDataId // 修改为使用 formDataId 匹配
+                })
+                if (isSelected) {
+                  this.$refs.table.toggleRowSelection(row, true)
+                }
+              })
+            }
+          })
+        }
+      },
 
+      // 添加恢复选中状态的方法
+      restoreSelection() {
+        if (this.formData.isSelectAll === 1) return
+
+        this.$nextTick(() => {
+          if (this.$refs.table) {
+            // 先清空所有选择
+            this.$refs.table.clearSelection()
+
+            // 恢复选中状态
+            this.tableData.forEach((row) => {
+              if (this.selectedMap[row.formDataId]) {
+                this.$refs.table.toggleRowSelection(row, true)
+              }
+            })
+          }
+        })
+      },
+
+      async handlePlanDataLoaded(data) {
+        this.isInitializing = true
         if (data.powerIdList || data.powerIdList === 0) {
           this.formData.powerSupply = data.powerIdList
           this.formData.towerUserList = data.towerUserList || []
+          this.formData.isSelectAll = Number(data.isSelectAll || 0)
 
           const deptId = Array.isArray(data.powerIdList) ? data.powerIdList[0] : data.powerIdList
           const userId = data.userId
 
-          // 直接加载网格员列表和工单列表，避免重复调用API
           this.userListLoading = true
-
-          // 并行执行两个请求
           Promise.all([
             asyncGetUserListByDept(deptId),
             asyncGetXsWorkOrders({
@@ -344,9 +375,7 @@
             .then(([userRes, orderRes]) => {
               if (userRes.code === 200) {
                 this.userList = userRes.data || []
-
                 if (userId && this.userList.length) {
-                  // 直接使用后台返回的userId
                   this.selectedUser =
                     this.userList.find((user) => String(user.userId) === String(userId))?.userId ||
                     null
@@ -357,24 +386,24 @@
                 this.tableData = orderRes.rows || []
                 this.pagination.total = orderRes.total || 0
 
-                // 更新选中计数和勾选状态
                 if (this.formData.isSelectAll === 1) {
                   this.selectedCount = this.pagination.total
                 } else {
                   this.selectedCount = this.formData.towerUserList?.length || 0
-                  // 保存towerUserList到selectedRows，确保表单提交时有数据
                   this.selectedRows = [...this.formData.towerUserList]
                 }
 
-                // 设置勾选状态 - 使用延时确保DOM已更新
                 setTimeout(() => {
                   if (this.$refs.table && this.formData.towerUserList?.length > 0) {
-                    console.log('设置表格选中状态，项数：', this.formData.towerUserList.length)
+                    console.log(
+                      '设置特殊巡视表格选中状态，项数：',
+                      this.formData.towerUserList.length
+                    )
+                    this.$refs.table.clearSelection()
+
                     this.tableData.forEach((row) => {
-                      // 增加更多匹配条件，确保能找到对应项
                       const isSelected = this.formData.towerUserList.some((item) => {
-                        // 使用多个字段匹配确保能找到正确的项
-                        return item.towerId && item.towerId === row.towerId
+                        return item.formDataId === row.formDataId // 修改为使用 formDataId 匹配
                       })
                       if (isSelected) {
                         this.$refs.table.toggleRowSelection(row, true)
@@ -384,7 +413,6 @@
                 }, 100)
               }
 
-              // 最后设置selectedDept，避免触发watch
               setTimeout(() => {
                 this.selectedDept = deptId
                 this.isInitializing = false
@@ -399,18 +427,14 @@
               this.tableLoading = false
             })
         } else {
-          // 其他情况处理
           this.formData.towerUserList = data.towerUserList || []
           this.formData.isSelectAll = Number(data.isSelectAll || 0)
           this.pagination.total = Number(data.total || 0)
-
-          // 直接设置选中数据
           this.selectedRows = [...this.formData.towerUserList]
           this.selectedCount =
             this.formData.isSelectAll === 1
               ? this.pagination.total
               : this.formData.towerUserList?.length || 0
-
           this.isInitializing = false
         }
       },
@@ -434,8 +458,13 @@
       },
 
       async handleBeforeSubmit(formData) {
-        if (!this.selectedDept || !this.selectedUser) {
-          this.$message.warning('请选择供电所和网格员')
+        if (!this.selectedDept) {
+          this.$message.warning('请选择供电所')
+          return false
+        }
+        // 添加校验：必须选择网格员
+        if (!this.selectedUser) {
+          this.$message.warning('请选择网格员')
           return false
         }
         // 添加校验：如果未全选，则必须选择至少一个对象
@@ -444,37 +473,32 @@
           return false
         }
 
-        // 获取基础表单数据
         const dtoBlob = formData.get('dto')
         const submitData = JSON.parse(await dtoBlob.text())
 
-        // 获取formDataId
         const formDataId = this.$refs.basePlan.formBasicInfo.formId
         if (!formDataId) {
           this.$message.warning('表单ID不能为空')
           return false
         }
 
-        // 添加或更新特定字段
-        submitData.formDataId = formDataId // 添加表单ID
         submitData.isSelectAll = this.formData.isSelectAll
 
-        // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
         const deptId = Array.isArray(this.selectedDept)
           ? this.selectedDept[0].toString()
           : this.selectedDept.toString()
         submitData.powerIdList = [deptId]
-        submitData.deptIdList = [deptId] // 修改为字符串数组格式
+        submitData.deptIdList = [deptId]
 
-        submitData.userId = this.selectedUser
-
+        // 如果是全选, towerUserList 传空数组, 否则传 selectedRows
         if (this.formData.isSelectAll === 1) {
           submitData.towerUserList = []
           submitData.total = this.pagination.total
         } else {
+          // 添加userId到每个选中的巡视对象
           submitData.towerUserList = this.selectedRows.map((row) => ({
             ...row,
-            userId: this.selectedUser
+            userId: this.selectedUser // 添加选中的网格员ID
           }))
           delete submitData.total
         }

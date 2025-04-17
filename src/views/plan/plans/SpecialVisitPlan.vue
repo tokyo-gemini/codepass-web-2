@@ -143,7 +143,8 @@
         },
         selectedRows: [], // 存储选中的行
         selectedCount: 0, // 添加选中计数
-        isInitializing: false
+        isInitializing: false,
+        selectedMap: {} // 添加全局选中记录映射表
       }
     },
     watch: {
@@ -297,7 +298,7 @@
           this.selectedCount = this.formData.towerUserList?.length || 0
           this.$nextTick(() => {
             if (this.formData.towerUserList.length && this.$refs.table) {
-              this.$refs.table.clearSelection() // 先清空
+              this.$refs.table.clearSelection()
               this.formData.towerUserList.forEach((item) => {
                 const row = this.tableData.find((r) => r.formDataId === item.formDataId)
                 if (row) {
@@ -312,14 +313,20 @@
       // 处理分页变化
       handlePageChange(page) {
         this.pagination.pageNum = page
-        this.getWorkOrderList()
+        this.getWorkOrderList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
       // 处理每页条数变化
       handleSizeChange(size) {
         this.pagination.pageSize = size
         this.pagination.pageNum = 1
-        this.getWorkOrderList()
+        this.getWorkOrderList().then(() => {
+          // 恢复选中状态
+          this.restoreSelection()
+        })
       },
 
       // 处理网格员选择变化
@@ -329,10 +336,24 @@
 
       // 处理表格选择变化
       handleSelectionChange(selection) {
-        // 只有在非全选状态下才更新 selectedRows 和 selectedCount
         if (this.formData.isSelectAll !== 1) {
           this.selectedRows = selection
           this.selectedCount = selection.length
+
+          // 更新全局选中记录
+          const currentPageIds = this.tableData.map((row) => row.formDataId)
+
+          // 从全局记录中移除当前页已经不再选中的项
+          currentPageIds.forEach((id) => {
+            if (!selection.some((item) => item.formDataId === id)) {
+              delete this.selectedMap[id]
+            }
+          })
+
+          // 添加当前页新选中的项
+          selection.forEach((row) => {
+            this.selectedMap[row.formDataId] = true
+          })
         }
       },
 
@@ -351,6 +372,25 @@
           this.selectedRows = []
           this.$refs.table.clearSelection()
         }
+      },
+
+      // 添加恢复选中状态的方法
+      restoreSelection() {
+        if (this.formData.isSelectAll === 1) return
+
+        this.$nextTick(() => {
+          if (this.$refs.table) {
+            // 先清空所有选择
+            this.$refs.table.clearSelection()
+
+            // 恢复选中状态
+            this.tableData.forEach((row) => {
+              if (this.selectedMap[row.formDataId]) {
+                this.$refs.table.toggleRowSelection(row, true)
+              }
+            })
+          }
+        })
       },
 
       handlePlanDataLoaded(data) {
@@ -415,17 +455,12 @@
                 setTimeout(() => {
                   if (this.$refs.table && this.formData.towerUserList?.length > 0) {
                     console.log('设置表格选中状态，项数：', this.formData.towerUserList.length)
-                    // 先清空所有选择
                     this.$refs.table.clearSelection()
 
                     this.tableData.forEach((row) => {
-                      // 增加更多匹配条件，确保能找到对应项
-                      const isSelected = this.formData.towerUserList.some((item) => {
-                        return (
-                          (item.customId && item.customId === row.customId) ||
-                          (item.towerId && item.towerId === row.towerId)
-                        )
-                      })
+                      const isSelected = this.formData.towerUserList.some(
+                        (item) => item.formDataId === row.formDataId
+                      )
                       if (isSelected) {
                         this.$refs.table.toggleRowSelection(row, true)
                       }
