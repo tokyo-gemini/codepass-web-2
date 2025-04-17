@@ -495,39 +495,27 @@
           return false
         }
 
-        // 从formData中获取dto字段
         const dtoBlob = formData.get('dto')
         const submitData = JSON.parse(await dtoBlob.text())
 
-        // 获取formDataId
-        const formDataId = this.$refs.basePlan.formBasicInfo.formId
-        if (!formDataId) {
-          this.$message.warning('表单ID不能为空')
-          return false
-        }
+        submitData.formDataId = this.$refs.basePlan.formBasicInfo.formId
+        submitData.isSelectAll = this.formData.isSelectAll || 0
 
-        // 添加或更新必要的特定字段
-        submitData.formDataId = formDataId // 添加表单ID
-        submitData.isSelectAll = this.formData.isSelectAll || 0 // 确保传递全选状态
-
-        // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
         const deptId = Array.isArray(this.selectedDept)
           ? this.selectedDept[0].toString()
           : this.selectedDept.toString()
         submitData.powerIdList = [deptId]
-        submitData.deptIdList = [deptId] // 修改为字符串数组格式
+        submitData.deptIdList = [deptId]
+        submitData.userId = this.selectedUser // 保留userId
 
-        submitData.userId = this.selectedUser
-
-        // 如果是全选，传空数组，并附加total
         if (this.formData.isSelectAll === 1) {
           submitData.towerUserList = []
           submitData.total = this.pagination.total
         } else {
+          // 只保留原始数据和userId，不添加formDataId
           submitData.towerUserList = this.selectedRows.map((row) => ({
             ...row,
-            userId: this.selectedUser,
-            formDataId: formDataId // 添加formDataId到每个对象
+            userId: this.selectedUser
           }))
           delete submitData.total
         }

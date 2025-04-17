@@ -640,10 +640,7 @@
           submitData.towerUserList =
             this.formData.isSelectAll === 1 || this.uploadFile
               ? []
-              : this.formData.towerUserList.map((item) => ({
-                  ...item,
-                  formDataId: submitData.formId // 为每个对象添加 formDataId
-                }))
+              : [...this.formData.towerUserList]
           submitData.towerIdList = this.formData.towerIdList
 
           if (this.formData.isSelectAll === 1) {

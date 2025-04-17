@@ -77,8 +77,6 @@
             width="55"
             :selectable="(row) => formData.isSelectAll !== 1"
           />
-          <el-table-column prop="customName" label="客户名称" min-width="200" />
-          <el-table-column prop="customId" label="客户编号" min-width="150" />
           <el-table-column prop="provinceName" label="所属省份" min-width="120" />
           <el-table-column prop="areaName" label="所属供电单位" min-width="150" />
           <el-table-column prop="companyName" label="所属城市" min-width="120" />
@@ -376,10 +374,7 @@
                       // 增加更多匹配条件，确保能找到对应项
                       const isSelected = this.formData.towerUserList.some((item) => {
                         // 使用多个字段匹配确保能找到正确的项
-                        return (
-                          (item.towerId && item.towerId === row.towerId) ||
-                          (item.customId && item.customId === row.customId)
-                        )
+                        return item.towerId && item.towerId === row.towerId
                       })
                       if (isSelected) {
                         this.$refs.table.toggleRowSelection(row, true)
@@ -479,8 +474,7 @@
         } else {
           submitData.towerUserList = this.selectedRows.map((row) => ({
             ...row,
-            userId: this.selectedUser,
-            formDataId: formDataId // 添加formDataId到每个对象
+            userId: this.selectedUser
           }))
           delete submitData.total
         }

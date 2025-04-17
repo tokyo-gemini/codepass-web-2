@@ -24,26 +24,6 @@
               />
             </div>
           </el-form-item>
-
-          <!-- 网格员选择 -->
-          <el-form-item label="网格员" required>
-            <el-select
-              v-model="selectedUser"
-              filterable
-              clearable
-              placeholder="请先选择供电所"
-              :loading="userListLoading"
-              :disabled="!selectedDept"
-              @change="handleUserChange"
-            >
-              <el-option
-                v-for="item in userList"
-                :key="item.userId"
-                :label="item.userName"
-                :value="item.userId"
-              />
-            </el-select>
-          </el-form-item>
         </div>
 
         <!-- 全选复选框 -->
@@ -77,8 +57,7 @@
             width="55"
             :selectable="(row) => formData.isSelectAll !== 1"
           />
-          <el-table-column prop="customName" label="客户名称" min-width="200" />
-          <el-table-column prop="customId" label="客户编号" min-width="150" />
+          <el-table-column prop="towerName" label="所属台区" min-width="150" />
           <el-table-column prop="provinceName" label="所属省份" min-width="120" />
           <el-table-column prop="areaName" label="所属供电单位" min-width="150" />
           <el-table-column prop="companyName" label="所属城市" min-width="120" />
@@ -112,7 +91,7 @@
 <script>
   import BasePlan from '../components/BasePlan.vue'
   import { deptTreeSelect } from '@/api/system/user'
-  import { asyncGetUserListByDept, asyncGetAreaList } from '@/api/plan'
+  import { asyncGetAreaList } from '@/api/plan'
   import Treeselect from '@riophae/vue-treeselect'
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 
@@ -126,9 +105,6 @@
       return {
         powerSupplyTree: [], // 供电所树形数据
         selectedDept: null, // 选中的供电所
-        userList: [], // 网格员列表
-        selectedUser: null, // 选中的网格员
-        userListLoading: false, // 网格员列表加载状态
         formData: {
           towerUserList: [],
           powerSupply: null,
@@ -147,11 +123,14 @@
       }
     },
     watch: {
-      // 监听供电所变化，当供电所清空时，清空网格员选择
+      // 监听供电所变化，当供电所清空时，清空相关选择
       selectedDept(val) {
         if (!val) {
-          this.selectedUser = null
-          this.userList = []
+          this.formData.towerUserList = []
+          this.selectedRows = []
+          this.selectedCount = 0
+          this.formData.isSelectAll = 0
+          this.tableData = []
         }
       }
     },
@@ -186,8 +165,6 @@
         }
 
         if (!value) {
-          this.selectedUser = null
-          this.userList = []
           this.formData.towerUserList = []
           this.selectedRows = []
           this.selectedCount = 0
@@ -269,10 +246,6 @@
         this.getAreaList()
       },
 
-      handleUserChange() {
-        // 处理网格员选择变化
-      },
-
       handlePlanDataLoaded(data) {
         // 设置初始化标志位
         this.isInitializing = true
@@ -283,33 +256,17 @@
           this.formData.isSelectAll = Number(data.isSelectAll || 0)
 
           const deptId = Array.isArray(data.powerIdList) ? data.powerIdList[0] : data.powerIdList
-          const userId = data.userId
 
-          // 直接加载网格员列表和台区列表，避免重复调用API
-          this.userListLoading = true
+          // 直接加载台区列表，避免重复调用API
+          this.tableLoading = true
 
-          // 并行执行两个请求
-          Promise.all([
-            asyncGetUserListByDept(deptId),
-            asyncGetAreaList({
-              deptIdList: deptId,
-              pageNum: this.pagination.pageNum,
-              pageSize: this.pagination.pageSize,
-              planId: this.$route.params.id || ''
-            })
-          ])
-            .then(([userRes, areaRes]) => {
-              if (userRes.code === 200) {
-                this.userList = userRes.data || []
-
-                if (userId && this.userList.length) {
-                  // 直接使用后台返回的userId
-                  this.selectedUser =
-                    this.userList.find((user) => String(user.userId) === String(userId))?.userId ||
-                    null
-                }
-              }
-
+          asyncGetAreaList({
+            deptIdList: deptId,
+            pageNum: this.pagination.pageNum,
+            pageSize: this.pagination.pageSize,
+            planId: this.$route.params.id || ''
+          })
+            .then((areaRes) => {
               if (areaRes.code === 200) {
                 this.tableData = areaRes.rows || []
                 this.pagination.total = areaRes.total || 0
@@ -357,7 +314,6 @@
               this.isInitializing = false
             })
             .finally(() => {
-              this.userListLoading = false
               this.tableLoading = false
             })
         } else {
@@ -402,8 +358,6 @@
 
       handleReset() {
         this.selectedDept = null
-        this.selectedUser = null
-        this.userList = []
         this.formData = {
           towerUserList: [],
           powerSupply: null,
@@ -419,8 +373,8 @@
       },
 
       async handleBeforeSubmit(formData) {
-        if (!this.selectedDept || !this.selectedUser) {
-          this.$message.warning('请选择供电所和网格员')
+        if (!this.selectedDept) {
+          this.$message.warning('请选择供电所')
           return false
         }
         // 添加校验：如果未全选，则必须选择至少一个对象
@@ -441,7 +395,6 @@
         }
 
         // 添加或更新特定字段
-        submitData.formDataId = formDataId // 添加表单ID
         submitData.isSelectAll = this.formData.isSelectAll
 
         // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
@@ -451,18 +404,12 @@
         submitData.powerIdList = [deptId]
         submitData.deptIdList = [deptId] // 修改为字符串数组格式
 
-        submitData.userId = this.selectedUser
-
         // 如果是全选, towerUserList 传空数组, 否则传 selectedRows
         if (this.formData.isSelectAll === 1) {
           submitData.towerUserList = []
           submitData.total = this.pagination.total
         } else {
-          submitData.towerUserList = this.selectedRows.map((row) => ({
-            ...row,
-            userId: this.selectedUser,
-            formDataId: formDataId // 添加formDataId到每个对象
-          }))
+          submitData.towerUserList = [...this.selectedRows] // 直接使用原始数据，不添加formDataId
           delete submitData.total
         }
 
