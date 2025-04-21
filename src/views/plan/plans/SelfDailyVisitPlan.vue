@@ -50,20 +50,23 @@
           customs: []
         }
         this.uploadFile = null
-        // 调用子组件的重置方法（如果存在）
+        // 调用子组件的重置方法
         this.$refs.selfReportTemplate?.handleFileRemove()
       },
       async handleBeforeSubmit(formData) {
         // 校验：必须上传文件
         if (!this.uploadFile && this.$route.params.id === undefined) {
-          // 仅在新增时强制要求上传文件
           this.$message.warning('请上传自主填报模板文件')
           return false
         }
 
-        // 从formData中获取dto字段 (由BasePlan准备的基础数据)
         const dtoBlob = formData.get('dto')
         const submitData = JSON.parse(await dtoBlob.text())
+
+        // 修改这里：将数据放入 customs 字段
+        submitData.customs = this.formData.towerUserList || []
+        // 添加 isSelectAll 字段，固定为 0
+        submitData.isSelectAll = 0
 
         // 更新formData中的dto
         formData.set(
@@ -77,6 +80,7 @@
         if (formData.has('file')) {
           formData.delete('file')
         }
+
         // 添加文件到formData
         if (this.uploadFile) {
           formData.append('file', this.uploadFile)
@@ -86,6 +90,8 @@
       },
       handleFileChange(file) {
         this.uploadFile = file
+        // 同步自动清空已选列表
+        this.formData.towerUserList = []
       }
     }
   }

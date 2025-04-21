@@ -40,49 +40,180 @@
           </el-checkbox>
         </div>
 
-        <!-- 工单表格 -->
-        <el-table
-          ref="table"
-          :data="tableData"
-          :loading="tableLoading"
-          border
-          stripe
-          size="small"
-          style="width: 100%"
-          :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
-          @selection-change="handleSelectionChange"
-        >
-          <el-table-column
-            type="selection"
-            width="55"
-            :selectable="(row) => formData.isSelectAll !== 1"
-          />
-          <el-table-column prop="towerName" label="所属台区" min-width="150" />
-          <el-table-column prop="provinceName" label="所属省份" min-width="120" />
-          <el-table-column prop="areaName" label="所属供电单位" min-width="150" />
-          <el-table-column prop="companyName" label="所属城市" min-width="120" />
-          <el-table-column prop="powerName" label="所属供电所" min-width="150" />
-          <el-table-column prop="userName" label="台区经理" min-width="120" />
-          <el-table-column prop="visit" label="走访状态" min-width="100" />
-        </el-table>
+        <!-- 替换原有表格为左右布局 -->
+        <template v-if="formData.isSelectAll !== 1">
+          <div class="flex gap-4">
+            <!-- 左侧可选列表 -->
+            <div class="flex-1 w-1/2">
+              <div class="font-medium mb-2">可选对象</div>
+              <el-table
+                ref="availableTable"
+                :data="tableData"
+                :loading="tableLoading"
+                border
+                stripe
+                size="small"
+                style="width: 100%"
+                :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+              >
+                <el-table-column
+                  prop="towerName"
+                  label="所属台区"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="provinceName"
+                  label="所属省份"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="areaName"
+                  label="所属供电单位"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="companyName"
+                  label="所属城市"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="powerName"
+                  label="所属供电所"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="userName"
+                  label="台区经理"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="visit"
+                  label="走访状态"
+                  min-width="100"
+                  show-overflow-tooltip
+                />
+                <el-table-column width="80" fixed="right">
+                  <template #default="scope">
+                    <el-button
+                      type="text"
+                      @click="handleSelect(scope.row)"
+                      :disabled="isRowSelected(scope.row)"
+                    >
+                      {{ isRowSelected(scope.row) ? '已选择' : '选择' }}
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
 
-        <!-- 分页和选择信息 -->
-        <div class="mt-2 flex justify-between items-center">
-          <div class="text-sm text-gray-500">
-            已选择 <span class="text-blue-600 font-medium">{{ selectedCount }}</span> 项
-            <span v-if="formData.isSelectAll === 1" class="ml-2">(已全选)</span>
+              <!-- 分页 -->
+              <div class="mt-2 flex justify-end">
+                <el-pagination
+                  @current-change="handlePageChange"
+                  @size-change="handleSizeChange"
+                  :current-page="pagination.pageNum"
+                  :page-size="pagination.pageSize"
+                  :page-sizes="[5, 10, 20]"
+                  layout="total, sizes, prev, pager, next"
+                  :total="pagination.total"
+                  background
+                />
+              </div>
+            </div>
+
+            <!-- 右侧已选列表 -->
+            <div class="flex-1 w-1/2">
+              <div class="font-medium mb-2">
+                已选对象
+                <span class="text-sm text-gray-500 ml-2">(共 {{ selectedCount }} 项)</span>
+              </div>
+              <el-table
+                ref="selectedTable"
+                :data="paginatedSelectedList"
+                border
+                stripe
+                size="small"
+                style="width: 100%"
+                :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+              >
+                <el-table-column
+                  prop="towerName"
+                  label="所属台区"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="provinceName"
+                  label="所属省份"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="areaName"
+                  label="所属供电单位"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="companyName"
+                  label="所属城市"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="powerName"
+                  label="所属供电所"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="userName"
+                  label="台区经理"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="visit"
+                  label="走访状态"
+                  min-width="100"
+                  show-overflow-tooltip
+                />
+                <el-table-column width="80" fixed="right">
+                  <template #default="scope">
+                    <el-button type="text" @click="handleUnselect(scope.row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <!-- 已选列表分页 -->
+              <div class="mt-2 flex justify-end">
+                <el-pagination
+                  @current-change="handleSelectedPageChange"
+                  @size-change="handleSelectedSizeChange"
+                  :current-page="selectedPagination.pageNum"
+                  :page-size="selectedPagination.pageSize"
+                  :page-sizes="[5, 10, 20]"
+                  layout="total, sizes, prev, pager, next"
+                  :total="selectedCount"
+                  background
+                />
+              </div>
+            </div>
           </div>
-          <el-pagination
-            @current-change="handlePageChange"
-            @size-change="handleSizeChange"
-            :current-page="pagination.pageNum"
-            :page-size="pagination.pageSize"
-            :page-sizes="[5, 10, 20]"
-            layout="total, sizes, prev, pager, next"
-            :total="pagination.total"
-            background
-          />
-        </div>
+        </template>
+
+        <!-- 全选时的提示 -->
+        <template v-else>
+          <div class="text-center py-8 text-gray-500">
+            <i class="el-icon-info text-xl mr-2"></i>
+            已全选当前条件下的所有对象 (共 {{ pagination.total }} 项)
+          </div>
+        </template>
       </div>
     </template>
   </base-plan>
@@ -120,7 +251,19 @@
         selectedRows: [], // 存储选中的行
         selectedCount: 0, // 添加选中计数
         isInitializing: false, // 添加初始化状态
-        selectedMap: {} // 添加全局选中记录映射表
+        selectedMap: {}, // 添加全局选中记录映射表
+        selectedPagination: {
+          pageNum: 1,
+          pageSize: 10
+        }
+      }
+    },
+    computed: {
+      // 计算分页后的已选列表数据
+      paginatedSelectedList() {
+        const start = (this.selectedPagination.pageNum - 1) * this.selectedPagination.pageSize
+        const end = start + this.selectedPagination.pageSize
+        return this.formData.towerUserList.slice(start, end)
       }
     },
     watch: {
@@ -167,7 +310,7 @@
 
         if (!value) {
           this.formData.towerUserList = []
-          this.selectedRows = []
+          this.selectedRows = [] // 确保清空selectedRows
           this.selectedCount = 0
           this.formData.isSelectAll = 0
           this.tableData = []
@@ -204,27 +347,19 @@
             this.tableData = res.rows || []
             this.pagination.total = res.total || 0
 
-            // 修改编辑时的回显选中逻辑
-            if (this.$route.params.id) {
-              this.$nextTick(() => {
-                this.tableData.forEach((row) => {
-                  // 根据 towerUserList 判断是否选中
-                  const isSelected = this.formData.towerUserList?.some(
-                    (item) => item.towerId === row.towerId
-                  )
-                  if (isSelected) {
-                    this.$refs.table.toggleRowSelection(row, true)
-                  }
-                })
-              })
-            }
-
             // 更新选中计数
             if (this.formData.isSelectAll === 1) {
               this.selectedCount = this.pagination.total
             } else {
+              // 修改这里：同步更新 selectedRows 和 formData.towerUserList
               this.selectedCount = this.formData.towerUserList?.length || 0
+              this.selectedRows = [...this.formData.towerUserList]
             }
+
+            // 恢复选中状态
+            this.$nextTick(() => {
+              this.restoreSelection()
+            })
           }
         } catch (error) {
           console.error('获取台区列表失败:', error)
@@ -385,41 +520,54 @@
           this.$message.warning('请选择供电所')
           return false
         }
+
+        console.log('准备提交数据:', {
+          isSelectAll: this.formData.isSelectAll,
+          selectedCount: this.selectedCount,
+          towerUserListLength: this.formData.towerUserList.length,
+          selectedRowsLength: this.selectedRows.length
+        })
+
         // 添加校验：如果未全选，则必须选择至少一个对象
-        if (this.formData.isSelectAll !== 1 && this.selectedRows.length === 0) {
+        const finalSelectedCount =
+          this.formData.isSelectAll === 1
+            ? this.pagination.total
+            : this.formData.towerUserList.length
+
+        if (this.formData.isSelectAll !== 1 && finalSelectedCount === 0) {
           this.$message.warning('请至少选择一个巡视对象或勾选全选')
           return false
         }
 
-        // 获取基础表单数据
         const dtoBlob = formData.get('dto')
         const submitData = JSON.parse(await dtoBlob.text())
 
-        // 获取formDataId
-        const formDataId = this.$refs.basePlan.formBasicInfo.formId
-        if (!formDataId) {
+        // 确保有formDataId
+        submitData.formDataId = this.$refs.basePlan.formBasicInfo.formId
+        if (!submitData.formDataId) {
           this.$message.warning('表单ID不能为空')
           return false
         }
-
-        // 添加或更新特定字段
-        submitData.isSelectAll = this.formData.isSelectAll
 
         // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
         const deptId = Array.isArray(this.selectedDept)
           ? this.selectedDept[0].toString()
           : this.selectedDept.toString()
-        submitData.powerIdList = [deptId]
-        submitData.deptIdList = [deptId] // 修改为字符串数组格式
 
-        // 如果是全选, towerUserList 传空数组, 否则传 selectedRows
+        submitData.powerIdList = [deptId]
+        submitData.deptIdList = [deptId]
+        submitData.isSelectAll = this.formData.isSelectAll || 0
+
+        // 如果是全选，towerUserList 传空数组，否则传 selectedRows
         if (this.formData.isSelectAll === 1) {
           submitData.towerUserList = []
           submitData.total = this.pagination.total
         } else {
-          submitData.towerUserList = [...this.selectedRows] // 直接使用原始数据，不添加formDataId
+          submitData.towerUserList = [...this.formData.towerUserList]
           delete submitData.total
         }
+
+        console.log('最终提交数据:', submitData)
 
         formData.set(
           'dto',
@@ -437,6 +585,37 @@
           label: node.label,
           children: node.children
         }
+      },
+
+      // 判断行是否已被选中
+      isRowSelected(row) {
+        return this.formData.towerUserList.some((item) => item.towerId === row.towerId)
+      },
+
+      // 选择一行数据
+      handleSelect(row) {
+        this.formData.towerUserList.push(row)
+        this.selectedCount = this.formData.towerUserList.length
+      },
+
+      // 取消选择一行数据
+      handleUnselect(row) {
+        const index = this.formData.towerUserList.findIndex((item) => item.towerId === row.towerId)
+        if (index !== -1) {
+          this.formData.towerUserList.splice(index, 1)
+          this.selectedCount = this.formData.towerUserList.length
+        }
+      },
+
+      // 处理已选列表分页变化
+      handleSelectedPageChange(page) {
+        this.selectedPagination.pageNum = page
+      },
+
+      // 处理已选列表每页条数变化
+      handleSelectedSizeChange(size) {
+        this.selectedPagination.pageSize = size
+        this.selectedPagination.pageNum = 1
       },
 
       // 处理表格选择变化

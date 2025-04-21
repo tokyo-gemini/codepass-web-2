@@ -203,3 +203,13 @@ export function asyncGetXsWorkOrders(data) {
     }
   })
 }
+
+// 下载模版通用接口
+export function asyncDownloadTemplatePlannedManage(data, url = '/plan/downloadTemplate') {
+  return request({
+    url: url,
+    method: 'post',
+    data,
+    responseType: 'blob'
+  })
+}

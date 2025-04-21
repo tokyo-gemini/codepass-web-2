@@ -230,7 +230,7 @@
       async getHistoryCompletionRate() {
         try {
           const params = {
-            xsType: this.horizontalSpecialType === 'inspection' ? 0 : 1 // 修改这里：inspection对应0（日常），visit对应1（特殊）
+            xsType: this.horizontalSpecialType === 'inspection' ? 0 : 1
           }
 
           // 如果用户选择了时间范围，则添加日期筛选参数
@@ -240,16 +240,18 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 检查是否是超级管理员
-          const roles = this.$store.getters && this.$store.getters.roles
-          const isAdmin = roles.includes('admin')
+          // 优先添加用户选择的统计区域，不管是否为超级管理员
+          if (this.searchParams.powerSupply) {
+            params.companyId = Array.isArray(this.searchParams.powerSupply)
+              ? this.searchParams.powerSupply.join(',')
+              : this.searchParams.powerSupply
+          } else {
+            // 用户没有选择统计区域，检查是否为超级管理员
+            const roles = this.$store.getters && this.$store.getters.roles
+            const isAdmin = roles.includes('admin')
 
-          // 只有非超级管理员时才添加区域筛选参数
-          if (!isAdmin) {
-            if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
-              params.companyId = this.searchParams.powerSupply.join(',')
-            } else {
-              // 用户没有选择统计区域，根据登录用户的deptId长度决定参数
+            // 非超级管理员时才使用deptId
+            if (!isAdmin) {
               const deptIdStr = this.deptId.toString()
               if (deptIdStr.length <= 5) {
                 params.cityId = this.deptId

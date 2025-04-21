@@ -174,32 +174,24 @@
           })
           formData.append('dto', jsonBlob)
 
-          console.log('触发before-submit事件')
-
-          // 修改这部分：使用事件emitter而不是回调
-          // 原先的代码期望通过回调获得结果，但实际上子组件是直接返回值
+          // 触发before-submit事件,让子组件处理特定逻辑
           const listeners = this._events['before-submit']
           let shouldContinue = true
 
           if (listeners && listeners.length > 0) {
-            // 如果有监听器，则直接调用并获取返回值
             try {
-              // 直接调用第一个监听器函数并获取返回值
               shouldContinue = await listeners[0](formData)
-              console.log('before-submit处理结果:', shouldContinue)
             } catch (error) {
               console.error('处理before-submit事件时出错:', error)
               shouldContinue = false
             }
           }
 
-          // 如果子类返回false，则终止提交
-          if (shouldContinue === false) {
-            console.warn('子组件通过before-submit事件返回false，终止提交')
+          if (!shouldContinue) {
             return
           }
 
-          // 在提交前打印最终要提交的数据内容，便于调试
+          // 在提交前打印最终要提交的数据内容
           const dtoBlob = formData.get('dto')
           if (dtoBlob) {
             const reader = new FileReader()
@@ -209,34 +201,19 @@
             reader.readAsText(dtoBlob)
           }
 
-          console.log('开始调用API提交数据...')
-
           // 提交表单
           const { id } = this.$route.params
           let res
-
           if (this.isSelfReport) {
-            if (id) {
-              console.log('调用编辑自主填报API')
-              res = await asyncEditSelfPlan(formData)
-            } else {
-              console.log('调用新增自主填报API')
-              res = await asyncAddSelfPlan(formData)
-            }
+            res = id ? await asyncEditSelfPlan(formData) : await asyncAddSelfPlan(formData)
           } else {
-            if (id) {
-              console.log('调用编辑计划API')
-              res = await asyncEditPlan(formData)
-            } else {
-              console.log('调用新增计划API')
-              res = await asyncAddPlan(formData)
-            }
+            res = id ? await asyncEditPlan(formData) : await asyncAddPlan(formData)
           }
 
-          console.log('API调用响应:', res)
-
-          this.$modal.msgSuccess(id ? '修改成功' : '新增成功')
-          this.handleBack()
+          if (res.code === 200) {
+            this.$modal.msgSuccess(id ? '修改成功' : '新增成功')
+            this.handleBack()
+          }
         } catch (error) {
           console.error('保存失败:', error)
           this.$modal.msgError(error.message || '保存失败')

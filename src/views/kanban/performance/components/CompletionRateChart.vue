@@ -185,18 +185,21 @@
         try {
           const params = {
             ...this.getLastWeekDateRange(),
-            xsType: this.specialType === 'visit' ? 1 : 0 // 0: 日常巡视, 1: 特殊巡视
+            xsType: this.specialType === 'visit' ? 1 : 0
           }
 
-          // 添加区域筛选参数
-          if (this.searchParams.powerSupply && this.searchParams.powerSupply.length > 0) {
-            params.companyId = this.searchParams.powerSupply.join(',')
+          // 优先添加用户选择的统计区域，不管是否为超级管理员
+          if (this.searchParams.powerSupply) {
+            params.companyId = Array.isArray(this.searchParams.powerSupply)
+              ? this.searchParams.powerSupply.join(',')
+              : this.searchParams.powerSupply
           } else {
-            // 检查是否是超级管理员
+            // 用户没有选择统计区域，检查是否为超级管理员
             const roles = this.$store.getters && this.$store.getters.roles
             const isAdmin = roles.includes('admin')
+
+            // 非超级管理员时才使用deptId
             if (!isAdmin) {
-              // 非超级管理员时才根据 deptId 添加参数
               const deptIdStr = this.deptId.toString()
               if (deptIdStr.length <= 5) {
                 params.cityId = this.deptId

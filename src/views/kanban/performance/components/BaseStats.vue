@@ -404,15 +404,16 @@
         const roles = this.$store.getters && this.$store.getters.roles
         const isAdmin = roles.includes('admin')
 
-        if (!isAdmin) {
-          // 非超级管理员时才添加区域筛选参数
-          if (this.isRestrictedUser) {
-            // deptId ≥ 7位时，必须传自己的deptId作为powerId
-            params.powerId = this.deptId
-          } else if (this.listSearchForm.powerSupply) {
-            // 只有用户选择了区域才传powerId
-            params.powerId = this.listSearchForm.powerSupply
-          }
+        // 处理区域筛选参数
+        if (this.listSearchForm.powerSupply) {
+          // 用户选择了区域筛选，将powerIdList转换为逗号分隔的字符串
+          const powerIds = Array.isArray(this.listSearchForm.powerSupply)
+            ? this.listSearchForm.powerSupply
+            : [this.listSearchForm.powerSupply]
+          params.powerIdList = powerIds.join(',')
+        } else {
+          // 用户没有选择区域筛选，传递 powerId
+          params.powerId = this.deptId
         }
 
         // 调用接口获取数据
@@ -588,13 +589,16 @@
               type: this.tableActiveTab === 'visit' ? 0 : 1 // 0: 走访, 1: 巡视
             }
 
-            // 添加区域筛选参数的逻辑，与列表查询保持一致
-            if (this.isRestrictedUser) {
-              // deptId ≥ 7位时，必须传自己的deptId作为powerId
+            // 处理区域筛选参数
+            if (this.listSearchForm.powerSupply) {
+              // 用户选择了区域筛选，将powerIdList转换为逗号分隔的字符串
+              const powerIds = Array.isArray(this.listSearchForm.powerSupply)
+                ? this.listSearchForm.powerSupply
+                : [this.listSearchForm.powerSupply]
+              queryParams.powerIdList = powerIds.join(',')
+            } else {
+              // 用户没有选择区域筛选，传递 powerId
               queryParams.powerId = this.deptId
-            } else if (this.listSearchForm.powerSupply) {
-              // 只有用户选择了区域才传powerId
-              queryParams.powerId = this.listSearchForm.powerSupply
             }
 
             // 如果有选择行，则只导出选中行

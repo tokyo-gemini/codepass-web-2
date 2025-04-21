@@ -69,10 +69,10 @@
         if (!this.chart) return
 
         const data = this.coverageData[this.coverageType] || []
-        const values = data.map((item) => item.value) // 提取数值
+        const values = data.map((item) => item.value)
         const average =
           values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2) : 0
-        const dates = this.getLast7Days()
+        const companyNames = data.map((item) => item.companyName)
 
         const option = {
           title: {
@@ -85,8 +85,8 @@
               const item = params[0]
               const dataItem = data[item.dataIndex] || {}
               return `<div>
-              <div>${dates[item.dataIndex]}</div>
-              <div>${this.coverageType === 'visit' ? '走访' : '巡视'}覆盖率：${item.value}%</div>
+              <div>${dataItem.companyName}</div>
+              <div>覆盖率：${item.value}%</div>
               <div>总次数：${dataItem.totalNum}</div>
             </div>`
             }
@@ -104,7 +104,7 @@
           },
           xAxis: {
             type: 'category',
-            data: dates,
+            data: companyNames,
             axisLabel: { rotate: 45 }
           },
           yAxis: {
@@ -137,7 +137,7 @@
             {
               name: '平均值',
               type: 'line',
-              data: new Array(dates.length).fill(average),
+              data: new Array(companyNames.length).fill(average),
               symbol: 'none',
               lineStyle: {
                 type: 'dashed',
@@ -217,17 +217,6 @@
         } catch (error) {
           console.error('获取覆盖率数据失败:', error)
         }
-      },
-
-      // 获取近7天日期
-      getLast7Days() {
-        const dates = []
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date()
-          date.setDate(date.getDate() - i)
-          dates.push(date.toLocaleDateString())
-        }
-        return dates
       },
 
       // 获取近7天日期范围的方法

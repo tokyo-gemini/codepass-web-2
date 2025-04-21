@@ -56,63 +56,264 @@
             </el-checkbox>
           </div>
 
-          <!-- 表格展示 -->
-          <el-table
-            v-if="selectedDept || formData.towerUserList.length > 0"
-            ref="table"
-            :data="tableData"
-            :loading="tableLoading"
-            border
-            stripe
-            size="small"
-            style="width: 100%"
-            :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
-            @selection-change="handleSelectionChange"
-          >
-            <!-- 复选框列，只在通过供电所选择时显示 -->
-            <el-table-column
-              v-if="selectedDept"
-              type="selection"
-              width="55"
-              :selectable="(row) => formData.isSelectAll !== 1"
-            />
-            <el-table-column prop="customName" label="客户名称" min-width="200" />
-            <el-table-column prop="customId" label="客户编号" min-width="150" />
-            <el-table-column prop="provinceName" label="所属省份" min-width="120" />
-            <el-table-column prop="areaName" label="所属供电单位" min-width="150" />
-            <el-table-column prop="companyName" label="所属城市" min-width="120" />
-            <el-table-column prop="powerName" label="所属供电所" min-width="150" />
-            <el-table-column prop="userName" label="客户经理" min-width="120" />
-            <el-table-column prop="visit" label="走访状态" min-width="100" />
-          </el-table>
+          <!-- 表格区域 - 供电所选择和系统内选择使用不同的布局 -->
+          <template v-if="selectedDept && formData.isSelectAll !== 1">
+            <!-- 供电所选择时显示左右布局 -->
+            <div class="flex gap-4">
+              <!-- 左侧可选列表 -->
+              <div class="flex-1 w-1/2">
+                <div class="font-medium mb-2">可选对象</div>
+                <el-table
+                  ref="availableTable"
+                  :data="tableData"
+                  :loading="tableLoading"
+                  border
+                  stripe
+                  size="small"
+                  style="width: 100%"
+                  :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+                >
+                  <el-table-column
+                    prop="customName"
+                    label="客户名称"
+                    min-width="200"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="customId"
+                    label="客户编号"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="provinceName"
+                    label="所属省份"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="areaName"
+                    label="所属供电单位"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="companyName"
+                    label="所属城市"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="powerName"
+                    label="所属供电所"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="userName"
+                    label="客户经理"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column width="80" fixed="right">
+                    <template #default="scope">
+                      <el-button
+                        type="text"
+                        @click="handleSelect(scope.row)"
+                        :disabled="isRowSelected(scope.row)"
+                      >
+                        {{ isRowSelected(scope.row) ? '已选择' : '选择' }}
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
 
-          <!-- 分页和选择信息 -->
-          <div
-            v-if="selectedDept || formData.towerUserList.length > 0"
-            class="mt-2 flex justify-between items-center"
-          >
-            <div class="text-sm text-gray-500">
-              已选择 <span class="text-blue-600 font-medium">{{ selectedCount }}</span> 项
-              <span v-if="formData.isSelectAll === 1" class="ml-2">(已全选)</span>
-              <!-- 添加数据来源提示 -->
-              <span
-                v-if="!selectedDept && formData.towerUserList.length > 0"
-                class="ml-2 text-blue-500"
-              >
-                (系统内选择)
-              </span>
+                <!-- 分页 -->
+                <div class="mt-2 flex justify-end">
+                  <el-pagination
+                    @current-change="handlePageChange"
+                    @size-change="handleSizeChange"
+                    :current-page="pagination.pageNum"
+                    :page-size="pagination.pageSize"
+                    :page-sizes="[5, 10, 20]"
+                    layout="total, sizes, prev, pager, next"
+                    :total="pagination.total"
+                    background
+                  />
+                </div>
+              </div>
+
+              <!-- 右侧已选列表 -->
+              <div class="flex-1 w-1/2">
+                <div class="font-medium mb-2">
+                  已选对象
+                  <span class="text-sm text-gray-500 ml-2">(共 {{ selectedCount }} 项)</span>
+                </div>
+                <el-table
+                  ref="selectedTable"
+                  :data="paginatedSelectedList"
+                  border
+                  stripe
+                  size="small"
+                  style="width: 100%"
+                  :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+                >
+                  <el-table-column
+                    prop="customName"
+                    label="客户名称"
+                    min-width="200"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="customId"
+                    label="客户编号"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="provinceName"
+                    label="所属省份"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="areaName"
+                    label="所属供电单位"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="companyName"
+                    label="所属城市"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="powerName"
+                    label="所属供电所"
+                    min-width="150"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column
+                    prop="userName"
+                    label="客户经理"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
+                  <el-table-column width="80" fixed="right">
+                    <template #default="scope">
+                      <el-button type="text" @click="handleUnselect(scope.row)">删除</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+
+                <!-- 已选列表分页 -->
+                <div class="mt-2 flex justify-end">
+                  <el-pagination
+                    @current-change="handleSelectedPageChange"
+                    @size-change="handleSelectedSizeChange"
+                    :current-page="selectedPagination.pageNum"
+                    :page-size="selectedPagination.pageSize"
+                    :page-sizes="[5, 10, 20]"
+                    layout="total, sizes, prev, pager, next"
+                    :total="selectedCount"
+                    background
+                  />
+                </div>
+              </div>
             </div>
-            <el-pagination
-              @current-change="handlePageChange"
-              @size-change="handleSizeChange"
-              :current-page="pagination.pageNum"
-              :page-size="pagination.pageSize"
-              :page-sizes="[5, 10, 20]"
-              layout="total, sizes, prev, pager, next"
-              :total="pagination.total"
-              background
-            />
-          </div>
+          </template>
+
+          <template v-else-if="formData.isSelectAll === 1">
+            <!-- 全选时的提示 -->
+            <div class="text-center py-8 text-gray-500">
+              <i class="el-icon-info text-xl mr-2"></i>
+              已全选当前条件下的所有对象 (共 {{ pagination.total }} 项)
+            </div>
+          </template>
+
+          <template v-else>
+            <!-- 系统内选择时只显示已选列表 -->
+            <div class="w-full">
+              <div class="font-medium mb-2">
+                已选对象
+                <span class="text-sm text-gray-500 ml-2">(共 {{ selectedCount }} 项)</span>
+                <span class="ml-2 text-blue-500">(系统内选择)</span>
+              </div>
+              <el-table
+                ref="selectedTable"
+                :data="paginatedSelectedList"
+                border
+                stripe
+                size="small"
+                style="width: 100%"
+                :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+              >
+                <!-- 表格列配置与已选列表相同 -->
+                <el-table-column
+                  prop="customName"
+                  label="客户名称"
+                  min-width="200"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="customId"
+                  label="客户编号"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="provinceName"
+                  label="所属省份"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="areaName"
+                  label="所属供电单位"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="companyName"
+                  label="所属城市"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="powerName"
+                  label="所属供电所"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="userName"
+                  label="客户经理"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column width="80" fixed="right">
+                  <template #default="scope">
+                    <el-button type="text" @click="handleUnselect(scope.row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <!-- 系统内选择的分页 -->
+              <div class="mt-2 flex justify-end">
+                <el-pagination
+                  @current-change="handleSelectedPageChange"
+                  @size-change="handleSelectedSizeChange"
+                  :current-page="selectedPagination.pageNum"
+                  :page-size="selectedPagination.pageSize"
+                  :page-sizes="[5, 10, 20]"
+                  layout="total, sizes, prev, pager, next"
+                  :total="selectedCount"
+                  background
+                />
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- 系统内选择弹框 -->
@@ -139,12 +340,103 @@
             </el-tab-pane>
             <!-- 上传模版-->
             <el-tab-pane label="上传模版" name="upload">
-              <upload-template
-                v-model="tempTowerUserList"
-                :plan-type="'3'"
-                @file-change="handleFileChange"
-                @upload-success="handleUploadSuccess"
-              />
+              <!-- 替换为简化的上传表单和数据显示 -->
+              <div class="upload-template">
+                <!-- 未上传状态 -->
+                <div v-if="!uploadSuccessful" class="upload-area">
+                  <!-- 添加下载模板按钮 -->
+                  <div class="flex gap-4 mb-4">
+                    <el-button type="primary" @click="handleDownloadTemplate">
+                      <i class="el-icon-download mr-1"></i>下载模板
+                    </el-button>
+                    <el-upload
+                      class="upload-component"
+                      action=""
+                      :http-request="handleUploadRequest"
+                      :limit="1"
+                      :before-upload="beforeUpload"
+                      :on-remove="handleFileRemove"
+                      :file-list="uploadFileList"
+                      accept=".xls,.xlsx"
+                    >
+                      <el-button size="small" type="primary">
+                        <i class="el-icon-upload mr-1"></i>上传Excel模板
+                      </el-button>
+                      <div slot="tip" class="el-upload__tip">
+                        请上传Excel文件, 文件大小不超过10MB
+                      </div>
+                    </el-upload>
+                  </div>
+
+                  <!-- 上传进度 -->
+                  <div v-if="uploadProgress > 0 && !uploadSuccessful" class="mt-4">
+                    <el-progress :percentage="uploadProgress" :show-text="false"></el-progress>
+                    <div class="text-center text-sm text-gray-500 mt-1">
+                      文件上传中，请稍候...{{ uploadProgress }}%
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 上传成功后状态 -->
+                <div v-if="uploadSuccessful" class="uploaded-data">
+                  <div class="flex justify-between items-center mb-4">
+                    <div class="text-success">
+                      <i class="el-icon-success mr-1"></i>
+                      文件解析成功，共获取 {{ tempTowerUserList.length }} 条数据
+                    </div>
+                    <el-button size="small" @click="handleFileRemove">重新上传</el-button>
+                  </div>
+
+                  <!-- 数据预览表格 -->
+                  <el-table
+                    :data="tempTowerUserList.slice(0, 5)"
+                    border
+                    stripe
+                    size="small"
+                    style="width: 100%"
+                    :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+                  >
+                    <el-table-column
+                      prop="customName"
+                      label="客户名称"
+                      min-width="200"
+                      show-overflow-tooltip
+                    />
+                    <el-table-column
+                      prop="customId"
+                      label="客户编号"
+                      min-width="150"
+                      show-overflow-tooltip
+                    />
+                    <el-table-column
+                      prop="areaName"
+                      label="所属供电单位"
+                      min-width="150"
+                      show-overflow-tooltip
+                    />
+                    <el-table-column
+                      prop="powerName"
+                      label="所属供电所"
+                      min-width="150"
+                      show-overflow-tooltip
+                    />
+                    <el-table-column
+                      prop="userName"
+                      label="客户经理"
+                      min-width="120"
+                      show-overflow-tooltip
+                    />
+                  </el-table>
+
+                  <!-- 如果有更多行，显示省略提示 -->
+                  <div
+                    v-if="tempTowerUserList.length > 5"
+                    class="text-center text-sm text-gray-500 mt-2"
+                  >
+                    (仅显示前5条数据，完整数据将在提交后保存)
+                  </div>
+                </div>
+              </div>
             </el-tab-pane>
           </el-tabs>
 
@@ -164,7 +456,11 @@
   import SystemSelect from '../components/SystemSelect.vue'
   import UploadTemplate from '../components/UploadTemplate.vue'
   import { deptTreeSelect } from '@/api/system/user'
-  import { asyncGetCustomerListByDept } from '@/api/plan'
+  import {
+    asyncGetCustomerListByDept,
+    asyncUploadSelfInfo,
+    asyncDownloadTemplatePlannedManage
+  } from '@/api/plan' // 添加导入
   import Treeselect from '@riophae/vue-treeselect'
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 
@@ -193,6 +489,9 @@
         tempSelectedCount: 0,
         tempIsSelectAll: 0,
         uploadFile: null,
+        uploadProgress: 0,
+        uploadSuccessful: false, // 新增：标记上传成功状态
+        uploadFileList: [], // 新增：上传文件列表
 
         // 新增数据
         powerSupplyTree: [],
@@ -206,7 +505,19 @@
         },
         selectedRows: [],
         isInitializing: false, // 标志位：是否正在初始化
-        selectedMap: {} // 添加全局选中记录映射表
+        selectedMap: {}, // 添加全局选中记录映射表
+        selectedPagination: {
+          pageNum: 1,
+          pageSize: 10
+        }
+      }
+    },
+    computed: {
+      // 计算分页后的已选列表数据
+      paginatedSelectedList() {
+        const start = (this.selectedPagination.pageNum - 1) * this.selectedPagination.pageSize
+        const end = start + this.selectedPagination.pageSize
+        return this.formData.towerUserList.slice(start, end)
       }
     },
     created() {
@@ -537,6 +848,9 @@
         this.total = 0
         this.activeTab = 'system'
         this.uploadFile = null
+        this.uploadFileList = []
+        this.uploadProgress = 0
+        this.uploadSuccessful = false // 重置上传状态
         this.tableData = []
         this.pagination.pageNum = 1
         this.pagination.total = 0
@@ -545,45 +859,38 @@
 
       // 确认系统内选择
       confirmSystemSelection() {
-        // 清空供电所选择
         this.selectedDept = null
 
-        console.log('确认选择时的临时数据:', this.tempTowerUserList)
+        // 如果是通过上传文件方式
+        if (this.uploadFile && this.tempTowerUserList.length > 0) {
+          console.log('确认通过文件上传选择的数据:', this.tempTowerUserList.length, '条')
+          // 将解析后的数据更新到formData
+          this.formData.towerUserList = [...this.tempTowerUserList]
+          this.selectedCount = this.tempTowerUserList.length
+          this.formData.isSelectAll = 0
+          this.systemDialogVisible = false
+          this.$message.success(`已选择${this.tempTowerUserList.length}项对象`)
+          return
+        }
 
-        // 确保复制所有必要的字段，包括customName和visit
-        this.formData.towerUserList = this.tempTowerUserList.map((item) => {
-          // 打印每一项的完整数据
-          console.log('处理数据项:', {
-            original: item,
-            customName: item.customName,
-            consName: item.consName
-          })
-
-          return {
-            ...item,
-            customName: item.customName || item.consName || item.userName || '未知客户',
-            customId: item.customId || item.consNo,
-            towerId: item.towerId || item.tgNo,
-            provinceName: item.provinceName,
-            areaName: item.areaName || item.orgName,
-            companyName: item.companyName,
-            powerName: item.powerName,
-            userName: item.userName || item.gridName,
-            visit: item.visit || '未走访'
-          }
-        })
-
+        // 系统内选择的逻辑保持不变
+        this.formData.towerUserList = this.tempTowerUserList.map((item) => ({
+          ...item,
+          customName: item.customName || item.consName || item.userName || '未知客户',
+          customId: item.customId || item.consNo,
+          towerId: item.towerId || item.tgNo,
+          provinceName: item.provinceName,
+          areaName: item.areaName || item.orgName,
+          companyName: item.companyName,
+          powerName: item.powerName,
+          userName: item.userName || item.gridName,
+          visit: item.visit || '未走访'
+        }))
         this.selectedCount = this.tempIsSelectAll === 1 ? this.total : this.tempSelectedCount
         this.formData.isSelectAll = this.tempIsSelectAll
 
-        // 设置表格数据，使用处理后的数据
-        this.tableData = [...this.formData.towerUserList]
-        this.pagination.total = this.formData.towerUserList.length
-
-        // 关闭弹窗并提示
         this.systemDialogVisible = false
 
-        // 添加成功消息提示
         if (this.tempIsSelectAll === 1) {
           this.$message.success(`已全选${this.total}项对象`)
         } else if (this.formData.towerUserList.length > 0) {
@@ -667,6 +974,8 @@
             delete submitData.total
             delete submitData.powerIdList
             delete submitData.towerIdList
+            delete submitData.deptIdList
+            delete submitData.userId
           }
 
           console.log('最终提交数据:', submitData)
@@ -708,9 +1017,181 @@
         this.formData.towerUserList = []
       },
 
-      handleFileChange(file) {
-        this.uploadFile = file
+      // 修改文件上传前处理
+      beforeUpload(file) {
+        const isExcel = /\.(xlsx|xls)$/.test(file.name.toLowerCase())
+        const isLt10M = file.size / 1024 / 1024 < 10
+
+        if (!isExcel) {
+          this.$message.error('上传文件只能是 Excel 格式!')
+          return false
+        }
+        if (!isLt10M) {
+          this.$message.error('上传文件大小不能超过 10MB!')
+          return false
+        }
+        return true
+      },
+
+      // 新增：自定义上传请求处理
+      handleUploadRequest({ file }) {
+        this.handleFileChange(file)
+        return { abort: () => {} } // 返回一个dummy abort方法
+      },
+
+      // 修改文件上传处理方法
+      async handleFileChange(file) {
+        if (!file) return
+
+        try {
+          // 设置上传文件列表用于显示
+          this.uploadFileList = [{ name: file.name, url: '' }]
+
+          // 创建 FormData 对象用于上传
+          const formData = new FormData()
+          formData.append('file', file)
+
+          // 清除之前的数据
+          this.tempTowerUserList = []
+          this.uploadFile = null
+          this.uploadProgress = 0
+          this.uploadSuccessful = false // 重置上传状态
+
+          // 开始显示上传进度
+          const interval = setInterval(() => {
+            if (this.uploadProgress < 90) {
+              this.uploadProgress += 10
+            }
+          }, 200)
+
+          // 调用上传接口
+          const res = await asyncUploadSelfInfo(formData)
+
+          // 清除进度条
+          clearInterval(interval)
+          this.uploadProgress = 100 // 设置为100%
+
+          if (res.code === 200) {
+            console.log('解析成功，返回数据:', res.data)
+
+            // 格式化返回的数据,使其与自助填报格式一致
+            this.tempTowerUserList = (res.data || []).map((item) => ({
+              customId: item.consNo,
+              customName: item.consName,
+              towerId: item.tgNo,
+              towerName: item.tgName,
+              areaName: item.orgName,
+              powerName: item.orgName,
+              userName: item.gridName,
+              userId: item.gridNo,
+              visit: '未走访'
+            }))
+
+            // 保存文件和更新状态
+            this.uploadFile = file
+
+            // 延迟更新成功状态，确保进度条完成显示
+            setTimeout(() => {
+              this.uploadSuccessful = true
+              this.$message.success(`文件解析成功，获取到${this.tempTowerUserList.length}条数据`)
+            }, 500)
+          } else {
+            this.uploadProgress = 0 // 出错时重置进度
+            this.$message.error(res.msg || '文件解析失败')
+            this.handleFileRemove()
+          }
+        } catch (error) {
+          console.error('文件上传失败:', error)
+          this.$message.error('文件上传失败')
+          this.handleFileRemove()
+          this.uploadProgress = 0 // 出错时重置进度
+        }
+      },
+
+      // 修改文件移除处理方法
+      handleFileRemove() {
+        this.uploadFile = null
+        this.uploadFileList = []
+        this.tempTowerUserList = []
+        this.uploadProgress = 0
+        this.uploadSuccessful = false // 重置上传状态
+      },
+
+      // 判断行是否已被选中
+      isRowSelected(row) {
+        return this.formData.towerUserList.some((item) => item.customId === row.customId)
+      },
+
+      // 选择一行数据
+      handleSelect(row) {
+        this.formData.towerUserList.push(row)
+        this.selectedCount = this.formData.towerUserList.length
+      },
+
+      // 取消选择一行数据
+      handleUnselect(row) {
+        const index = this.formData.towerUserList.findIndex(
+          (item) => item.customId === row.customId
+        )
+        if (index !== -1) {
+          this.formData.towerUserList.splice(index, 1)
+          this.selectedCount = this.formData.towerUserList.length
+        }
+      },
+
+      // 处理已选列表分页变化
+      handleSelectedPageChange(page) {
+        this.selectedPagination.pageNum = page
+      },
+
+      // 处理已选列表每页条数变化
+      handleSelectedSizeChange(size) {
+        this.selectedPagination.pageSize = size
+        this.selectedPagination.pageNum = 1
+      },
+
+      // 修改下载模板方法，使其与 SelfReportTemplate 组件中的逻辑一致
+      async handleDownloadTemplate() {
+        try {
+          // 日常走访计划使用不同的API路径，但保持相同的调用逻辑
+          const res = await asyncDownloadTemplatePlannedManage(
+            { type: 'zf' },
+            '/plannedManage/downloadTemplate'
+          )
+          const fileName = '走访类计划任务派单模板.xlsx'
+          const link = document.createElement('a')
+          link.href = window.URL.createObjectURL(new Blob([res]))
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(link.href)
+        } catch (error) {
+          console.error('下载模板失败:', error)
+          this.$modal.msgError('下载模板失败')
+        }
       }
     }
   }
 </script>
+
+<style scoped>
+  .upload-area {
+    padding: 20px;
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #fafafa;
+  }
+
+  .upload-component {
+    display: inline-block;
+  }
+
+  .uploaded-data {
+    padding: 15px;
+    border: 1px solid #e6f7ff;
+    border-radius: 6px;
+    background-color: #f0f9ff;
+  }
+</style>
