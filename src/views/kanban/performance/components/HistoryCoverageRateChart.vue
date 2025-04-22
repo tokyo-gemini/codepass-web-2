@@ -134,8 +134,14 @@
             containLabel: true
           },
           legend: {
-            data: ['覆盖率', '平均值'],
-            top: 25
+            data: ['覆盖率', `平均值: ${average}%`],
+            top: 25,
+            formatter: function (name) {
+              if (name.includes('平均值')) {
+                return name
+              }
+              return '覆盖率'
+            }
           },
           xAxis: {
             type: 'value',
@@ -184,23 +190,16 @@
               }))
             },
             {
-              name: '平均值',
+              name: `平均值: ${average}%`,
               type: 'line',
               yAxisIndex: 0,
-              markLine: {
-                data: [{ xAxis: average, name: '平均值' }],
-                label: {
-                  formatter: '平均值: {c}%',
-                  position: 'insideEndTop'
-                },
-                lineStyle: {
-                  type: 'dashed',
-                  color: '#FF9800',
-                  width: 2
-                },
-                symbol: ['none', 'none']
+              lineStyle: {
+                type: 'dashed',
+                color: '#FF9800',
+                width: 2
               },
-              data: []
+              symbol: 'none',
+              data: new Array(companies.length).fill(average)
             }
           ]
         }

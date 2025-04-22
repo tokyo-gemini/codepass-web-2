@@ -105,8 +105,14 @@
             }
           },
           legend: {
-            data: ['完成率', '平均值'],
-            top: 25
+            data: ['完成率', `平均值: ${average}%`],
+            top: 25,
+            formatter: function (name) {
+              if (name.includes('平均值')) {
+                return name
+              }
+              return '完成率'
+            }
           },
           grid: {
             left: '3%',
@@ -141,14 +147,14 @@
               })),
               itemStyle: {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: '#83bff6' },
-                  { offset: 0.5, color: '#188df0' },
-                  { offset: 1, color: '#188df0' }
+                  { offset: 0, color: '#91cc75' },
+                  { offset: 0.5, color: '#67a651' },
+                  { offset: 1, color: '#67a651' }
                 ])
               }
             },
             {
-              name: '平均值',
+              name: `平均值: ${average}%`,
               type: 'line',
               data: new Array(data.length).fill(average),
               symbol: 'none',

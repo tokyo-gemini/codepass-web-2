@@ -92,8 +92,14 @@
             }
           },
           legend: {
-            data: ['覆盖率', '平均值'],
-            top: 25
+            data: ['覆盖率', `平均值: ${average}%`],
+            top: 25,
+            formatter: function (name) {
+              if (name.includes('平均值')) {
+                return name
+              }
+              return '覆盖率'
+            }
           },
           grid: {
             left: '3%',
@@ -135,7 +141,7 @@
               }
             },
             {
-              name: '平均值',
+              name: `平均值: ${average}%`,
               type: 'line',
               data: new Array(companyNames.length).fill(average),
               symbol: 'none',
