@@ -205,7 +205,7 @@
     asyncEnabledPlan,
     asyncGetPlanCount,
     asyncDeletePlan,
-    asyncGenerateQrcode // 添加导入
+    plannedManageQrcodeGenerate // 添加导入
   } from '@/api/plan'
   import CustomSwitch from '@/components/CustomSwitch.vue'
 
@@ -412,7 +412,7 @@
             }
           }, 300)
 
-          asyncGenerateQrcode()
+          plannedManageQrcodeGenerate()
             .then((res) => {
               // 完成时直接显示100%
               this.progressPercentage = 100

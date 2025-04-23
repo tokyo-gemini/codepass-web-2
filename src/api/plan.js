@@ -153,7 +153,7 @@ export function asyncEditSelfPlan(data) {
   })
 }
 // 自主填报详情
-export function asyncGetSelfPlanDetail(id) {
+export function selfPlannedGetDetail(id) {
   return request({
     url: `/selfPlanned/get/${id}`,
     method: 'get'
@@ -161,7 +161,7 @@ export function asyncGetSelfPlanDetail(id) {
 }
 
 // 修改批量生成二维码接口
-export function asyncGenerateQrcode() {
+export function plannedManageQrcodeGenerate() {
   return request({
     url: '/plannedManage/qrcode/generate',
     method: 'post',
