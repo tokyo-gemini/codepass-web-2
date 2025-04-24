@@ -43,19 +43,6 @@
           />
         </el-form-item>
 
-        <el-form-item label="所属台区" prop="towerId">
-          <treeselect
-            v-model="queryParams.towerId"
-            :options="towerOptions"
-            :normalizer="normalizer"
-            placeholder="请选择台区"
-            class="w-48"
-            :clearable="true"
-            :searchable="true"
-            :default-expand-level="0"
-          />
-        </el-form-item>
-
         <el-form-item
           :label="queryParams.type === 'zf' ? '走访日期' : '巡检日期'"
           prop="dispatchTime"
@@ -125,10 +112,6 @@
               </div>
             </el-form-item>
           </div>
-
-          <el-form-item label="客户名称" prop="customName">
-            <el-input v-model="queryParams.customName" placeholder="请输入客户名称" clearable />
-          </el-form-item>
         </template>
 
         <!-- 公共筛选项续 -->
@@ -167,8 +150,8 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="结果状态" prop="statusDataName">
-          <el-select v-model="queryParams.statusDataName" placeholder="请选择结果状态" clearable>
+        <el-form-item label="结果状态" prop="statusDatald">
+          <el-select v-model="queryParams.statusDatald" placeholder="请选择结果状态" clearable>
             <el-option
               v-for="item in statusOptions"
               :key="item.value"
@@ -253,6 +236,13 @@
             {{ scope.row.statusDataName || '-' }}
           </template>
         </el-table-column>
+        <el-table-column label="是否在现场" align="center" prop="isOnSite" width="100">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.isOnSite === 1 ? 'success' : 'info'">
+              {{ scope.row.isOnSite === 1 ? '是' : '否' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="执行状态" align="center" prop="formStatus">
           <template slot-scope="scope">
             <el-tag :type="getFormStatusType(scope.row.formStatus)">
@@ -260,7 +250,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="上报人" align="center" prop="userName" />
+        <el-table-column label="网格员" align="center" prop="userName" />
         <el-table-column
           label="操作"
           align="center"
@@ -418,8 +408,6 @@
         visitList: [],
         // 站所选项
         powerSupplyOptions: [],
-        // 台区选项 - 修改为树形结构数据
-        towerOptions: [],
         // 客户标签选项
         customerTagOptions: [],
         // 查询参数
@@ -430,7 +418,6 @@
           cityId: '',
           companyId: '',
           powerId: null, // 修改为 null
-          towerId: null, // 修改为 null
           dispatchStartTime: '',
           dispatchEndTime: '',
           tagIdList: [],
@@ -442,7 +429,6 @@
           oneTypeId: '',
           twoTypeId: '',
           threeTypeId: '',
-          customName: '',
           pageNum: 1,
           pageSize: 10
         },
@@ -514,8 +500,7 @@
       /** 获取站所数据并处理重复ID */
       getPowerSupplyOptions() {
         // 根据当前查询类型设置type值
-        const type = this.queryParams.type === 'zf' ? '1' : '2'
-        deptTreeSelect({ type }).then((response) => {
+        deptTreeSelect().then((response) => {
           // 处理数据,为每个节点生成唯一ID
           const processTreeData = (nodes, parentId = '') => {
             return nodes.map((node, index) => {
@@ -540,43 +525,6 @@
 
           this.powerSupplyOptions = processTreeData(response.data)
         })
-      },
-
-      /** 处理供电所选择变化并获取对应台区数据 */
-      async handlePowerSupplyChange(value) {
-        if (value) {
-          try {
-            // 根据不同的查询类型使用不同的参数
-            const params = {
-              pageNum: 1,
-              pageSize: 9999
-            }
-
-            // 走访类型使用 userId，巡视类型使用 deptIdList
-            if (this.queryParams.type === 'zf') {
-              params.userId = value
-            } else {
-              params.deptIdList = value
-            }
-
-            const res = await asyncGetAreaList(params)
-            this.towerOptions = this.formatTowerOptions(res.data || [])
-          } catch (error) {
-            console.error('获取台区数据失败:', error)
-            this.towerOptions = []
-          }
-        } else {
-          this.towerOptions = []
-          this.queryParams.towerId = null
-        }
-      },
-
-      /** 格式化台区数据为树形结构 */
-      formatTowerOptions(data) {
-        return data.map((item) => ({
-          id: item.towerId,
-          label: item.towerName
-        }))
       },
       /** 转换树形数据结构 */
       normalizer(node) {
@@ -676,14 +624,12 @@
           formType: '',
           formId: '',
           powerId: '',
-          towerId: '',
           dispatchStartTime: '',
           dispatchEndTime: '',
           tagIdList: [],
           formDataId: '',
           statusDataId: '',
           formStatus: '',
-          customName: '',
           current: 1,
           size: 10
         }
@@ -779,7 +725,6 @@
 
         // 如果切换到巡检，清空客户相关字段
         if (this.queryParams.type === 'xs') {
-          this.queryParams.customName = ''
           this.queryParams.tagIdList = []
           this.selectedTags = []
           this.checkedTags = []
