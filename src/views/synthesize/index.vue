@@ -238,8 +238,8 @@
         </el-table-column>
         <el-table-column label="是否在现场" align="center" prop="isOnSite" width="100">
           <template slot-scope="scope">
-            <el-tag :type="scope.row.isOnSite === 1 ? 'success' : 'info'">
-              {{ scope.row.isOnSite === 1 ? '是' : '否' }}
+            <el-tag :type="scope.row.isOnSite === '1' ? 'success' : 'info'">
+              {{ scope.row.isOnSite === '1' ? '是' : '否' }}
             </el-tag>
           </template>
         </el-table-column>
