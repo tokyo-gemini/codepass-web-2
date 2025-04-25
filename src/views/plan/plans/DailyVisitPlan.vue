@@ -93,19 +93,19 @@
                   />
                   <el-table-column
                     prop="areaName"
-                    label="所属供电单位"
+                    label="所属城市"
                     min-width="150"
                     show-overflow-tooltip
                   />
                   <el-table-column
                     prop="companyName"
-                    label="所属城市"
+                    label="所属单位区县"
                     min-width="120"
                     show-overflow-tooltip
                   />
                   <el-table-column
                     prop="powerName"
-                    label="所属供电所"
+                    label="所属供电单位"
                     min-width="150"
                     show-overflow-tooltip
                   />
@@ -178,19 +178,19 @@
                   />
                   <el-table-column
                     prop="areaName"
-                    label="所属供电单位"
+                    label="所属城市"
                     min-width="150"
                     show-overflow-tooltip
                   />
                   <el-table-column
                     prop="companyName"
-                    label="所属城市"
+                    label="所属单位区县"
                     min-width="120"
                     show-overflow-tooltip
                   />
                   <el-table-column
                     prop="powerName"
-                    label="所属供电所"
+                    label="所属供电单位"
                     min-width="150"
                     show-overflow-tooltip
                   />
@@ -233,12 +233,12 @@
           </template>
 
           <template v-else>
-            <!-- 系统内选择时只显示已选列表 -->
+            <!-- 选择所属单位时只显示已选列表 -->
             <div class="w-full">
               <div class="font-medium mb-2">
                 已选对象
                 <span class="text-sm text-gray-500 ml-2">(共 {{ selectedCount }} 项)</span>
-                <span class="ml-2 text-blue-500">(系统内选择)</span>
+                <span class="ml-2 text-blue-500">(选择所属单位)</span>
               </div>
               <el-table
                 ref="selectedTable"
@@ -270,19 +270,19 @@
                 />
                 <el-table-column
                   prop="areaName"
-                  label="所属供电单位"
+                  label="所属城市"
                   min-width="150"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="companyName"
-                  label="所属城市"
+                  label="所属单位区县"
                   min-width="120"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="powerName"
-                  label="所属供电所"
+                  label="所属供电单位"
                   min-width="150"
                   show-overflow-tooltip
                 />
@@ -299,7 +299,7 @@
                 </el-table-column>
               </el-table>
 
-              <!-- 系统内选择的分页 -->
+              <!-- 选择所属单位的分页 -->
               <div class="mt-2 flex justify-end">
                 <el-pagination
                   @current-change="handleSelectedPageChange"
@@ -316,17 +316,17 @@
           </template>
         </div>
 
-        <!-- 系统内选择弹框 -->
+        <!-- 选择所属单位弹框 -->
         <el-dialog
-          title="系统内对象选择"
+          title="选择所属单位"
           :visible.sync="systemDialogVisible"
           width="80%"
           :before-close="handleSystemDialogClose"
           append-to-body
         >
           <el-tabs v-model="activeTab">
-            <!-- 系统内选择 tab -->
-            <el-tab-pane label="系统内选择" name="system">
+            <!-- 选择所属单位 tab -->
+            <el-tab-pane label="选择所属单位" name="system">
               <system-select
                 v-model="tempTowerUserList"
                 :plan-type="'3'"
@@ -410,13 +410,13 @@
                     />
                     <el-table-column
                       prop="areaName"
-                      label="所属供电单位"
+                      label="所属城市"
                       min-width="150"
                       show-overflow-tooltip
                     />
                     <el-table-column
                       prop="powerName"
-                      label="所属供电所"
+                      label="所属供电单位"
                       min-width="150"
                       show-overflow-tooltip
                     />
@@ -817,7 +817,7 @@
       openSystemDialog() {
         if (this.selectedDept) {
           this.$modal
-            .confirm('切换到系统内选择将清空当前供电所选择的数据，是否继续？')
+            .confirm('切换到选择所属单位将清空当前供电所选择的数据，是否继续？')
             .then(() => {
               this.selectedDept = null
               this.tableData = []
@@ -857,7 +857,7 @@
         this.$refs.table?.clearSelection()
       },
 
-      // 确认系统内选择
+      // 确认选择所属单位
       confirmSystemSelection() {
         this.selectedDept = null
 
@@ -873,7 +873,7 @@
           return
         }
 
-        // 系统内选择的逻辑保持不变
+        // 选择所属单位的逻辑保持不变
         this.formData.towerUserList = this.tempTowerUserList.map((item) => ({
           ...item,
           customName: item.customName || item.consName || item.userName || '未知客户',
@@ -944,8 +944,8 @@
             delete submitData.deptIdList // 确保删除不需要的字段
             delete submitData.userId
           } else {
-            // 系统内选择时
-            submitData.powerIdList = this.formData.powerSupply // 系统内选择时保留powerIdList
+            // 选择所属单位时
+            submitData.powerIdList = this.formData.powerSupply // 选择所属单位时保留powerIdList
             submitData.userId = this.selectedUser
             delete submitData.deptIdList
           }

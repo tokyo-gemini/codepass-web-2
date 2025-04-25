@@ -70,19 +70,19 @@
                 />
                 <el-table-column
                   prop="areaName"
-                  label="所属供电单位"
+                  label="所属城市"
                   min-width="150"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="companyName"
-                  label="所属城市"
+                  label="所属单位区县"
                   min-width="120"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="powerName"
-                  label="所属供电所"
+                  label="所属供电单位"
                   min-width="150"
                   show-overflow-tooltip
                 />
@@ -155,19 +155,19 @@
                 />
                 <el-table-column
                   prop="areaName"
-                  label="所属供电单位"
+                  label="所属城市"
                   min-width="150"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="companyName"
-                  label="所属城市"
+                  label="所属单位区县"
                   min-width="120"
                   show-overflow-tooltip
                 />
                 <el-table-column
                   prop="powerName"
-                  label="所属供电所"
+                  label="所属供电单位"
                   min-width="150"
                   show-overflow-tooltip
                 />
