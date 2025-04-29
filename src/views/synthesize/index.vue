@@ -322,20 +322,11 @@
         destroy-on-close
       >
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="客户名称">{{ detailInfo.customName }}</el-descriptions-item>
-          <el-descriptions-item label="客户ID">{{ detailInfo.customId }}</el-descriptions-item>
-          <el-descriptions-item label="联系电话">{{ detailInfo.phoneNumber }}</el-descriptions-item>
           <el-descriptions-item label="所属台区">{{ detailInfo.towerName }}</el-descriptions-item>
           <el-descriptions-item label="台区容量">{{ detailInfo.towerVolume }}</el-descriptions-item>
           <el-descriptions-item label="台区ID">{{ detailInfo.towerId }}</el-descriptions-item>
           <el-descriptions-item :span="2" label="详细地址">{{
             detailInfo.address
-          }}</el-descriptions-item>
-          <el-descriptions-item label="设备用户名称">{{
-            detailInfo.deviceUserName || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="设备用户电话">{{
-            detailInfo.deviceUserPhoneNumber || '-'
           }}</el-descriptions-item>
         </el-descriptions>
 

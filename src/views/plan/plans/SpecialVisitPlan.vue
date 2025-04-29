@@ -79,9 +79,9 @@
                 <el-table-column prop="customName" label="客户名称" show-overflow-tooltip />
                 <el-table-column prop="customId" label="客户编号" show-overflow-tooltip />
                 <el-table-column prop="provinceName" label="所属省份" show-overflow-tooltip />
-                <el-table-column prop="areaName" label="所属供电单位" show-overflow-tooltip />
-                <el-table-column prop="companyName" label="所属城市" show-overflow-tooltip />
-                <el-table-column prop="powerName" label="所属供电所" show-overflow-tooltip />
+                <el-table-column prop="areaName" label="所属城市" show-overflow-tooltip />
+                <el-table-column prop="companyName" label="所属单位区县" show-overflow-tooltip />
+                <el-table-column prop="powerName" label="所属供电单位" show-overflow-tooltip />
                 <el-table-column prop="userName" label="台区经理" show-overflow-tooltip />
                 <el-table-column width="80" fixed="right">
                   <template #default="scope">
@@ -129,9 +129,9 @@
                 <el-table-column prop="customName" label="客户名称" show-overflow-tooltip />
                 <el-table-column prop="customId" label="客户编号" show-overflow-tooltip />
                 <el-table-column prop="provinceName" label="所属省份" show-overflow-tooltip />
-                <el-table-column prop="areaName" label="所属供电单位" show-overflow-tooltip />
-                <el-table-column prop="companyName" label="所属城市" show-overflow-tooltip />
-                <el-table-column prop="powerName" label="所属供电所" show-overflow-tooltip />
+                <el-table-column prop="areaName" label="所属城市" show-overflow-tooltip />
+                <el-table-column prop="companyName" label="所属单位区县" show-overflow-tooltip />
+                <el-table-column prop="powerName" label="所属供电单位" show-overflow-tooltip />
                 <el-table-column prop="userName" label="台区经理" show-overflow-tooltip />
                 <el-table-column width="80" fixed="right">
                   <template #default="scope">

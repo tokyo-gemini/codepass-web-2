@@ -46,9 +46,9 @@
         <el-table-column prop="customName" label="客户名称" />
         <el-table-column prop="customId" label="客户编号" />
         <!-- 所属城市 -->
-        <el-table-column prop="areaName" label="所属供电单位" />
-        <el-table-column prop="companyName" label="所属城市" />
-        <el-table-column prop="powerName" label="所属供电所" />
+        <el-table-column prop="areaName" label="所属城市" />
+        <el-table-column prop="companyName" label="所属单位区县" />
+        <el-table-column prop="powerName" label="所属供电单位" />
         <el-table-column prop="towerName" label="所属台区" />
         <el-table-column prop="userName" label="客户经理" />
         <el-table-column prop="visit" label="走访状态" />
@@ -58,9 +58,9 @@
         <el-table-column prop="towerName" label="台区名称" />
         <el-table-column prop="towerId" label="台区编号" />
         <el-table-column prop="provinceName" label="所属省份" />
-        <el-table-column prop="areaName" label="所属供电单位" />
-        <el-table-column prop="companyName" label="所属城市" />
-        <el-table-column prop="powerName" label="所属供电所" />
+        <el-table-column prop="areaName" label="所属城市" />
+        <el-table-column prop="companyName" label="所属单位区县" />
+        <el-table-column prop="powerName" label="所属供电单位" />
         <el-table-column prop="userName" label="台区经理" />
       </template>
     </el-table>
