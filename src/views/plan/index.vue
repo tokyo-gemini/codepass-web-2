@@ -153,6 +153,37 @@
       </div>
     </el-dialog>
 
+    <!-- 添加生成二维码的站所选择弹窗 -->
+    <el-dialog
+      title="选择站所"
+      :visible.sync="qrcodeDialogVisible"
+      width="500px"
+      center
+      append-to-body
+    >
+      <div class="qrcode-select-container">
+        <p class="text-gray-600 mb-4">请选择要生成二维码的站所</p>
+
+        <!-- 使用站所选择组件 -->
+        <dept-treeselect
+          v-model="selectedDeptId"
+          :options="powerSupplyTree"
+          placeholder="请选择站所"
+        />
+
+        <div class="mt-4 flex justify-end">
+          <el-button @click="qrcodeDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="confirmGenerateQrcode"
+            :loading="generating"
+            :disabled="!selectedDeptId"
+            >确定生成</el-button
+          >
+        </div>
+      </div>
+    </el-dialog>
+
     <!-- 特殊走访选择弹窗 -->
     <el-dialog
       title="选择特殊走访类型"
@@ -205,14 +236,17 @@
     asyncEnabledPlan,
     asyncGetPlanCount,
     asyncDeletePlan,
-    asyncGenerateQrcode // 添加导入
+    asyncGenerateQrcode
   } from '@/api/plan'
   import CustomSwitch from '@/components/CustomSwitch.vue'
+  import DeptTreeselect from '@/components/DeptTreeselect' // 替换原来的 VisitTreeselect
+  import { deptTreeSelect } from '@/api/system/user'
 
   export default {
     name: 'PlanManagement',
     components: {
-      CustomSwitch
+      CustomSwitch,
+      DeptTreeselect
     },
     dicts: ['plan_status_option', 'plan_type_option'],
     data() {
@@ -267,16 +301,20 @@
             hidden: true
           }
         ],
-        planCounts: [], // 添加计划数量数据
+        planCounts: [],
         progressVisible: false,
         progressPercentage: 0,
-        visitDialogVisible: false, // 特殊走访选择弹窗
-        dailyVisitDialogVisible: false // 新增日常走访选择弹窗
+        visitDialogVisible: false,
+        dailyVisitDialogVisible: false,
+        qrcodeDialogVisible: false,
+        selectedDeptId: null,
+        powerSupplyTree: [],
+        generating: false
       }
     },
     created() {
       this.getList()
-      this.getPlanTypeCount() // 添加获取计划类型数量的调用
+      this.getPlanTypeCount()
     },
     methods: {
       /** 查询计划列表 */
@@ -294,7 +332,6 @@
           })
           .catch(() => {
             this.loading = false
-            // this.$message.error('获取计划列表失败');
           })
       },
       /** 搜索按钮操作 */
@@ -313,27 +350,22 @@
         this.$modal
           .confirm('是否确认删除该计划？')
           .then(() => {
-            // 修改删除接口调用
             return asyncDeletePlan({ planIds: planId })
           })
           .then(() => {
             this.getList()
             this.$modal.msgSuccess('删除成功')
-            // 同时刷新统计数量
             this.getPlanTypeCount()
           })
           .catch((error) => {
             console.error('删除失败:', error)
-            // this.$modal.msgError(error.msg || '删除失败')
           })
       },
       /** 打开新建计划页面 */
       createPlan(type) {
         if (type === '4') {
-          // 特殊走访时显示选择对话框
           this.visitDialogVisible = true
         } else if (type === '3') {
-          // 日常走访时显示选择对话框
           this.dailyVisitDialogVisible = true
         } else {
           const routeUrl = `/plan/visit/${type}`
@@ -371,14 +403,13 @@
 
           if (res.code === 200) {
             this.$modal.msgSuccess(`${text}成功`)
-            this.getList() // 刷新列表
-            resolve() // 成功时 resolve
+            this.getList()
+            resolve()
           } else {
             this.$modal.msgError(res.msg || `${text}失败`)
-            reject(new Error(res.msg || `${text}失败`)) // 失败时 reject
+            reject(new Error(res.msg || `${text}失败`))
           }
         } catch (error) {
-          // 取消确认或接口报错时 reject
           reject(error)
         }
       },
@@ -386,7 +417,6 @@
       async getPlanTypeCount() {
         try {
           const res = await asyncGetPlanCount()
-          // 修改判断条件为 200
           if (res.code === 200) {
             this.planCounts = res.data || []
           }
@@ -399,51 +429,80 @@
         const found = this.planCounts.find((item) => item.planType === type)
         return found ? found.planTypeCounts || 0 : 0
       },
-      /** 批量生成二维码 */
+      /** 点击批量生成二维码按钮 */
       handleGenerateQrcode() {
-        this.$modal.confirm('是否确认生成二维码文件？').then(() => {
-          this.progressVisible = true
-          this.progressPercentage = 0
-
-          // 模拟进度增加
-          const timer = setInterval(() => {
-            if (this.progressPercentage < 90) {
-              this.progressPercentage += 10
-            }
-          }, 300)
-
-          asyncGenerateQrcode()
-            .then((res) => {
-              // 完成时直接显示100%
-              this.progressPercentage = 100
-              setTimeout(() => {
-                clearInterval(timer)
-                this.progressVisible = false
-
-                // 创建 Blob 对象
-                const blob = new Blob([res], { type: 'application/zip' })
-                const link = document.createElement('a')
-                link.href = window.URL.createObjectURL(blob)
-                link.download = `二维码_${new Date().getTime()}.zip`
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-                window.URL.revokeObjectURL(link.href)
-
-                this.$notify({
-                  title: '生成成功',
-                  message: '二维码文件已成功生成,请检查您选择的下载目录',
-                  type: 'success',
-                  duration: 0
-                })
-              }, 200)
+        this.getPowerSupplyTree().then(() => {
+          this.qrcodeDialogVisible = true
+        })
+      },
+      /** 获取供电所树形数据 */
+      async getPowerSupplyTree() {
+        try {
+          this.selectedDeptId = null
+          const res = await deptTreeSelect()
+          const processTreeData = (nodes, parent = null) => {
+            return nodes.map((node) => {
+              const processedNode = { ...node, parent }
+              if (node.children) {
+                processedNode.children = processTreeData(node.children, processedNode)
+              }
+              return processedNode
             })
-            .catch(() => {
+          }
+          this.powerSupplyTree = processTreeData(res.data || [])
+        } catch (error) {
+          console.error('获取供电所树形数据失败:', error)
+          this.$modal.msgError('获取供电所树形数据失败')
+        }
+      },
+      /** 确认生成二维码 */
+      confirmGenerateQrcode() {
+        if (!this.selectedDeptId) {
+          this.$modal.msgError('请选择站所')
+          return
+        }
+
+        this.generating = true
+        this.progressVisible = true
+        this.progressPercentage = 0
+
+        const timer = setInterval(() => {
+          if (this.progressPercentage < 90) {
+            this.progressPercentage += 10
+          }
+        }, 300)
+
+        asyncGenerateQrcode(this.selectedDeptId)
+          .then((res) => {
+            this.progressPercentage = 100
+            setTimeout(() => {
               clearInterval(timer)
               this.progressVisible = false
-              this.$modal.msgError('二维码生成失败')
-            })
-        })
+              this.generating = false
+
+              const blob = new Blob([res], { type: 'application/zip' })
+              const link = document.createElement('a')
+              link.href = window.URL.createObjectURL(blob)
+              link.download = `二维码_${new Date().getTime()}.zip`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              window.URL.revokeObjectURL(link.href)
+
+              this.$notify({
+                title: '生成成功',
+                message: '二维码文件已成功生成,请检查您选择的下载目录',
+                type: 'success',
+                duration: 0
+              })
+            }, 200)
+          })
+          .catch(() => {
+            clearInterval(timer)
+            this.progressVisible = false
+            this.generating = false
+            this.$modal.msgError('二维码生成失败')
+          })
       }
     }
   }
@@ -514,7 +573,13 @@
     }
   }
 
-  // 移除之前的按钮样式
+  .qrcode-select-container {
+    p {
+      font-size: 14px;
+      color: #606266;
+    }
+  }
+
   .el-button {
     width: auto;
     height: auto;

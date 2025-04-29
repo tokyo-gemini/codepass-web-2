@@ -161,10 +161,11 @@ export function asyncGetSelfPlanDetail(id) {
 }
 
 // 修改批量生成二维码接口
-export function asyncGenerateQrcode() {
+export function asyncGenerateQrcode(deptId) {
   return request({
     url: '/plannedManage/qrcode/generate',
     method: 'post',
+    params: { deptId },
     responseType: 'blob' // 添加responseType
   })
 }
