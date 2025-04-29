@@ -517,7 +517,6 @@
 
       async handleBeforeSubmit(formData) {
         if (!this.selectedDept) {
-          this.$message.warning('请选择供电所')
           return false
         }
 

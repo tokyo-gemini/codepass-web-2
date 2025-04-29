@@ -3,8 +3,8 @@
     <!-- 搜索区域 - 根据用户部门ID长度决定是否显示 -->
     <el-card class="search-section">
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <!-- 只有当用户部门ID不是7位数时才显示统计区域选择 -->
-        <el-form-item label="统计区域" v-if="!isFixedPowerSupply">
+        <!-- 只有当用户部门ID不是7位数时才显示所属单位选择 -->
+        <el-form-item label="所属单位" v-if="!isFixedPowerSupply">
           <custom-tree-select
             v-model="searchForm.powerSupply"
             :options="powerSupplyTree"
@@ -13,7 +13,6 @@
             :check-strictly="true"
             :user-dept-id="deptId"
             :user-dept-id-length="deptId.toString().length"
-            placeholder="请选择供电所"
             @change="handlePowerSupplyChange"
           />
         </el-form-item>
@@ -100,7 +99,6 @@
               :check-strictly="true"
               :user-dept-id="deptId"
               :user-dept-id-length="deptId.toString().length"
-              placeholder="请选择供电所"
               @change="handleListPowerSupplyChange"
             />
           </el-form-item>

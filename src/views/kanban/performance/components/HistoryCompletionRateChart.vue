@@ -239,13 +239,13 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 优先添加用户选择的统计区域，不管是否为超级管理员
+          // 优先添加用户选择的所属单位，不管是否为超级管理员
           if (this.searchParams.powerSupply) {
             params.companyId = Array.isArray(this.searchParams.powerSupply)
               ? this.searchParams.powerSupply.join(',')
               : this.searchParams.powerSupply
           } else {
-            // 用户没有选择统计区域，检查是否为超级管理员
+            // 用户没有选择所属单位，检查是否为超级管理员
             const roles = this.$store.getters && this.$store.getters.roles
             const isAdmin = roles.includes('admin')
 

@@ -38,7 +38,6 @@
             :append-to-body="true"
             :close-on-select="true"
             :show-count="true"
-            placeholder="请选择供电所"
             class="w-48"
           />
         </el-form-item>

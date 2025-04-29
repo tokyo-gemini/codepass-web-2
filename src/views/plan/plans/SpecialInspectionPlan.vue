@@ -603,7 +603,7 @@
 
       async handleBeforeSubmit(formData) {
         if (!this.selectedDept || !this.selectedUser) {
-          this.$message.warning('请选择供电所和网格员')
+          this.$message.warning('请选择必填项')
           return false
         }
         // 添加校验：如果未全选，则必须选择至少一个对象
