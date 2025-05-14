@@ -113,7 +113,7 @@
         immediate: true
       },
       value: {
-        handler(val) {
+        handler() {
           this.initSelection()
         },
         immediate: true
@@ -140,8 +140,8 @@
               node.children = processNode(node.children, level + 1)
 
               // 计算子节点中的可选节点数量
-              if (level === 5) {
-                // 如果是第5层，直接判断本节点
+              if (level === 5 && node.children.length === 0) {
+                // 如果是第5层且是叶子节点（人员节点），直接判断本节点
                 node.selectableCount = 1
               } else {
                 // 汇总所有子节点的可选节点数量
@@ -156,7 +156,7 @@
                 this.expandedKeys.push(node.id)
               }
             } else if (level === 5) {
-              // 叶子节点且在第5层
+              // 叶子节点且在第5层（人员节点）
               node.selectableCount = 1
             }
 
@@ -179,11 +179,14 @@
           const nodes = []
           const traverse = (treeData) => {
             treeData.forEach((node) => {
-              if (ids.includes(node.id)) {
+              // 将 id 转换为字符串进行比较，确保能够匹配数字和字符串类型的 ID
+              const nodeId = String(node.id)
+              if (ids.some((id) => String(id) === nodeId)) {
                 nodes.push({
                   id: node.id,
                   label: node.label
                 })
+                console.log('找到匹配的节点:', node.id, node.label)
               }
               if (node.children?.length) {
                 traverse(node.children)
@@ -191,14 +194,21 @@
             })
           }
           traverse(this.treeData)
+
+          // 如果没有找到匹配的节点，但有 ID 值，记录日志
+          if (nodes.length === 0 && ids.length > 0) {
+            console.warn('未找到匹配的节点，传入的 ID:', ids)
+            console.log('当前树形数据:', this.treeData)
+          }
+
           return nodes
         }
 
         this.selectedNodes = findNodes(this.value)
       },
-      isSelectableNode(node) {
-        // 只有第五层节点可选
-        return node.level === 5
+      isSelectableNode() {
+        // 对于供电所选择，所有节点都可选
+        return true
       },
       isLeafNode(node) {
         return !node.children || !node.children.length

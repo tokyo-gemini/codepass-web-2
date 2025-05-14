@@ -320,7 +320,8 @@
       // 获取供电所树形数据
       async getPowerSupplyTree() {
         try {
-          // 只有日常走访计划(planType=3)时传type=1,其他情况不传type
+          // 日常走访计划(planType=3)时传type=1,其他情况不传type
+          // 确保传递type=1参数以获取正确的树形结构
           const params = this.planType === '3' ? { type: '1' } : {}
           const res = await deptTreeSelect(params)
           this.powerSupplyTree = res.data || []
@@ -355,7 +356,7 @@
         return Math.max(...node.children.map((child) => this.getNodeDepth(child, depth + 1)))
       },
 
-      // Tree格式化，使只有第五层（最底层）可选
+      // Tree格式化，使只有第五层（最底层人员节点）可选
       normalizer(node, depth = 1) {
         // 递归处理子节点
         let children = node.children
@@ -363,16 +364,16 @@
           ? children.map((child) => this.normalizer(child, depth + 1))
           : undefined
 
-        // 只有深度为5的节点才可选，其余禁用
+        // 判断是否是最底层的人员节点（例如"王旭明"、"喝好"）
+        // 根据树形结构，这些节点通常在第5层
+        const isPersonNode = depth === 5 && (!node.children || node.children.length === 0)
+
         return {
           id: node.id,
           label: node.label,
           children: normalizedChildren,
-          // 禁用所有非第五层的节点
-          isDisabled: depth !== 5
-          // 如果需要强制第五层成为叶子节点（即使它有子节点），可以取消下面注释
-          // isDefaultExpanded: depth < 4, // 默认展开前四层方便查看
-          // children: depth === 5 ? undefined : normalizedChildren, // 第五层强制无子节点
+          // 只允许最底层的人员节点可选
+          isDisabled: !isPersonNode
         }
       }
     }

@@ -16,8 +16,10 @@
             type="primary"
             size="small"
             @click="openSystemDialog"
-            :disabled="!!selectedDept"
-            :title="selectedDept ? '已选择供电所数据源，不可使用对象选择' : ''"
+            :disabled="selectedDept && selectedDept.length > 0"
+            :title="
+              selectedDept && selectedDept.length > 0 ? '已选择供电所数据源，不可使用对象选择' : ''
+            "
           >
             <i class="el-icon-plus mr-1"></i>选择对象
           </el-button>
@@ -28,22 +30,19 @@
           <div class="flex mb-4">
             <el-form-item label="供电所">
               <div class="flex-1">
-                <treeselect
+                <visit-treeselect
                   style="width: 300px"
                   v-model="selectedDept"
                   :options="powerSupplyTree"
-                  :normalizer="normalizer"
                   placeholder="选择供电所"
-                  :clearable="true"
-                  :disable-branch-nodes="true"
-                  @input="handleDeptChange"
+                  @change="handleDeptChangeWithLabel"
                 />
               </div>
             </el-form-item>
           </div>
 
           <!-- 全选复选框 -->
-          <div v-if="selectedDept" class="mb-4 flex items-center">
+          <div v-if="selectedDept && selectedDept.length > 0" class="mb-4 flex items-center">
             <el-checkbox
               v-model="formData.isSelectAll"
               :true-label="1"
@@ -57,7 +56,7 @@
           </div>
 
           <!-- 表格区域 - 供电所选择和系统内选择使用不同的布局 -->
-          <template v-if="selectedDept && formData.isSelectAll !== 1">
+          <template v-if="selectedDept && selectedDept.length > 0 && formData.isSelectAll !== 1">
             <!-- 供电所选择时显示左右布局 -->
             <div class="flex gap-4">
               <!-- 左侧可选列表 -->
@@ -233,7 +232,7 @@
           </template>
 
           <template v-else>
-            <!-- 选择所属单位时只显示已选列表 -->
+            <!-- 选择所属单位时只显示已选列表，使用与对象选择相同的树形选择器逻辑 -->
             <div class="w-full">
               <div class="font-medium mb-2">
                 已选对象
@@ -461,8 +460,7 @@
     asyncUploadSelfInfo,
     asyncDownloadTemplatePlannedManage
   } from '@/api/plan' // 添加导入
-  import Treeselect from '@riophae/vue-treeselect'
-  import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+  import VisitTreeselect from '@/components/VisitTreeselect'
 
   export default {
     name: 'DailyVisitPlan',
@@ -470,7 +468,7 @@
       BasePlan,
       SystemSelect,
       UploadTemplate,
-      Treeselect
+      VisitTreeselect
     },
     data() {
       return {
@@ -495,7 +493,7 @@
 
         // 新增数据
         powerSupplyTree: [],
-        selectedDept: null,
+        selectedDept: [], // 改为数组以适应 VisitTreeselect 组件
         tableData: [],
         tableLoading: false,
         pagination: {
@@ -520,15 +518,48 @@
         return this.formData.towerUserList.slice(start, end)
       }
     },
+    watch: {
+      // 监听树形数据变化，确保在树形数据加载完成后能够正确设置选中值
+      powerSupplyTree: {
+        handler(newVal) {
+          if (newVal && newVal.length > 0 && this.selectedDept && this.selectedDept.length > 0) {
+            console.log('树形数据变化，尝试重新设置selectedDept:', this.selectedDept)
+            const tempSelectedDept = [...this.selectedDept]
+            this.selectedDept = []
+            this.$nextTick(() => {
+              this.selectedDept = tempSelectedDept
+              console.log('树形数据变化后，重新设置selectedDept为:', this.selectedDept)
+            })
+          }
+        }
+      }
+    },
     created() {
       this.getPowerSupplyTree()
     },
     methods: {
-      // 获取供电所树形数据（用于 Treeselect，不传 type）
+      // 获取供电所树形数据（用于 Treeselect，传递 type=1 参数）
       async getPowerSupplyTree() {
         try {
-          const res = await deptTreeSelect()
+          // 添加 type=1 参数，确保获取正确的树形结构
+          const res = await deptTreeSelect({ type: '1' })
           this.powerSupplyTree = res.data || []
+
+          // 如果是编辑模式，尝试从路由参数中获取ID并加载数据
+          if (this.$route.params.id) {
+            console.log('编辑模式，等待树形数据加载完成后尝试回显供电所')
+            this.$nextTick(() => {
+              // 如果已经有了selectedDept数据，尝试重新设置一次
+              if (this.selectedDept && this.selectedDept.length > 0) {
+                console.log('树形数据加载完成后，重新设置selectedDept:', this.selectedDept)
+                const tempSelectedDept = [...this.selectedDept]
+                this.selectedDept = []
+                this.$nextTick(() => {
+                  this.selectedDept = tempSelectedDept
+                })
+              }
+            })
+          }
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)
         }
@@ -536,7 +567,7 @@
 
       // 添加处理计划数据加载的方法
       async handlePlanDataLoaded(data) {
-        console.log('DailyVisitPlan - 开始处理计划数据')
+        console.log('DailyVisitPlan - 开始处理计划数据', data)
         this.isInitializing = true
 
         // 保存 towerUserList 数据
@@ -557,7 +588,10 @@
           this.selectedMap[key] = true
         })
 
+        // 根据接口返回的数据，确定使用哪个ID进行回显
+        // 优先使用 powerIdList，因为这是供电所的实际ID
         if (data.powerIdList?.length) {
+          console.log('使用powerIdList回显供电所:', data.powerIdList)
           this.formData.powerSupply = Array.isArray(data.powerIdList)
             ? data.powerIdList
             : [data.powerIdList]
@@ -566,15 +600,102 @@
           this.tableLoading = true
           const params = {
             deptIdList: deptId,
+            userId: data.userId || deptId, // 使用接口返回的userId，如果没有则使用deptId
             pageNum: this.pagination.pageNum,
             pageSize: this.pagination.pageSize,
             planId: this.$route.params.id || ''
           }
 
           // 设置 selectedDept，不触发 handleDeptChange
-          this.$nextTick(() => {
-            this.selectedDept = deptId
-          })
+          // 确保树形数据已经加载完成
+          if (this.powerSupplyTree && this.powerSupplyTree.length > 0) {
+            console.log('树形数据已加载，直接设置selectedDept')
+            // 先清空，然后在下一个事件循环中设置，确保组件能够正确响应变化
+            this.selectedDept = []
+            this.$nextTick(() => {
+              // 对于 VisitTreeselect 组件，selectedDept 需要是数组
+              this.selectedDept = Array.isArray(deptId) ? deptId : [deptId]
+              console.log('设置selectedDept为:', this.selectedDept)
+            })
+          } else {
+            console.log('树形数据尚未加载，等待加载完成后再设置selectedDept')
+            // 先保存值，等待树形数据加载完成后在getPowerSupplyTree中设置
+            this.selectedDept = Array.isArray(deptId) ? deptId : [deptId]
+            console.log('暂存selectedDept为:', this.selectedDept)
+          }
+
+          try {
+            const res = await asyncGetCustomerListByDept(params)
+            if (res.code === 200) {
+              this.tableData = res.rows || []
+              this.pagination.total = res.total || 0
+
+              this.formData.isSelectAll = Number(data.isSelectAll || 0)
+              this.selectedCount =
+                this.formData.isSelectAll === 1
+                  ? this.pagination.total
+                  : this.formData.towerUserList.length
+              this.total = this.pagination.total
+
+              // 等待 DOM 更新后设置勾选状态
+              this.$nextTick(() => {
+                if (this.$refs.table && this.formData.towerUserList?.length > 0) {
+                  this.$refs.table.clearSelection()
+                  this.tableData.forEach((row) => {
+                    const rowKey = `${row.customId}_${row.towerId}`
+                    if (this.selectedMap[rowKey]) {
+                      this.$refs.table.toggleRowSelection(row, true)
+                    }
+                  })
+                }
+                this.isInitializing = false
+                console.log('DailyVisitPlan - 处理计划数据完成')
+              })
+            } else {
+              this.isInitializing = false
+            }
+          } catch (error) {
+            console.error('获取客户列表失败:', error)
+            this.$message.error('获取客户列表失败')
+            this.isInitializing = false
+          } finally {
+            this.tableLoading = false
+          }
+        }
+        // 如果没有powerIdList但有userId，则使用userId
+        else if (data.userId) {
+          console.log('使用userId回显供电所:', data.userId)
+          const userId = data.userId
+
+          // 设置 powerSupply
+          this.formData.powerSupply = Array.isArray(userId) ? userId : [userId]
+
+          this.tableLoading = true
+          const params = {
+            deptIdList: userId,
+            userId: userId, // 添加 userId 参数，与 deptIdList 保持一致
+            pageNum: this.pagination.pageNum,
+            pageSize: this.pagination.pageSize,
+            planId: this.$route.params.id || ''
+          }
+
+          // 设置 selectedDept，不触发 handleDeptChange
+          // 确保树形数据已经加载完成
+          if (this.powerSupplyTree && this.powerSupplyTree.length > 0) {
+            console.log('树形数据已加载，直接设置selectedDept')
+            // 先清空，然后在下一个事件循环中设置，确保组件能够正确响应变化
+            this.selectedDept = []
+            this.$nextTick(() => {
+              // 对于 VisitTreeselect 组件，selectedDept 需要是数组
+              this.selectedDept = Array.isArray(userId) ? userId : [userId]
+              console.log('设置selectedDept为:', this.selectedDept)
+            })
+          } else {
+            console.log('树形数据尚未加载，等待加载完成后再设置selectedDept')
+            // 先保存值，等待树形数据加载完成后在getPowerSupplyTree中设置
+            this.selectedDept = Array.isArray(userId) ? userId : [userId]
+            console.log('暂存selectedDept为:', this.selectedDept)
+          }
 
           try {
             const res = await asyncGetCustomerListByDept(params)
@@ -615,6 +736,7 @@
           }
         } else if (data.deptIdList?.length) {
           // 系统内选择的情况
+          console.log('使用deptIdList回显:', data.deptIdList)
           this.selectedDept = null
           this.formData.powerSupply = Array.isArray(data.deptIdList)
             ? data.deptIdList
@@ -628,6 +750,7 @@
           this.isInitializing = false
         } else {
           // 无供电所和部门ID的情况
+          console.log('没有供电所和部门ID数据')
           this.selectedDept = null
           this.formData.powerSupply = []
           this.tableData = this.formData.towerUserList
@@ -640,15 +763,44 @@
         }
       },
 
-      // 处理供电所选择变化
-      async handleDeptChange(value) {
-        console.log('handleDeptChange被调用，初始化状态:', this.isInitializing, '值:', value)
+      // 处理供电所选择变化 - 使用 VisitTreeselect 组件的方法
+      async handleDeptChangeWithLabel(nodes) {
+        console.log(
+          'handleDeptChangeWithLabel被调用，初始化状态:',
+          this.isInitializing,
+          '值:',
+          nodes
+        )
 
         // 如果正在初始化，直接返回，不执行任何操作
         if (this.isInitializing) {
-          console.log('正在初始化中，跳过handleDeptChange中的请求操作')
+          console.log('正在初始化中，跳过handleDeptChangeWithLabel中的请求操作')
           return
         }
+
+        if (!nodes || !nodes.length) {
+          this.formData.towerUserList = []
+          this.selectedRows = []
+          this.selectedCount = 0
+          this.formData.isSelectAll = 0
+          this.tableData = []
+          this.formData.powerSupply = []
+          this.selectedDept = []
+          return
+        }
+
+        // 获取选中节点的id
+        const ids = nodes.map((node) => node.id)
+
+        // 更新供电所数据
+        this.selectedDept = ids
+        this.formData.powerSupply = ids
+        await this.getCustomerList()
+      },
+
+      // 保留旧方法以兼容现有代码
+      async handleDeptChange(value) {
+        if (this.isInitializing) return
 
         if (!value) {
           this.formData.towerUserList = []
@@ -667,15 +819,24 @@
 
       // 获取客户列表
       async getCustomerList() {
-        if (!this.selectedDept) return
+        if (
+          !this.selectedDept ||
+          (Array.isArray(this.selectedDept) && this.selectedDept.length === 0)
+        )
+          return
+
         this.tableLoading = true
         try {
+          const deptId = Array.isArray(this.selectedDept) ? this.selectedDept[0] : this.selectedDept
+
           const params = {
-            deptIdList: this.selectedDept,
+            deptIdList: deptId,
+            userId: deptId, // 添加 userId 参数，与 deptIdList 保持一致
             pageNum: this.pagination.pageNum,
             pageSize: this.pagination.pageSize,
             planId: this.$route.params.id || '' // 添加 planId 参数
           }
+
           const res = await asyncGetCustomerListByDept(params)
           if (res.code === 200) {
             this.tableData = res.rows || []
@@ -779,34 +940,26 @@
         })
       },
 
-      // Tree格式化
+      // Tree格式化 - 修改为只允许选择最底层的人员节点
       normalizer(node) {
-        const getDepth = (node, depth = 1) => {
-          if (!node.children || node.children.length === 0) {
-            return depth
-          }
-          return Math.max(...node.children.map((child) => getDepth(child, depth + 1)))
-        }
-
+        // 递归处理节点，确保只有最底层的人员节点可选
         const processNode = (node, currentDepth = 1) => {
-          const isLeaf = !node.children || node.children.length === 0
           let normalizedChildren = undefined
 
-          if (node.children) {
+          if (node.children && node.children.length > 0) {
             normalizedChildren = node.children.map((child) => processNode(child, currentDepth + 1))
           }
 
-          // 如果当前节点在第四层，移除其子节点使其成为叶子节点
-          if (currentDepth === 4) {
-            normalizedChildren = undefined
-          }
+          // 判断是否是最底层的人员节点（例如"王旭明"、"喝好"）
+          // 根据树形结构，这些节点通常在第5层或更深层次
+          const isPersonNode = currentDepth === 5 && (!node.children || node.children.length === 0)
 
           return {
             id: node.id,
             label: node.label,
             children: normalizedChildren,
-            // 只允许第四层且为叶子节点的节点可选
-            disabled: currentDepth !== 4
+            // 只允许最底层的人员节点可选
+            disabled: !isPersonNode
           }
         }
 
@@ -815,11 +968,11 @@
 
       // 处理对象选择弹框打开
       openSystemDialog() {
-        if (this.selectedDept) {
+        if (this.selectedDept && this.selectedDept.length > 0) {
           this.$modal
             .confirm('切换到选择所属单位将清空当前供电所选择的数据，是否继续？')
             .then(() => {
-              this.selectedDept = null
+              this.selectedDept = []
               this.tableData = []
               this.systemDialogVisible = true
               this.tempTowerUserList = [...this.formData.towerUserList]
@@ -837,7 +990,7 @@
 
       // 修改现有的重置方法
       handleReset() {
-        this.selectedDept = null
+        this.selectedDept = [] // 改为空数组以适应 VisitTreeselect 组件
         this.formData = {
           towerUserList: [],
           isSelectAll: 0,
@@ -859,7 +1012,7 @@
 
       // 确认选择所属单位
       confirmSystemSelection() {
-        this.selectedDept = null
+        this.selectedDept = [] // 改为空数组以适应 VisitTreeselect 组件
 
         // 如果是通过上传文件方式
         if (this.uploadFile && this.tempTowerUserList.length > 0) {
@@ -935,18 +1088,43 @@
             submitData.formDataId = submitData.formId
           }
           // 如果是从供电所选择的数据源，添加 deptIdList
-          if (this.selectedDept) {
+          if (
+            this.selectedDept &&
+            (Array.isArray(this.selectedDept) ? this.selectedDept.length > 0 : true)
+          ) {
             const deptId = Array.isArray(this.selectedDept)
               ? this.selectedDept[0]
               : this.selectedDept
-            // 日常走访使用powerIdList而不是deptIdList
-            submitData.powerIdList = [deptId.toString()]
-            delete submitData.deptIdList // 确保删除不需要的字段
-            delete submitData.userId
+
+            // 确保 deptId 不是 undefined
+            if (deptId) {
+              // 日常走访使用powerIdList而不是deptIdList
+              submitData.powerIdList = [deptId.toString()]
+              // 添加userId参数，值为选中的供电所ID
+              submitData.userId = deptId.toString()
+              delete submitData.deptIdList // 确保删除不需要的字段
+            } else {
+              // 如果 deptId 是 undefined，使用 formData.powerSupply
+              submitData.powerIdList = this.formData.powerSupply
+              // 如果有powerSupply，使用第一个作为userId
+              if (this.formData.powerSupply && this.formData.powerSupply.length > 0) {
+                submitData.userId = Array.isArray(this.formData.powerSupply)
+                  ? this.formData.powerSupply[0].toString()
+                  : this.formData.powerSupply.toString()
+              }
+              delete submitData.deptIdList
+            }
           } else {
             // 选择所属单位时
             submitData.powerIdList = this.formData.powerSupply // 选择所属单位时保留powerIdList
-            submitData.userId = this.selectedUser
+            // 如果有powerSupply，使用第一个作为userId
+            if (this.formData.powerSupply && this.formData.powerSupply.length > 0) {
+              submitData.userId = Array.isArray(this.formData.powerSupply)
+                ? this.formData.powerSupply[0].toString()
+                : this.formData.powerSupply.toString()
+            } else if (this.selectedUser) {
+              submitData.userId = this.selectedUser
+            }
             delete submitData.deptIdList
           }
 
@@ -975,7 +1153,7 @@
             delete submitData.powerIdList
             delete submitData.towerIdList
             delete submitData.deptIdList
-            delete submitData.userId
+            // 保留userId参数，不删除
           }
 
           console.log('最终提交数据:', submitData)
