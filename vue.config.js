@@ -7,7 +7,7 @@ function resolve(dir) {
 }
 
 const name = process.env.VUE_APP_TITLE || '码上通管理系统'
-const port = process.env.port || process.env.npm_config_port || 8080
+const port = process.env.port || process.env.npm_config_port || 8081
 
 // vue.config.js 配置说明
 //官方vue.config.js 参考文档 https://cli.vuejs.org/zh/config/#css-loaderoptions
