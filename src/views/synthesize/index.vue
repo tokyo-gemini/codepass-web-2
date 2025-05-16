@@ -22,25 +22,28 @@
         label-width="100px"
       >
         <!-- 公共筛选项 -->
-        <el-form-item label="所属供电所" prop="powerId">
-          <treeselect
-            v-model="queryParams.powerId"
-            :options="powerSupplyOptions"
-            :normalizer="normalizer"
-            :clearable="true"
-            :searchable="true"
-            :disable-branch-nodes="true"
-            :default-expand-level="0"
-            :disable-fuzzy-matching="true"
-            :multiple="false"
-            :flat="false"
-            :always-show-clear="true"
-            :append-to-body="true"
-            :close-on-select="true"
-            :show-count="true"
-            class="w-48"
-          />
-        </el-form-item>
+        <!-- 所属供电所 - 独占一行 -->
+        <div class="w-full mb-4">
+          <el-form-item label="所属供电所" prop="powerId">
+            <treeselect
+              v-model="queryParams.powerId"
+              :options="powerSupplyOptions"
+              :normalizer="normalizer"
+              :clearable="true"
+              :searchable="true"
+              :disable-branch-nodes="true"
+              :default-expand-level="0"
+              :disable-fuzzy-matching="true"
+              :multiple="false"
+              :flat="false"
+              :always-show-clear="true"
+              :append-to-body="true"
+              :close-on-select="true"
+              :show-count="true"
+              class="w-full"
+            />
+          </el-form-item>
+        </div>
 
         <el-form-item
           :label="queryParams.type === 'zf' ? '走访日期' : '巡检日期'"
@@ -1002,10 +1005,11 @@
       /** 获取表单状态类型 */
       getFormStatusType(status) {
         const statusMap = {
-          0: 'info', // 待处理
-          1: 'warning', // 处理中
-          2: 'success', // 已完成
-          3: 'danger' // 已超时
+          0: 'danger', // 超时未完成
+          1: 'info', // 已创建
+          2: 'warning', // 进行中
+          3: 'success', // 按时完成
+          4: 'warning' // 超时完成
         }
         return statusMap[status] || 'info'
       },
@@ -1013,10 +1017,11 @@
       /** 获取表单状态文本 */
       getFormStatusText(status) {
         const statusMap = {
-          0: '待处理',
-          1: '处理中',
-          2: '已完成',
-          3: '已超时'
+          0: '超时未完成',
+          1: '已创建',
+          2: '进行中',
+          3: '按时完成',
+          4: '超时完成'
         }
         return statusMap[status] || '未知状态'
       },
@@ -1086,5 +1091,40 @@
       color: #909399;
       font-size: 30px;
     }
+  }
+</style>
+
+<style>
+  /* 修改所属供电所组件的字体样式 */
+  .vue-treeselect__label {
+    font-size: 14px !important;
+    font-weight: normal !important;
+  }
+
+  .vue-treeselect__option--selected .vue-treeselect__label {
+    font-weight: normal !important;
+  }
+
+  .vue-treeselect__option--highlight .vue-treeselect__label {
+    font-weight: normal !important;
+  }
+
+  /* 所属供电所独占一行的样式 */
+  .w-full {
+    width: 100% !important;
+  }
+
+  .mb-4 {
+    margin-bottom: 1rem !important;
+  }
+
+  /* 确保表单项在独占一行时宽度合适 */
+  .w-full .el-form-item {
+    display: flex;
+    width: 100%;
+  }
+
+  .w-full .el-form-item__content {
+    flex: 1;
   }
 </style>
