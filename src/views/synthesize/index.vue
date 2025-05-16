@@ -139,7 +139,12 @@
         </el-form-item>
 
         <el-form-item label="来源表单" prop="formId">
-          <el-select v-model="queryParams.formId" placeholder="请选择来源表单" clearable>
+          <el-select
+            v-model="queryParams.formId"
+            placeholder="请选择来源表单"
+            clearable
+            @change="handleFormIdChange"
+          >
             <el-option
               v-for="item in formOptions"
               :key="item.value"
@@ -216,6 +221,9 @@
                 <i class="el-icon-info dynamic-column-icon"></i>
               </el-tooltip>
             </div>
+          </template>
+          <template slot-scope="scope">
+            {{ getFormWidgetValue(scope.row, col.prop) }}
           </template>
         </el-table-column>
 
@@ -475,14 +483,25 @@
         this.loading = true
         asyncGetVisitList(this.queryParams)
           .then((response) => {
-            this.visitList = response.rows
+            // 确保每行数据都有 formWidgetList 字段
+            this.visitList = response.rows.map((row) => {
+              // 如果 formWidgetList 不是数组，初始化为空数组
+              if (!row.formWidgetList || !Array.isArray(row.formWidgetList)) {
+                row.formWidgetList = []
+              }
+              return row
+            })
+
             this.total = response.total
             // 更新空数据提示文本
             this.emptyText =
               this.hasFormList && !this.visitList.length ? '暂无数据' : this.emptyText
             this.loading = false
+
+            console.log('获取列表数据成功，数据条数:', this.visitList.length)
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error('获取列表数据失败:', error)
             this.loading = false
             this.emptyText = '获取数据失败'
           })
@@ -744,6 +763,23 @@
         }
       },
 
+      /** 处理来源表单变化 */
+      async handleFormIdChange(value) {
+        if (value) {
+          // 重新获取表单控件配置
+          await this.getFormControls()
+          // 重新获取列表数据
+          await this.getList()
+        } else {
+          // 清空动态列配置
+          this.dynamicColumns = []
+          this.selectedColumns = []
+          // 清空列表数据
+          this.visitList = []
+          this.total = 0
+        }
+      },
+
       /** 处理日期变化 */
       handleDateChange(val) {
         if (val) {
@@ -859,6 +895,9 @@
         try {
           if (!this.queryParams.formId) return
 
+          // 显示加载状态
+          this.loading = true
+
           const res = await asyncGetFormControls(this.queryParams.formId)
           if (res.data?.length) {
             // 初始化动态列配置
@@ -873,10 +912,22 @@
 
             // 尝试恢复上次的列显示设置
             this.restoreColumnSettings()
+
+            console.log('表单控件配置已更新，formId:', this.queryParams.formId)
+          } else {
+            // 如果没有获取到控件配置，清空动态列
+            this.dynamicColumns = []
+            this.selectedColumns = []
+            console.warn('未获取到表单控件配置，formId:', this.queryParams.formId)
           }
         } catch (error) {
           console.error('获取表单控件失败:', error)
           this.$message.error('获取表单控件失败')
+          // 出错时清空动态列
+          this.dynamicColumns = []
+          this.selectedColumns = []
+        } finally {
+          this.loading = false
         }
       },
 
@@ -981,6 +1032,21 @@
           ...formJson,
           widgetList: formJson.widgetList.filter((widget) => widget.type !== 'm-picture-upload')
         }
+      },
+
+      /** 获取表单控件值 */
+      getFormWidgetValue(row, prop) {
+        // 检查行数据是否存在
+        if (!row) return '-'
+
+        // 检查formWidgetList是否存在
+        if (!row.formWidgetList || !Array.isArray(row.formWidgetList)) return '-'
+
+        // 查找匹配prop的控件
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+
+        // 如果找到控件并且有值，返回值，否则返回'-'
+        return widget && widget.value !== null && widget.value !== undefined ? widget.value : '-'
       }
     }
   }
