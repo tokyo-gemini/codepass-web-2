@@ -90,7 +90,9 @@
         const option = {
           title: {
             text:
-              this.horizontalSpecialType === 'visit' ? '历史日常巡视完成率' : '历史特殊巡视完成率'
+              this.horizontalSpecialType === 'inspection'
+                ? '历史日常巡视完成率'
+                : '历史特殊巡视完成率'
           },
           tooltip: {
             trigger: 'axis',

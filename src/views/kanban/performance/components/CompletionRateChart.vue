@@ -77,7 +77,7 @@
 
         const option = {
           title: {
-            text: this.specialType === 'visit' ? '近7日日常巡视完成率' : '近7日特殊巡视完成率'
+            text: this.specialType === 'inspection' ? '近7日日常巡视完成率' : '近7日特殊巡视完成率'
           },
           tooltip: {
             trigger: 'axis',
