@@ -68,7 +68,11 @@
     <!-- 分页区域 -->
     <div class="mt-4 flex justify-between items-center">
       <div class="text-sm text-gray-500">
-        已选择 <span class="text-blue-600 font-medium">{{ selectedCount }}</span> 项
+        已选择
+        <span class="text-blue-600 font-medium">{{
+          isSelectAll === 1 ? total : selectedCount
+        }}</span>
+        项
         <span v-if="isSelectAll === 1" class="ml-2">(已全选)</span>
       </div>
       <pagination
@@ -146,8 +150,11 @@
       },
       value: {
         handler(val) {
-          this.selectedCount = val?.length || 0
-          this.$emit('update:selectedCount', this.selectedCount)
+          // 只在非全选模式下更新 selectedCount
+          if (this.isSelectAll !== 1) {
+            this.selectedCount = val?.length || 0
+            this.$emit('update:selectedCount', this.selectedCount)
+          }
         },
         immediate: true
       }
