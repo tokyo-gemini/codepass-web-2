@@ -1017,12 +1017,28 @@
         // 如果是通过上传文件方式
         if (this.uploadFile && this.tempTowerUserList.length > 0) {
           console.log('确认通过文件上传选择的数据:', this.tempTowerUserList.length, '条')
-          // 将解析后的数据更新到formData
-          this.formData.towerUserList = [...this.tempTowerUserList]
-          this.selectedCount = this.tempTowerUserList.length
+          // 将解析后的数据更新到formData，确保数据格式统一
+          this.formData.towerUserList = this.tempTowerUserList.map((item) => ({
+            ...item,
+            customName: item.customName || item.consName || '未知客户',
+            customId: item.customId || item.consNo,
+            towerId: item.towerId || item.tgNo,
+            towerName: item.towerName || item.tgName,
+            areaName: item.areaName || item.orgName,
+            powerName: item.powerName || item.orgName,
+            userName: item.userName || item.gridName,
+            userId: item.userId || item.gridNo,
+            visit: item.visit || '未走访'
+          }))
+          this.selectedCount = this.formData.towerUserList.length
           this.formData.isSelectAll = 0
           this.systemDialogVisible = false
-          this.$message.success(`已选择${this.tempTowerUserList.length}项对象`)
+          this.$message.success(`已选择${this.formData.towerUserList.length}项对象`)
+          console.log(
+            '文件上传数据已确认，formData.towerUserList:',
+            this.formData.towerUserList.length,
+            '条'
+          )
           return
         }
 
@@ -1129,10 +1145,9 @@
           }
 
           submitData.isSelectAll = this.formData.isSelectAll
+          // 修复：上传文件时也应该保留 towerUserList 数据
           submitData.towerUserList =
-            this.formData.isSelectAll === 1 || this.uploadFile
-              ? []
-              : [...this.formData.towerUserList] // 确保包含最新勾选的数据
+            this.formData.isSelectAll === 1 ? [] : [...this.formData.towerUserList] // 确保包含最新勾选的数据
           submitData.towerIdList = this.formData.towerIdList
 
           if (this.formData.isSelectAll === 1) {
@@ -1148,12 +1163,20 @@
           if (this.uploadFile) {
             formData.append('file', this.uploadFile)
             submitData.isSelectAll = 0
-            submitData.towerUserList = []
+            // 修复：保留解析后的数据，不清空 towerUserList
+            submitData.towerUserList = this.formData.towerUserList || []
             delete submitData.total
             delete submitData.powerIdList
             delete submitData.towerIdList
             delete submitData.deptIdList
             // 保留userId参数，不删除
+            console.log('上传文件模式 - towerUserList数据:', submitData.towerUserList.length, '条')
+
+            // 验证上传文件模式下的数据完整性
+            if (submitData.towerUserList.length === 0) {
+              this.$message.warning('上传文件解析的数据为空，请检查文件内容或重新上传')
+              return false
+            }
           }
 
           console.log('最终提交数据:', submitData)

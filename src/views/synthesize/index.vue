@@ -226,7 +226,23 @@
             </div>
           </template>
           <template slot-scope="scope">
-            {{ getFormWidgetValue(scope.row, col.prop) }}
+            <!-- 判断是否为图片类型数据 -->
+            <div v-if="isImageColumn(scope.row, col.prop)">
+              <el-image
+                v-if="getImageList(scope.row, col.prop).length > 0"
+                :src="getFirstImageUrl(scope.row, col.prop)"
+                fit="cover"
+                class="table-image"
+                @click="openImagePreview(scope.row, col.prop)"
+              >
+                <div slot="error" class="image-slot">
+                  <i class="el-icon-picture-outline"></i>
+                </div>
+              </el-image>
+              <span v-else>-</span>
+            </div>
+            <!-- 普通文本数据 -->
+            <span v-else>{{ getFormWidgetValue(scope.row, col.prop) }}</span>
           </template>
         </el-table-column>
 
@@ -348,7 +364,7 @@
             <el-image
               v-for="(img, index) in imageList"
               :key="index"
-              :src="baseURL + img.url"
+              :src="getSecureImageUrl(img.url)"
               :preview-src-list="previewList"
               fit="cover"
               class="preview-image"
@@ -369,6 +385,74 @@
           ref="vmFormRef"
         >
         </vm-form-render>
+      </el-dialog>
+
+      <!-- 图片预览弹窗 -->
+      <el-dialog
+        title="图片预览"
+        :visible.sync="imagePreviewVisible"
+        width="90%"
+        :fullscreen="false"
+        append-to-body
+        :modal-append-to-body="false"
+        :close-on-click-modal="false"
+        custom-class="image-preview-dialog"
+        @close="closeImagePreview"
+      >
+        <div v-if="currentImageList.length > 0" class="image-preview-container">
+          <div class="image-container">
+            <el-image
+              :src="currentImageList[currentImageIndex].url"
+              fit="contain"
+              class="preview-main-image"
+            >
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+                <p>图片加载失败</p>
+              </div>
+            </el-image>
+          </div>
+
+          <!-- 图片导航 -->
+          <div v-if="currentImageList.length > 1" class="image-navigation">
+            <el-button
+              type="primary"
+              icon="el-icon-arrow-left"
+              :disabled="currentImageIndex === 0"
+              @click="prevImage"
+            >
+              上一张
+            </el-button>
+            <span class="image-counter">
+              {{ currentImageIndex + 1 }} / {{ currentImageList.length }}
+            </span>
+            <el-button
+              type="primary"
+              icon="el-icon-arrow-right"
+              :disabled="currentImageIndex === currentImageList.length - 1"
+              @click="nextImage"
+            >
+              下一张
+            </el-button>
+          </div>
+
+          <!-- 缩略图列表 -->
+          <div v-if="currentImageList.length > 1" class="thumbnail-list">
+            <el-image
+              v-for="(img, index) in currentImageList"
+              :key="index"
+              :src="img.url"
+              fit="cover"
+              class="thumbnail-image"
+              :class="{ active: index === currentImageIndex }"
+              @click="currentImageIndex = index"
+            >
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+              </div>
+            </el-image>
+          </div>
+        </div>
       </el-dialog>
     </template>
   </div>
@@ -462,7 +546,11 @@
         },
         imageList: [], // 添加图片列表
         previewList: [], // 添加预览列表
-        baseURL: process.env.VUE_APP_BASE_API // 添加基础URL
+        baseURL: process.env.VUE_APP_BASE_API, // 添加基础URL
+        // 图片预览相关
+        imagePreviewVisible: false, // 图片预览弹窗显示状态
+        currentImageList: [], // 当前预览的图片列表
+        currentImageIndex: 0 // 当前预览的图片索引
       }
     },
     async created() {
@@ -676,7 +764,14 @@
             const pictureWidget = widgetList.find((widget) => widget.type === 'm-picture-upload')
             if (pictureWidget) {
               this.imageList = formData[pictureWidget.id] || []
-              this.previewList = this.imageList.map((img) => this.baseURL + img.url)
+              this.previewList = this.imageList.map((img) => {
+                let imageUrl = img.url.startsWith('http') ? img.url : this.baseURL + img.url
+                // 确保使用HTTPS协议，避免混合内容问题
+                if (imageUrl.startsWith('http://')) {
+                  imageUrl = imageUrl.replace('http://', 'https://')
+                }
+                return imageUrl
+              })
             } else {
               this.imageList = []
               this.previewList = []
@@ -1052,6 +1147,117 @@
 
         // 如果找到控件并且有值，返回值，否则返回'-'
         return widget && widget.value !== null && widget.value !== undefined ? widget.value : '-'
+      },
+
+      /** 判断是否为图片列 */
+      isImageColumn(row, prop) {
+        if (!row || !row.formWidgetList || !Array.isArray(row.formWidgetList)) return false
+
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+        if (!widget || !widget.value) return false
+
+        // 尝试解析值，判断是否为图片数组格式
+        try {
+          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
+          return Array.isArray(value) && value.length > 0 && value[0].url
+        } catch (error) {
+          return false
+        }
+      },
+
+      /** 获取图片列表 */
+      getImageList(row, prop) {
+        if (!this.isImageColumn(row, prop)) return []
+
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+        try {
+          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
+          return Array.isArray(value) ? value : []
+        } catch (error) {
+          return []
+        }
+      },
+
+      /** 获取第一张图片的URL */
+      getFirstImageUrl(row, prop) {
+        const imageList = this.getImageList(row, prop)
+        if (imageList.length === 0) return ''
+
+        const firstImage = imageList[0]
+        let imageUrl = ''
+
+        // 如果URL已经是完整的HTTP地址，直接使用，否则拼接baseURL
+        if (firstImage.url.startsWith('http')) {
+          imageUrl = firstImage.url
+        } else {
+          imageUrl = this.baseURL + firstImage.url
+        }
+
+        // 确保使用HTTPS协议，避免混合内容问题
+        if (imageUrl.startsWith('http://')) {
+          imageUrl = imageUrl.replace('http://', 'https://')
+        }
+
+        return imageUrl
+      },
+
+      /** 打开图片预览 */
+      openImagePreview(row, prop) {
+        const imageList = this.getImageList(row, prop)
+        if (imageList.length === 0) return
+
+        // 处理图片URL，确保是完整的地址并使用HTTPS
+        this.currentImageList = imageList.map((img) => {
+          let imageUrl = img.url.startsWith('http') ? img.url : this.baseURL + img.url
+
+          // 确保使用HTTPS协议，避免混合内容问题
+          if (imageUrl.startsWith('http://')) {
+            imageUrl = imageUrl.replace('http://', 'https://')
+          }
+
+          return {
+            ...img,
+            url: imageUrl
+          }
+        })
+
+        this.currentImageIndex = 0
+        this.imagePreviewVisible = true
+      },
+
+      /** 关闭图片预览 */
+      closeImagePreview() {
+        this.imagePreviewVisible = false
+        this.currentImageList = []
+        this.currentImageIndex = 0
+      },
+
+      /** 上一张图片 */
+      prevImage() {
+        if (this.currentImageIndex > 0) {
+          this.currentImageIndex--
+        }
+      },
+
+      /** 下一张图片 */
+      nextImage() {
+        if (this.currentImageIndex < this.currentImageList.length - 1) {
+          this.currentImageIndex++
+        }
+      },
+
+      /** 获取安全的图片URL（HTTPS） */
+      getSecureImageUrl(url) {
+        if (!url) return ''
+
+        let imageUrl = url.startsWith('http') ? url : this.baseURL + url
+
+        // 确保使用HTTPS协议，避免混合内容问题
+        if (imageUrl.startsWith('http://')) {
+          imageUrl = imageUrl.replace('http://', 'https://')
+        }
+
+        return imageUrl
       }
     }
   }
@@ -1091,6 +1297,106 @@
       color: #909399;
       font-size: 30px;
     }
+  }
+
+  /* 表格中的图片样式 */
+  .table-image {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    object-fit: cover !important; /* 确保图片充满固定容器 */
+  }
+
+  /* 图片预览弹窗样式 */
+  .image-preview-dialog {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .image-preview-dialog .el-dialog__body {
+    flex: 1;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .image-preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: calc(90vh - 150px);
+    overflow: hidden;
+  }
+
+  /* 修改大图预览容器样式 */
+  .image-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    background: #000;
+    overflow: hidden;
+    max-height: calc(90vh - 300px); /* 限制最大高度 */
+  }
+
+  /* 修改预览大图样式，确保完整显示 */
+  .preview-main-image {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+
+  .preview-main-image img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain !important; /* 确保图片完整显示 */
+  }
+
+  /* 修改缩略图列表样式 */
+  .thumbnail-list {
+    padding: 10px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  /* 修改缩略图样式，使用固定尺寸且保持比例 */
+  .thumbnail-image {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    object-fit: cover !important; /* 确保图片充满固定容器 */
+  }
+
+  /* 全局样式 */
+  .el-image {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 根据不同场景设置图片展示方式 */
+  .el-image.preview-main-image .el-image__inner {
+    object-fit: contain !important; /* 预览大图完整显示 */
+  }
+
+  .el-image.thumbnail-image .el-image__inner,
+  .el-image.table-image .el-image__inner {
+    object-fit: cover !important; /* 缩略图和列表图填充固定容器 */
+    width: 100% !important;
+    height: 100% !important;
   }
 </style>
 
