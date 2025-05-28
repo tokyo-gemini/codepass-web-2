@@ -8,7 +8,7 @@
   >
     <template #plan-content>
       <div class="rounded bg-white shadow w-full p-4 min-h-[650px]">
-        <div class="flex">
+        <div class="flex gap-4">
           <!-- 供电所单选 -->
           <el-form-item label="供电所" required>
             <div class="flex-1">
@@ -23,6 +23,18 @@
                 @input="handleDeptChange"
               />
             </div>
+          </el-form-item>
+
+          <!-- 添加所属台区筛选输入框 -->
+          <el-form-item label="所属台区">
+            <el-input
+              v-model="towerNameFilter"
+              placeholder="输入台区名称筛选"
+              clearable
+              @input="handleTowerNameChange"
+              @clear="handleTowerNameClear"
+              style="width: 220px"
+            />
           </el-form-item>
         </div>
 
@@ -236,6 +248,7 @@
       return {
         powerSupplyTree: [], // 供电所树形数据
         selectedDept: null, // 选中的供电所
+        towerNameFilter: '', // 添加台区名称筛选
         formData: {
           towerUserList: [],
           powerSupply: null,
@@ -293,15 +306,29 @@
         }
       },
 
+      // 处理台区名称筛选变化
+      handleTowerNameChange() {
+        // 清除之前的定时器
+        if (this.searchTimer) {
+          clearTimeout(this.searchTimer)
+        }
+
+        // 设置防抖延迟
+        this.searchTimer = setTimeout(() => {
+          this.pagination.pageNum = 1 // 重置页码
+          this.getAreaList() // 重新获取数据
+        }, 500) // 500ms防抖
+      },
+
+      // 处理台区名称筛选清空
+      handleTowerNameClear() {
+        this.towerNameFilter = ''
+        this.pagination.pageNum = 1 // 重置页码
+        this.getAreaList() // 重新获取数据
+      },
+
       // 处理供电所选择变化
       async handleDeptChange(value) {
-        console.log(
-          'DailyInspectionPlan - handleDeptChange被调用，初始化状态:',
-          this.isInitializing,
-          '值:',
-          value
-        )
-
         // 如果正在初始化，直接返回，不执行任何操作
         if (this.isInitializing) {
           console.log('DailyInspectionPlan - 正在初始化中，跳过handleDeptChange中的请求操作')
@@ -317,6 +344,7 @@
           return
         }
 
+        this.towerNameFilter = '' // 清空台区筛选
         this.formData.powerSupply = value
         this.$emit('update:power-depts', value)
 
@@ -324,7 +352,7 @@
         await this.getAreaList()
       },
 
-      // 获取台区列表
+      // 获取台区列表 - 修改添加towerName参数
       async getAreaList() {
         if (!this.selectedDept) return
 
@@ -333,7 +361,8 @@
           const params = {
             deptIdList: Array.isArray(this.selectedDept) ? this.selectedDept[0] : this.selectedDept,
             pageNum: this.pagination.pageNum,
-            pageSize: this.pagination.pageSize
+            pageSize: this.pagination.pageSize,
+            towerName: this.towerNameFilter || '' // 添加台区名称筛选参数
           }
 
           // 编辑时添加planId
@@ -391,6 +420,15 @@
       handlePlanDataLoaded(data) {
         // 设置初始化标志位
         this.isInitializing = true
+
+        // 清空台区筛选
+        this.towerNameFilter = ''
+
+        // 加载部门数据
+        if (data.department) {
+          this.selectedDepartment = data.department
+          this.formData.department = data.department
+        }
 
         if (data.powerIdList || data.powerIdList === 0) {
           this.formData.powerSupply = data.powerIdList
@@ -500,6 +538,7 @@
 
       handleReset() {
         this.selectedDept = null
+        this.towerNameFilter = '' // 重置台区筛选
         this.formData = {
           towerUserList: [],
           powerSupply: null,
@@ -546,6 +585,11 @@
         if (!submitData.formDataId) {
           this.$message.warning('表单ID不能为空')
           return false
+        }
+
+        // 添加部门字段
+        if (this.selectedDepartment) {
+          submitData.department = this.selectedDepartment
         }
 
         // 修改这里：将 powerIdList 和 deptIdList 都转换为字符串数组格式
@@ -676,6 +720,12 @@
           this.selectedMap = {} // 清空全局选中记录
           this.$refs.table.clearSelection()
         }
+      }
+    },
+    beforeDestroy() {
+      // 清理定时器
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
       }
     }
   }

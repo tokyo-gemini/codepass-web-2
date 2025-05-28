@@ -12,6 +12,19 @@
         />
       </div>
 
+      <!-- 所属台区筛选 -->
+      <div class="min-w-[180px]">
+        <el-input
+          v-model="towerNameFilter"
+          placeholder="输入台区名称筛选"
+          clearable
+          @input="handleTowerNameChange"
+          @clear="handleTowerNameClear"
+        >
+          <template #prepend>台区名称</template>
+        </el-input>
+      </div>
+
       <!-- 全选控制 - 添加禁用条件 -->
       <div class="flex items-center ml-auto">
         <el-checkbox
@@ -134,7 +147,9 @@
         currentPageItems: [],
         // 添加本地状态跟踪 powerDepts
         localPowerDepts: [], // 存储ID
-        selectedDeptLabels: [] // 添加此行存储显示用的标签
+        selectedDeptLabels: [], // 添加此行存储显示用的标签
+        towerNameFilter: '', // 台区名称筛选
+        searchTimer: null // 搜索防抖定时器
       }
     },
     watch: {
@@ -162,7 +177,12 @@
     created() {
       this.getPowerSupplyTree()
     },
-
+    beforeDestroy() {
+      // 清理搜索定时器
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
+      }
+    },
     methods: {
       // 刷新选择状态 - 使其成为独立方法并修复实现
       refreshSelection() {
@@ -211,7 +231,8 @@
               // 修改这里：使用localPowerDepts
               userId: this.localPowerDepts.toString(), // 供电所ID
               towerIdList: '', // 不再传递台区ID
-              customName: '' // 不再传递搜索关键字
+              customName: '', // 不再传递搜索关键字
+              towerName: this.towerNameFilter || '' // 添加台区名称筛选参数
             }
 
             const customerRes = await asyncGetCustomerList(customerParams)
@@ -234,7 +255,7 @@
               // 修改这里：使用localPowerDepts
               deptIdList: this.localPowerDepts.toString(),
               planId: '',
-              towerName: '' // 不再传递台区名称搜索
+              towerName: this.towerNameFilter || '' // 添加台区名称筛选参数
             }
 
             const res = await asyncGetAreaList(params)
@@ -335,10 +356,11 @@
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)
         }
-      },
-
-      // 处理供电所变化 - 新增方法获取和显示供电所名称
+      }, // 处理供电所变化 - 新增方法获取和显示供电所名称
       handlePowerSupplyChangeWithLabel(nodes) {
+        // 重置台区筛选
+        this.towerNameFilter = ''
+
         if (nodes?.length) {
           // 获取选中节点的id和名称
           const ids = nodes.map((node) => node.id)
@@ -382,6 +404,26 @@
           // 只允许最底层的人员节点可选
           isDisabled: !isPersonNode
         }
+      },
+
+      // 处理台区名称筛选输入变化
+      handleTowerNameChange() {
+        // 清除之前的搜索定时器
+        if (this.searchTimer) {
+          clearTimeout(this.searchTimer)
+        }
+        // 设置防抖延迟搜索
+        this.searchTimer = setTimeout(() => {
+          this.queryParams.pageNum = 1 // 重置页码
+          this.getObjectTable()
+        }, 500) // 500ms 防抖
+      },
+
+      // 处理台区名称筛选清空
+      handleTowerNameClear() {
+        this.towerNameFilter = ''
+        this.queryParams.pageNum = 1 // 重置页码
+        this.getObjectTable()
       }
     }
   }

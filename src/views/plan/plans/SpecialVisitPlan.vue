@@ -8,7 +8,7 @@
   >
     <template #plan-content>
       <div class="rounded bg-white shadow w-full p-4 min-h-[650px]">
-        <div class="flex">
+        <div class="flex gap-4">
           <!-- 供电所单选 -->
           <el-form-item label="供电所" required>
             <div class="flex-1">
@@ -23,6 +23,18 @@
                 @input="handleDeptChange"
               />
             </div>
+          </el-form-item>
+
+          <!-- 添加所属台区筛选输入框 -->
+          <el-form-item label="所属台区">
+            <el-input
+              v-model="towerNameFilter"
+              placeholder="输入台区名称筛选"
+              clearable
+              @input="handleTowerNameChange"
+              @clear="handleTowerNameClear"
+              style="width: 220px"
+            />
           </el-form-item>
 
           <!-- 网格员选择 - 添加禁用逻辑 -->
@@ -186,6 +198,7 @@
       return {
         powerSupplyTree: [], // 供电所树形数据
         selectedDept: null, // 选中的供电所
+        towerNameFilter: '', // 添加台区名称筛选
         userList: [], // 网格员列表
         selectedUser: null, // 选中的网格员
         userListLoading: false, // 网格员列表加载状态
@@ -194,6 +207,7 @@
           powerSupply: null,
           isSelectAll: 0 // 添加全选状态
         },
+        searchTimer: null, // 搜索防抖定时器
         tableLoading: false,
         tableData: [],
         pagination: {
@@ -241,6 +255,27 @@
         }
       },
 
+      // 处理台区名称筛选变化
+      handleTowerNameChange() {
+        // 清除之前的定时器
+        if (this.searchTimer) {
+          clearTimeout(this.searchTimer)
+        }
+
+        // 设置防抖延迟
+        this.searchTimer = setTimeout(() => {
+          this.pagination.pageNum = 1 // 重置页码
+          this.getWorkOrderList() // 重新获取数据
+        }, 500) // 500ms防抖
+      },
+
+      // 处理台区名称筛选清空
+      handleTowerNameClear() {
+        this.towerNameFilter = ''
+        this.pagination.pageNum = 1 // 重置页码
+        this.getWorkOrderList() // 重新获取数据
+      },
+
       // 处理供电所选择变化
       async handleDeptChange(value) {
         // 处理清空供电所的情况
@@ -253,6 +288,7 @@
           return
         }
 
+        this.towerNameFilter = '' // 清空台区筛选
         this.selectedUser = null
         this.userList = []
         this.selectedCount = 0
@@ -288,7 +324,8 @@
           const params = {
             deptIdList: Array.isArray(this.selectedDept) ? this.selectedDept[0] : this.selectedDept,
             pageNum: this.pagination.pageNum,
-            pageSize: this.pagination.pageSize
+            pageSize: this.pagination.pageSize,
+            towerName: this.towerNameFilter || '' // 添加台区名称筛选参数
           }
 
           if (this.$route.params.id) {
@@ -387,6 +424,15 @@
         console.log('SpecialVisitPlan - 开始处理计划数据')
         this.isInitializing = true
 
+        // 清空台区筛选
+        this.towerNameFilter = ''
+
+        // 加载部门数据
+        if (data.department) {
+          this.selectedDepartment = data.department
+          this.formData.department = data.department
+        }
+
         if (data.powerIdList || data.powerIdList === 0) {
           this.formData.powerSupply = data.powerIdList
           this.formData.towerUserList = data.towerUserList || [] // 原始选中列表
@@ -467,6 +513,7 @@
       handleReset() {
         this.selectedDept = null
         this.selectedUser = null
+        this.towerNameFilter = '' // 重置台区筛选
         this.userList = []
         this.formData = {
           towerUserList: [],
@@ -505,6 +552,11 @@
         submitData.formDataId = this.$refs.basePlan.formBasicInfo.formId
         submitData.isSelectAll = this.formData.isSelectAll || 0
 
+        // 添加部门字段
+        if (this.selectedDepartment) {
+          submitData.department = this.selectedDepartment
+        }
+
         const deptId = Array.isArray(this.selectedDept)
           ? this.selectedDept[0].toString()
           : this.selectedDept.toString()
@@ -540,6 +592,12 @@
           label: node.label,
           children: node.children
         }
+      }
+    },
+    beforeDestroy() {
+      // 清理定时器
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
       }
     }
   }
