@@ -1,8 +1,7 @@
 <template>
   <div class="app-container">
     <el-tabs v-model="queryParams.type" @tab-click="handleTypeChange">
-      <!-- <el-tab-pane label="自主填报" name="zz"></el-tab-pane>
-      <el-tab-pane label="无单查询" name="wd"></el-tab-pane> -->
+      <!-- 移除永远不会显示的标签页注释 -->
       <el-tab-pane label="走访查询" name="zf"></el-tab-pane>
       <el-tab-pane label="巡视查询" name="xs"></el-tab-pane>
     </el-tabs>
@@ -216,6 +215,7 @@
           :key="col.prop"
           align="center"
           class-name="dynamic-column"
+          :width="getColumnWidth(col.prop, col.label)"
         >
           <template slot="header">
             <div class="dynamic-column-header">
@@ -240,6 +240,19 @@
                 </div>
               </el-image>
               <span v-else>-</span>
+            </div>
+            <!-- 判断是否为七必访字段 - 直接展示选项和勾选状态 -->
+            <div v-else-if="isSevenMustVisitField(col.prop)" class="seven-must-visit-cell">
+              <div class="seven-must-visit-list-direct">
+                <div
+                  v-for="(item, index) in getSevenMustVisitLabels(scope.row, col.prop)"
+                  :key="index"
+                  class="seven-must-visit-item-direct"
+                >
+                  <i class="el-icon-check seven-must-visit-checkbox"></i>
+                  <span class="seven-must-visit-label">{{ item }}</span>
+                </div>
+              </div>
             </div>
             <!-- 普通文本数据 -->
             <span v-else>{{ getFormWidgetValue(scope.row, col.prop) }}</span>
@@ -482,7 +495,7 @@
     data() {
       return {
         // 激活的标签页
-        activeTab: 'visit',
+        // activeTab: 'visit', // 已有queryParams.type，不需要再定义activeTab
         // 遮罩层
         loading: true,
         // 显示搜索条件
@@ -550,7 +563,18 @@
         // 图片预览相关
         imagePreviewVisible: false, // 图片预览弹窗显示状态
         currentImageList: [], // 当前预览的图片列表
-        currentImageIndex: 0 // 当前预览的图片索引
+        currentImageIndex: 0, // 当前预览的图片索引
+        // 移除重复的七必访选项映射，只在一个地方维护
+        sevenMustVisitKeywords: [
+          '返乡人员',
+          '低电压',
+          '重过载',
+          '95598',
+          '12398',
+          '12345',
+          '千伏安',
+          '台区用户'
+        ]
       }
     },
     async created() {
@@ -1097,6 +1121,229 @@
           console.error('恢复列设置失败:', error)
         }
       },
+      /** 获取列宽度 */
+      getColumnWidth(prop, label) {
+        // 根据字段类型设置宽度
+        if (this.isSevenMustVisitField(prop)) {
+          return '300' // 七必访字段增加宽度
+        } else if (label && label.length > 10) {
+          return '200' // 标签文字较长的列增加宽度
+        } else {
+          return '160' // 默认宽度
+        }
+      },
+
+      /** 判断是否为图片列 */
+      isImageColumn(row, prop) {
+        if (!row || !row.formWidgetList || !Array.isArray(row.formWidgetList)) return false
+
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+        if (!widget || !widget.value) return false
+
+        // 尝试解析值，判断是否为图片数组格式
+        try {
+          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
+          return Array.isArray(value) && value.length > 0 && value[0].url
+        } catch (error) {
+          return false
+        }
+      },
+
+      /** 获取图片列表 */
+      getImageList(row, prop) {
+        if (!this.isImageColumn(row, prop)) return []
+
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+        try {
+          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
+          return Array.isArray(value) ? value : []
+        } catch (error) {
+          return []
+        }
+      },
+
+      /** 获取第一张图片的URL - 使用统一处理函数 */
+      getFirstImageUrl(row, prop) {
+        const imageList = this.getImageList(row, prop)
+        if (imageList.length === 0) return ''
+
+        return this.processImageUrl(imageList[0].url)
+      },
+
+      /** 统一处理图片URL的函数 */
+      processImageUrl(url) {
+        if (!url) return ''
+
+        // 如果URL已经是完整的HTTP地址，直接使用，否则拼接baseURL
+        let imageUrl = url.startsWith('http') ? url : this.baseURL + url
+
+        // 确保使用HTTPS协议，避免混合内容问题
+        if (imageUrl.startsWith('http://')) {
+          imageUrl = imageUrl.replace('http://', 'https://')
+        }
+
+        return imageUrl
+      },
+
+      /** 打开图片预览 - 使用统一处理函数 */
+      openImagePreview(row, prop) {
+        const imageList = this.getImageList(row, prop)
+        if (imageList.length === 0) return
+
+        // 处理图片URL，确保是完整的地址并使用HTTPS
+        this.currentImageList = imageList.map((img) => ({
+          ...img,
+          url: this.processImageUrl(img.url)
+        }))
+
+        this.currentImageIndex = 0
+        this.imagePreviewVisible = true
+      },
+
+      /** 关闭图片预览 */
+      closeImagePreview() {
+        this.imagePreviewVisible = false
+        this.currentImageList = []
+        this.currentImageIndex = 0
+      },
+
+      /** 上一张图片 */
+      prevImage() {
+        if (this.currentImageIndex > 0) {
+          this.currentImageIndex--
+        }
+      },
+
+      /** 下一张图片 */
+      nextImage() {
+        if (this.currentImageIndex < this.currentImageList.length - 1) {
+          this.currentImageIndex++
+        }
+      },
+
+      /** 获取安全的图片URL（HTTPS） */
+      getSecureImageUrl(url) {
+        return this.processImageUrl(url)
+      },
+
+      /** 判断是否为七必访字段 */
+      isSevenMustVisitField(prop) {
+        if (!prop || !this.visitList.length) return false
+
+        // 遍历所有行找到包含此prop的行
+        for (const row of this.visitList) {
+          // 确保行数据包含必要的信息
+          if (!row.formWidgetList || !Array.isArray(row.formWidgetList)) continue
+
+          // 在formWidgetList中查找匹配的控件
+          const widget = row.formWidgetList.find((item) => item.prop === prop)
+          if (!widget) continue
+
+          // 1. 通过标签名直接判断
+          if (widget.label === '七必访') return true
+
+          // 2. 如果是多选框控件，尝试进一步判断
+          if (widget.type === 'm-checkbox') {
+            // 尝试从widgetList中获取控件配置
+            const widgetConfig = this.getWidgetConfig(row, prop)
+            if (widgetConfig) {
+              // 判断是否包含典型的七必访选项文本
+              const hasSevenMustVisitKeywords = this.hasSevenMustVisitKeywords(widgetConfig)
+              if (hasSevenMustVisitKeywords) return true
+            }
+          }
+        }
+
+        return false
+      },
+
+      /**
+       * 获取七必访字段值对应的文本标签列表 - 重构版本使用通用映射方法
+       */
+      getSevenMustVisitLabels(row, prop) {
+        if (!row || !row.formWidgetList) return []
+
+        // 查找匹配prop的表单控件
+        const widget = row.formWidgetList.find((item) => item.prop === prop)
+        if (!widget || !widget.value) return []
+
+        // 获取控件选项配置
+        const widgetConfig = this.getWidgetConfig(row, prop)
+        if (!widgetConfig || !widgetConfig.options || !widgetConfig.options.optionItems) {
+          return []
+        }
+
+        try {
+          // 解析选项值
+          let selectedValues = widget.value
+          if (typeof selectedValues === 'string') {
+            if (selectedValues.startsWith('[') && selectedValues.endsWith(']')) {
+              selectedValues = JSON.parse(selectedValues)
+            } else {
+              selectedValues = selectedValues.split(',').map((v) => Number(v.trim()))
+            }
+          }
+
+          // 确保是数组
+          if (!Array.isArray(selectedValues)) {
+            selectedValues = [selectedValues]
+          }
+
+          // 创建值到标签的映射
+          const optionMap = widgetConfig.options.optionItems.reduce((map, option) => {
+            map[option.value] = option.label
+            return map
+          }, {})
+
+          // 映射每个值到对应的标签，保持原有顺序
+          return selectedValues.map((value) => optionMap[value] || `未知选项(${value})`)
+        } catch (error) {
+          console.error('处理七必访字段值失败:', error, widget.value)
+          return []
+        }
+      },
+
+      /**
+       * 从行数据中获取控件配置信息
+       */
+      getWidgetConfig(row, prop) {
+        try {
+          // 获取widgetList的字符串并解析
+          if (!row.widgetList) return null
+
+          let widgetList
+          if (typeof row.widgetList === 'string') {
+            widgetList = JSON.parse(row.widgetList)
+          } else if (Array.isArray(row.widgetList)) {
+            widgetList = row.widgetList
+          } else {
+            return null
+          }
+
+          // 查找匹配prop的控件配置
+          return widgetList.find((item) => item.id === prop)
+        } catch (error) {
+          console.error('获取控件配置失败:', error)
+          return null
+        }
+      },
+
+      /**
+       * 判断控件配置是否包含七必访相关关键词
+       */
+      hasSevenMustVisitKeywords(widgetConfig) {
+        if (!widgetConfig || !widgetConfig.options || !widgetConfig.options.optionItems) {
+          return false
+        }
+
+        // 使用data中定义的关键词列表
+        return widgetConfig.options.optionItems.some((option) =>
+          this.sevenMustVisitKeywords.some(
+            (keyword) => option.label && option.label.includes(keyword)
+          )
+        )
+      },
+
       /** 获取表单状态类型 */
       getFormStatusType(status) {
         const statusMap = {
@@ -1134,7 +1381,7 @@
         }
       },
 
-      /** 获取表单控件值 */
+      /** 获取表单控件值 - 优化版本，支持所有类型的选项映射 */
       getFormWidgetValue(row, prop) {
         // 检查行数据是否存在
         if (!row) return '-'
@@ -1144,120 +1391,119 @@
 
         // 查找匹配prop的控件
         const widget = row.formWidgetList.find((item) => item.prop === prop)
+        if (!widget || widget.value === null || widget.value === undefined) return '-'
 
-        // 如果找到控件并且有值，返回值，否则返回'-'
-        return widget && widget.value !== null && widget.value !== undefined ? widget.value : '-'
-      },
+        // 获取控件配置信息
+        const widgetConfig = this.getWidgetConfig(row, prop)
 
-      /** 判断是否为图片列 */
-      isImageColumn(row, prop) {
-        if (!row || !row.formWidgetList || !Array.isArray(row.formWidgetList)) return false
-
-        const widget = row.formWidgetList.find((item) => item.prop === prop)
-        if (!widget || !widget.value) return false
-
-        // 尝试解析值，判断是否为图片数组格式
-        try {
-          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
-          return Array.isArray(value) && value.length > 0 && value[0].url
-        } catch (error) {
-          return false
+        // 如果没有找到控件配置或者没有选项配置，直接返回原始值
+        if (!widgetConfig || !widgetConfig.options || !widgetConfig.options.optionItems) {
+          return widget.value
         }
+
+        // 处理不同类型的控件值映射
+        return this.mapWidgetValueToLabel(
+          widget.value,
+          widgetConfig.options.optionItems,
+          widget.type
+        )
       },
 
-      /** 获取图片列表 */
-      getImageList(row, prop) {
-        if (!this.isImageColumn(row, prop)) return []
+      /**
+       * 将控件值映射为对应的标签文本
+       * @param {*} value - 控件的值
+       * @param {Array} optionItems - 选项配置数组
+       * @param {string} widgetType - 控件类型
+       * @returns {string} - 映射后的文本
+       */
+      mapWidgetValueToLabel(value, optionItems, widgetType) {
+        if (!optionItems || !Array.isArray(optionItems)) return value
 
-        const widget = row.formWidgetList.find((item) => item.prop === prop)
-        try {
-          const value = typeof widget.value === 'string' ? JSON.parse(widget.value) : widget.value
-          return Array.isArray(value) ? value : []
-        } catch (error) {
-          return []
-        }
-      },
+        // 创建值到标签的映射
+        const optionMap = optionItems.reduce((map, option) => {
+          map[option.value] = option.label
+          return map
+        }, {})
 
-      /** 获取第一张图片的URL */
-      getFirstImageUrl(row, prop) {
-        const imageList = this.getImageList(row, prop)
-        if (imageList.length === 0) return ''
+        // 根据控件类型处理不同的值格式
+        if (widgetType === 'm-checkbox') {
+          // 多选框：值可能是数组字符串或数组
+          let selectedValues = value
 
-        const firstImage = imageList[0]
-        let imageUrl = ''
+          try {
+            if (typeof selectedValues === 'string') {
+              if (selectedValues.startsWith('[') && selectedValues.endsWith(']')) {
+                selectedValues = JSON.parse(selectedValues)
+              } else {
+                selectedValues = selectedValues.split(',').map((v) => Number(v.trim()))
+              }
+            }
 
-        // 如果URL已经是完整的HTTP地址，直接使用，否则拼接baseURL
-        if (firstImage.url.startsWith('http')) {
-          imageUrl = firstImage.url
+            // 确保是数组
+            if (!Array.isArray(selectedValues)) {
+              selectedValues = [selectedValues]
+            }
+
+            // 映射每个值到对应的标签
+            const labels = selectedValues.map((val) => optionMap[val] || `未知选项(${val})`)
+            return labels.join('、')
+          } catch (error) {
+            console.error('解析多选框值失败:', error, value)
+            return value
+          }
+        } else if (widgetType === 'm-radio' || widgetType === 'm-select') {
+          // 单选框或下拉框：直接映射单个值
+          return optionMap[value] || value
         } else {
-          imageUrl = this.baseURL + firstImage.url
+          // 其他类型控件直接返回原值
+          return value
         }
-
-        // 确保使用HTTPS协议，避免混合内容问题
-        if (imageUrl.startsWith('http://')) {
-          imageUrl = imageUrl.replace('http://', 'https://')
-        }
-
-        return imageUrl
       },
 
-      /** 打开图片预览 */
-      openImagePreview(row, prop) {
-        const imageList = this.getImageList(row, prop)
-        if (imageList.length === 0) return
+      /** 判断是否为七必访字段 - 优化版本 */
+      isSevenMustVisitField(prop) {
+        if (!prop || !this.visitList.length) return false
 
-        // 处理图片URL，确保是完整的地址并使用HTTPS
-        this.currentImageList = imageList.map((img) => {
-          let imageUrl = img.url.startsWith('http') ? img.url : this.baseURL + img.url
+        // 遍历所有行找到包含此prop的行
+        for (const row of this.visitList) {
+          // 确保行数据包含必要的信息
+          if (!row.formWidgetList || !Array.isArray(row.formWidgetList)) continue
 
-          // 确保使用HTTPS协议，避免混合内容问题
-          if (imageUrl.startsWith('http://')) {
-            imageUrl = imageUrl.replace('http://', 'https://')
+          // 在formWidgetList中查找匹配的控件
+          const widget = row.formWidgetList.find((item) => item.prop === prop)
+          if (!widget) continue
+
+          // 1. 通过标签名直接判断
+          if (widget.label === '七必访') return true
+
+          // 2. 如果是多选框控件，尝试进一步判断
+          if (widget.type === 'm-checkbox') {
+            // 尝试从widgetList中获取控件配置
+            const widgetConfig = this.getWidgetConfig(row, prop)
+            if (widgetConfig) {
+              // 判断是否包含典型的七必访选项文本
+              const hasSevenMustVisitKeywords = this.hasSevenMustVisitKeywords(widgetConfig)
+              if (hasSevenMustVisitKeywords) return true
+            }
           }
-
-          return {
-            ...img,
-            url: imageUrl
-          }
-        })
-
-        this.currentImageIndex = 0
-        this.imagePreviewVisible = true
-      },
-
-      /** 关闭图片预览 */
-      closeImagePreview() {
-        this.imagePreviewVisible = false
-        this.currentImageList = []
-        this.currentImageIndex = 0
-      },
-
-      /** 上一张图片 */
-      prevImage() {
-        if (this.currentImageIndex > 0) {
-          this.currentImageIndex--
-        }
-      },
-
-      /** 下一张图片 */
-      nextImage() {
-        if (this.currentImageIndex < this.currentImageList.length - 1) {
-          this.currentImageIndex++
-        }
-      },
-
-      /** 获取安全的图片URL（HTTPS） */
-      getSecureImageUrl(url) {
-        if (!url) return ''
-
-        let imageUrl = url.startsWith('http') ? url : this.baseURL + url
-
-        // 确保使用HTTPS协议，避免混合内容问题
-        if (imageUrl.startsWith('http://')) {
-          imageUrl = imageUrl.replace('http://', 'https://')
         }
 
-        return imageUrl
+        return false
+      },
+
+      /**
+       * 获取七必访字段的摘要显示
+       * 保留此方法以兼容模板中的引用
+       */
+      getSevenMustVisitSummary(row, prop) {
+        const labels = this.getSevenMustVisitLabels(row, prop)
+        if (labels.length === 0) return '-'
+
+        if (labels.length <= 2) {
+          return labels.join('、')
+        } else {
+          return `已选择${labels.length}项`
+        }
       }
     }
   }
@@ -1397,6 +1643,60 @@
     object-fit: cover !important; /* 缩略图和列表图填充固定容器 */
     width: 100% !important;
     height: 100% !important;
+  }
+
+  /* 七必访字段样式 - 直接显示版本 */
+  .seven-must-visit-cell {
+    padding: 5px;
+    text-align: left;
+    min-width: 280px; /* 设置最小宽度 */
+  }
+
+  .seven-must-visit-list-direct {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0 5px;
+    width: 100%; /* 确保使用完整宽度 */
+  }
+
+  .seven-must-visit-item-direct {
+    display: flex;
+    align-items: flex-start;
+    padding: 3px 0;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 4px; /* 增加项目间间距 */
+    border-bottom: 1px dashed #ebeef5; /* 添加分隔线 */
+    padding-bottom: 4px;
+  }
+
+  .seven-must-visit-item-direct:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  /* 自定义表格样式 */
+  .dynamic-column .cell {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  /* 优化表格整体布局 */
+  :deep(.el-table) {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  :deep(.el-table__body) {
+    width: 100% !important;
+  }
+
+  :deep(.el-table__header) {
+    width: 100% !important;
+  }
+
+  :deep(.el-table__body td) {
+    padding: 8px 0;
   }
 </style>
 
