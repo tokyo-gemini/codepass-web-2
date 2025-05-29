@@ -1026,8 +1026,8 @@
             towerName: item.towerName || item.tgName,
             areaName: item.areaName || item.orgName,
             powerName: item.powerName || item.orgName,
-            userName: item.userName || item.gridName,
-            userId: item.userId || item.gridNo,
+            userName: item.userName || item.gridNo, // 修改：优先使用gridNo作为userName
+            userId: item.userId || item.gridName, // 使用gridName作为userId
             visit: item.visit || '未走访'
           }))
           this.selectedCount = this.formData.towerUserList.length
@@ -1283,8 +1283,8 @@
               towerName: item.tgName,
               areaName: item.orgName,
               powerName: item.orgName,
-              userName: item.gridName,
-              userId: item.gridNo,
+              userName: item.gridNo, // 修改：将网格员编号(gridNo)放入userName
+              userId: item.gridName, // 将网格员名称放入userId
               visit: '未走访'
             }))
 
