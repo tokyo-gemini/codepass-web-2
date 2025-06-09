@@ -55,8 +55,8 @@
               @keyup.enter.native="handleQuery"
             />
           </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
+          <el-form-item label="状态" prop="planStatus">
+            <el-select v-model="queryParams.planStatus" placeholder="请选择状态" clearable>
               <el-option
                 v-for="dict in dict.type.plan_status_option"
                 :key="dict.value"
@@ -83,11 +83,21 @@
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleGenerateQrcode">批量生成二维码</el-button>
+            <el-button type="warning" @click="handleExport">
+              <i class="el-icon-download"></i> 导出
+            </el-button>
           </el-form-item>
         </el-form>
       </div>
 
-      <el-table v-loading="loading" :data="planList">
+      <el-table
+        v-loading="loading"
+        :data="planList"
+        @selection-change="handleSelectionChange"
+        ref="planTable"
+      >
+        <!-- 添加row-key -->
+        <el-table-column type="selection" width="55" :reserve-selection="true" />
         <el-table-column label="计划名称" prop="planName" align="center" />
         <el-table-column label="类型" prop="planType" align="center">
           <template slot-scope="scope">
@@ -241,6 +251,7 @@
   import CustomSwitch from '@/components/CustomSwitch.vue'
   import DeptTreeselect from '@/components/DeptTreeselect' // 替换原来的 VisitTreeselect
   import { deptTreeSelect } from '@/api/system/user'
+  import { exportFile } from '@/utils/request'
 
   export default {
     name: 'PlanManagement',
@@ -262,7 +273,7 @@
           pageNum: 1,
           pageSize: 10,
           planName: undefined,
-          status: undefined,
+          planStatus: undefined,
           planType: undefined
         },
         planTypes: [
@@ -309,7 +320,10 @@
         qrcodeDialogVisible: false,
         selectedDeptId: null,
         powerSupplyTree: [],
-        generating: false
+        generating: false,
+        // 添加选中数据数组
+        selectedPlanIds: [], // 选中的planId数组
+        allSelectedPlans: new Map() // 用于存储所有页面的选中记录
       }
     },
     created() {
@@ -325,6 +339,19 @@
             if (response.code === 200) {
               this.planList = response.rows
               this.total = response.total
+
+              // 在数据加载完成后,恢复当前页的选中状态
+              this.$nextTick(() => {
+                const currentPage = this.queryParams.pageNum
+                const selectedRows = this.allSelectedPlans.get(currentPage) || []
+
+                // 恢复选中状态
+                this.planList.forEach((row) => {
+                  if (selectedRows.find((selected) => selected.planId === row.planId)) {
+                    this.$refs.planTable.toggleRowSelection(row, true)
+                  }
+                })
+              })
             } else {
               this.$message.error(response.msg || '获取计划列表失败')
             }
@@ -343,6 +370,13 @@
       resetQuery() {
         this.resetForm('queryForm')
         this.handleQuery()
+
+        // 清空选中记录
+        this.selectedPlanIds = []
+        this.allSelectedPlans.clear()
+        if (this.$refs.planTable) {
+          this.$refs.planTable.clearSelection()
+        }
       },
       /** 删除按钮操作 */
       handleDelete(row) {
@@ -502,6 +536,50 @@
             this.progressVisible = false
             this.generating = false
             this.$modal.msgError('二维码生成失败')
+          })
+      },
+      /** 处理表格多选 */
+      handleSelectionChange(selection) {
+        // 更新当前页面选中的记录
+        const currentPage = this.queryParams.pageNum
+        this.allSelectedPlans.set(currentPage, selection)
+
+        // 合并所有页面选中的planId
+        this.selectedPlanIds = Array.from(this.allSelectedPlans.values())
+          .flat()
+          .map((item) => item.planId)
+      },
+      // 处理导出
+      handleExport() {
+        // 构造导出参数
+        const params = {}
+
+        // 添加筛选参数
+        if (this.queryParams.planName) {
+          params.planName = this.queryParams.planName
+        }
+        if (this.queryParams.planStatus) {
+          params.planStatus = this.queryParams.planStatus
+        }
+        if (this.queryParams.planType) {
+          params.planType = this.queryParams.planType
+        }
+
+        // 获取所有页面选中的planId
+        if (this.selectedPlanIds.length > 0) {
+          params.planIdList = this.selectedPlanIds
+        }
+
+        // 调用导出接口
+        exportFile('/plannedManage/planManage/export', params, '计划管理列表.xlsx', {
+          method: 'get',
+          responseType: 'blob'
+        })
+          .then(() => {
+            this.$modal.msgSuccess('导出成功')
+          })
+          .catch(() => {
+            this.$modal.msgError('导出失败')
           })
       }
     }

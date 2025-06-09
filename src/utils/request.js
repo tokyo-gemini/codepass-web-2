@@ -196,18 +196,30 @@ export function download(url, params, filename, config) {
 }
 
 // 添加新的导出方法
-export function exportFile(url, params, filename, config) {
+export function exportFile(url, params, filename, config = {}) {
   downloadLoadingInstance = Loading.service({
     text: '正在下载数据，请稍候',
     spinner: 'el-icon-loading',
     background: 'rgba(0, 0, 0, 0.7)'
   })
-  return service
-    .post(url, params, {
-      headers: { 'Content-Type': 'application/json' },
-      responseType: 'blob',
-      ...config
-    })
+
+  // 默认配置
+  const defaultConfig = {
+    headers: { 'Content-Type': 'application/json' },
+    responseType: 'blob',
+    method: 'post' // 默认使用 POST 方法
+  }
+
+  // 合并配置
+  const finalConfig = {
+    ...defaultConfig,
+    ...config,
+    url,
+    // 根据请求方法决定如何传递参数
+    [config.method?.toLowerCase() === 'get' ? 'params' : 'data']: params
+  }
+
+  return service(finalConfig)
     .then(async (data) => {
       const isBlob = blobValidate(data)
       if (isBlob) {

@@ -187,6 +187,9 @@
       <!-- 表格顶部操作区 -->
       <div class="mb-4 w-full flex justify-end items-center">
         <el-button type="text" icon="el-icon-setting" @click="showColumnSettings">列设置</el-button>
+        <el-button type="warning" plain icon="el-icon-download" @click="handleExport"
+          >导出</el-button
+        >
       </div>
 
       <el-table v-loading="loading" :data="visitList" :show-header="hasFormList">
@@ -345,6 +348,37 @@
         </div>
       </el-dialog>
 
+      <!-- 导出配置弹窗 -->
+      <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+        <div class="mb-4 text-gray-600">可导出数据总量：{{ total }}条</div>
+        <el-form :model="exportForm" label-width="120px">
+          <el-form-item label="单次导出数量">
+            <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
+              <el-radio :label="1000">1000条/次</el-radio>
+              <el-radio :label="3000">3000条/次</el-radio>
+              <el-radio :label="5000">5000条/次</el-radio>
+              <el-radio :label="10000">10000条/次</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="导出页数选择">
+            <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
+              <el-option
+                v-for="page in totalPages"
+                :key="page"
+                :label="getPageRangeLabel(page)"
+                :value="page"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="exportVisible = false">取 消</el-button>
+          <el-button type="primary" @click="handleConfirmExport" :loading="exporting"
+            >确 定</el-button
+          >
+        </div>
+      </el-dialog>
+
       <pagination
         v-show="total > 0"
         :total="total"
@@ -485,6 +519,7 @@
   import { deptTreeSelect } from '@/api/system/user'
   import Treeselect from '@riophae/vue-treeselect'
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+  import { exportFile } from '@/utils/request'
   export default {
     name: 'SynthesizePage',
     components: {
@@ -574,7 +609,14 @@
           '12345',
           '千伏安',
           '台区用户'
-        ]
+        ],
+        // 添加导出相关数据
+        exportVisible: false,
+        exporting: false,
+        exportForm: {
+          page: 1,
+          pageSize: 1000
+        }
       }
     },
     async created() {
@@ -590,6 +632,10 @@
         if (!this.columnSearchKeyword) return this.dynamicColumns
         const keyword = this.columnSearchKeyword.toLowerCase()
         return this.dynamicColumns.filter((column) => column.label.toLowerCase().includes(keyword))
+      },
+      // 添加计算总页数
+      totalPages() {
+        return Math.ceil(this.total / this.exportForm.pageSize)
       }
     },
     methods: {
@@ -1504,6 +1550,75 @@
         } else {
           return `已选择${labels.length}项`
         }
+      },
+
+      /** 导出按钮操作 */
+      handleExport() {
+        if (!this.queryParams.formId) {
+          this.$modal.msgError('请先选择来源表单')
+          return
+        }
+        if (this.total === 0) {
+          this.$modal.msgError('当前没有数据可供导出')
+          return
+        }
+        this.exportForm.page = 1
+        this.exportVisible = true
+      },
+
+      /** 确认导出操作 */
+      handleConfirmExport() {
+        this.$modal.confirm('是否确认导出数据?').then(() => {
+          this.exporting = true
+
+          // 构造查询参数
+          const params = {
+            formType: this.queryParams.formType,
+            formId: this.queryParams.formId,
+            page: this.exportForm.page,
+            pageSize: this.exportForm.pageSize
+          }
+
+          // 修改为 GET 请求，使用新的导出接口
+          exportFile(
+            '/search/comprehensive/page/export',
+            params,
+            `${this.queryParams.type === 'zf' ? '走访' : '巡视'}数据_第${
+              this.exportForm.page
+            }页_${new Date().getTime()}.xlsx`,
+            {
+              method: 'get', // 显式指定使用 GET 方法
+              timeout: 300000, // 设置5分钟超时
+              params: params, // GET请求参数通过params传递
+              responseType: 'blob' // 确保响应类型为blob
+            }
+          )
+            .then(() => {
+              this.exporting = false
+              this.exportVisible = false
+              this.$modal.msgSuccess('导出成功')
+            })
+            .catch((error) => {
+              console.error('导出失败:', error)
+              this.exporting = false
+              this.$modal.msgError('导出失败')
+            })
+        })
+      },
+
+      /** 处理单次导出数量变化 */
+      handlePageSizeChange() {
+        this.exportForm.page = 1 // 重置页码选择
+      },
+
+      /** 获取页码范围标签 */
+      getPageRangeLabel(page) {
+        const start = (page - 1) * this.exportForm.pageSize
+        const remainingItems = this.total - start
+        const itemsInThisPage = Math.min(this.exportForm.pageSize, remainingItems)
+        const end = start + itemsInThisPage
+
+        return `第${page}页 (${start + 1}-${end}条)`
       }
     }
   }
@@ -1697,6 +1812,11 @@
 
   :deep(.el-table__body td) {
     padding: 8px 0;
+  }
+
+  /* 添加导出弹窗相关样式 */
+  .text-gray-600 {
+    color: #666;
   }
 </style>
 
