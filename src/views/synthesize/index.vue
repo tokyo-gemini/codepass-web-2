@@ -25,7 +25,7 @@
         <div class="w-full mb-4">
           <el-form-item label="所属供电所" prop="powerId">
             <treeselect
-              v-model="queryParams.powerId"
+              v-model="selectedPowerId"
               :options="powerSupplyOptions"
               :normalizer="normalizer"
               :clearable="true"
@@ -40,6 +40,7 @@
               :close-on-select="true"
               :show-count="true"
               class="w-full"
+              @input="handlePowerIdChange"
             />
           </el-form-item>
         </div>
@@ -541,6 +542,8 @@
         visitList: [],
         // 站所选项
         powerSupplyOptions: [],
+        // 添加TreeSelect使用的选中值
+        selectedPowerId: null,
         // 客户标签选项
         customerTagOptions: [],
         // 查询参数
@@ -550,7 +553,7 @@
           formId: '',
           cityId: '',
           companyId: '',
-          powerId: null, // 修改为 null
+          powerId: null, // 这里仍然保持为null，但将存储原始ID
           dispatchStartTime: '',
           dispatchEndTime: '',
           tagIdList: [],
@@ -803,6 +806,9 @@
           current: 1,
           size: 10
         }
+
+        // 重置TreeSelect选中值
+        this.selectedPowerId = null
 
         if (type === 'zf') {
           this.selectedTags = []
@@ -1619,6 +1625,39 @@
         const end = start + itemsInThisPage
 
         return `第${page}页 (${start + 1}-${end}条)`
+      },
+
+      /** 处理供电所选择变化 */
+      handlePowerIdChange(value) {
+        if (!value) {
+          // 当清除选择时
+          this.queryParams.powerId = null
+          return
+        }
+
+        // 查找选中节点的原始ID
+        const findOriginalId = (nodes, id) => {
+          for (const node of nodes) {
+            if (node.id === id) {
+              return node.originalId
+            }
+            if (node.children && node.children.length) {
+              const result = findOriginalId(node.children, id)
+              if (result) return result
+            }
+          }
+          return null
+        }
+
+        // 将唯一ID转换为原始ID
+        const originalId = findOriginalId(this.powerSupplyOptions, value)
+        if (originalId) {
+          this.queryParams.powerId = originalId
+          console.log('已将供电所ID转换为原始ID:', originalId)
+        } else {
+          console.warn('未找到对应的原始ID:', value)
+          this.queryParams.powerId = value // 退化处理
+        }
       }
     }
   }
