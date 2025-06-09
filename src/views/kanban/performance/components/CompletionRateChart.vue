@@ -91,7 +91,7 @@
               }</div>
               <div style="color: #666; margin-bottom: 4px">
                 ${
-                  this.specialType === 'visit' ? '日常巡视完成率' : '特殊巡视完成率'
+                  this.specialType === 'inspection' ? '日常巡视完成率' : '特殊巡视完成率'
                 } <span style="float: right; color: #67a651; font-weight: bold">${
                 item.value
               }%</span>

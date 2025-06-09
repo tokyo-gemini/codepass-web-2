@@ -108,7 +108,7 @@
                       </div>
                       <div style="color: #666; margin-bottom: 4px">
                         ${
-                          this.horizontalSpecialType === 'visit'
+                          this.horizontalSpecialType === 'inspection'
                             ? '日常巡视完成率'
                             : '特殊巡视完成率'
                         }
@@ -117,7 +117,7 @@
                         </span>
                       </div>
                       <div style="color: #666">
-                        总${this.horizontalSpecialType === 'visit' ? '日常' : '特殊'}巡视次数
+                        总${this.horizontalSpecialType === 'inspection' ? '日常' : '特殊'}巡视次数
                         <span style="float: right; color: #67a651; font-weight: bold">
                           ${dataItem.totalNum || 0}
                         </span>
