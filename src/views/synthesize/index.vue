@@ -1585,9 +1585,15 @@
             pageSize: this.exportForm.pageSize
           }
 
-          // 修改为 GET 请求，使用新的导出接口
+          // 根据查询类型选择不同的导出接口
+          const exportUrl =
+            this.queryParams.type === 'zf'
+              ? '/search/comprehensive/page/export' // 走访导出
+              : '/search/comprehensiveXs/page/export' // 巡视导出
+
+          // 修改为 GET 请求，使用对应的导出接口
           exportFile(
-            '/search/comprehensive/page/export',
+            exportUrl,
             params,
             `${this.queryParams.type === 'zf' ? '走访' : '巡视'}数据_第${
               this.exportForm.page
