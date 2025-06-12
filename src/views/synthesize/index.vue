@@ -39,6 +39,7 @@
               :append-to-body="true"
               :close-on-select="true"
               :show-count="true"
+              placeholder="请选择所属供电所"
               class="w-full"
               @input="handlePowerIdChange"
             />

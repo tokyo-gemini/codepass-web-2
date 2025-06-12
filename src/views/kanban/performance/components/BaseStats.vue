@@ -133,10 +133,10 @@
         style="width: 100%"
       >
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column prop="companyName" label="区域名称" show-overflow-tooltip />
-        <el-table-column prop="towerName" label="变压器名称" show-overflow-tooltip />
+        <el-table-column prop="companyName" label="单位" show-overflow-tooltip />
+        <el-table-column prop="towerName" label="台区名称" show-overflow-tooltip />
         <el-table-column
-          :label="tableActiveTab === 'visit' ? '日常走访数量' : '日常巡视数量'"
+          :label="tableActiveTab === 'visit' ? '日常已走访数量' : '日常已巡视数量'"
           align="center"
         >
           <template slot-scope="scope">
@@ -148,7 +148,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="tableActiveTab === 'visit' ? '特殊走访数量' : '特殊巡视数量'"
+          :label="tableActiveTab === 'visit' ? '累计走访' : '累计巡视数量'"
           align="center"
         >
           <template slot-scope="scope">
