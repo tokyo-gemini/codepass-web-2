@@ -233,6 +233,12 @@
 
       // 获取历史巡视完成率数据
       async getHistoryCompletionRate() {
+        console.log('🔍 [HistoryCompletionRateChart] getHistoryCompletionRate 被调用')
+        console.log('🔍 当前组件状态:', {
+          horizontalSpecialType: this.horizontalSpecialType,
+          searchParams: this.searchParams
+        })
+
         try {
           const params = {
             xsType: this.horizontalSpecialType === 'inspection' ? 0 : 1
@@ -245,26 +251,14 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 优先添加用户选择的所属单位，不管是否为超级管理员
+          // 如果所属单位有值，就传cityId
           if (this.searchParams.powerSupply) {
-            params.companyId = Array.isArray(this.searchParams.powerSupply)
-              ? this.searchParams.powerSupply.join(',')
-              : this.searchParams.powerSupply
-          } else {
-            // 用户没有选择所属单位，检查是否为超级管理员
-            const roles = this.$store.getters && this.$store.getters.roles
-            const isAdmin = roles.includes('admin')
-
-            // 非超级管理员时才使用deptId
-            if (!isAdmin) {
-              const deptIdStr = this.deptId.toString()
-              if (deptIdStr.length <= 5) {
-                params.cityId = this.deptId
-              } else if (deptIdStr.length >= 7) {
-                params.companyId = this.deptId
-              }
-            }
+            params.cityId = this.searchParams.powerSupply
+            console.log('🔍 使用searchParams.powerSupply作为cityId:', params.cityId)
           }
+
+          console.log('🔍 最终请求参数:', params)
+          console.log('🔍 即将调用API: /result/kan/ban/get/completion/history')
 
           const res = await getCompletionRateHistory(params)
 
@@ -318,15 +312,60 @@
     },
     watch: {
       searchParams: {
-        handler() {
-          // 清除之前的定时器
-          if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer)
+        handler(newVal, oldVal) {
+          console.log('🔍 [HistoryCompletionRateChart] searchParams watch 触发')
+          console.log('🔍 oldVal:', oldVal)
+          console.log('🔍 newVal:', newVal)
+
+          // 避免初始化时的无效调用：只有当oldVal存在且powerSupply有实际变化时才调用API
+          if (
+            !oldVal ||
+            oldVal.powerSupply !== newVal.powerSupply ||
+            JSON.stringify(oldVal.dateRange) !== JSON.stringify(newVal.dateRange)
+          ) {
+            // 清除之前的定时器
+            if (this.debounceTimer) {
+              clearTimeout(this.debounceTimer)
+            }
+            // 设置防抖延迟，避免短时间内重复调用
+            this.debounceTimer = setTimeout(() => {
+              console.log('🔍 防抖延迟后执行 getHistoryCompletionRate')
+              this.getHistoryCompletionRate()
+            }, 100) // 100ms 防抖
+          } else {
+            console.log('🔍 searchParams无实际变化，跳过API调用')
           }
-          // 设置防抖延迟，避免短时间内重复调用
-          this.debounceTimer = setTimeout(() => {
-            this.getHistoryCompletionRate()
-          }, 100) // 100ms 防抖
+        },
+        deep: true,
+        immediate: true
+      }
+    }
+  }
+</script>
+
+<style scoped>
+  .chart-container {
+    width: 100%;
+    height: 100%;
+  }
+  .chart {
+    height: 400px;
+  }
+  .chart-header {
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+</style>
+            }
+            // 设置防抖延迟，避免短时间内重复调用
+            this.debounceTimer = setTimeout(() => {
+              console.log('🔍 防抖延迟后执行 getHistoryCompletionRate')
+              this.getHistoryCompletionRate()
+            }, 100) // 100ms 防抖
+          } else {
+            console.log('🔍 searchParams无实际变化，跳过API调用')
+          }
         },
         deep: true,
         immediate: true

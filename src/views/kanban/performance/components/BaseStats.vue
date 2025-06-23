@@ -13,7 +13,6 @@
             :check-strictly="true"
             :user-dept-id="deptId"
             :user-dept-id-length="deptId.toString().length"
-            @change="handlePowerSupplyChange"
           />
         </el-form-item>
         <el-form-item label="时间范围">
@@ -304,16 +303,6 @@
       title() {
         return this.type === 'visit' ? '走访' : '巡视'
       },
-      isFixedPowerSupply() {
-        return this.deptId && this.deptId.toString().length === 7
-      },
-      isSeniorManager() {
-        return this.deptId && this.deptId.toString().length === 5
-      },
-      isRestrictedUser() {
-        // 判断是否是受限用户（deptId大于等于7位）
-        return this.deptId && this.deptId.toString().length >= 7
-      },
       // 添加计算总页数的计算属性
       totalPages() {
         return Math.ceil(this.pagination.total / this.exportForm.pageSize)
@@ -349,6 +338,10 @@
       },
 
       handleSearch() {
+        console.log('🔍 [BaseStats] handleSearch 被调用')
+        console.log('🔍 调用堆栈:', new Error().stack)
+        console.log('🔍 当前searchForm状态:', this.searchForm)
+
         // 通过ref调用各子组件的refresh方法
         this.$refs.coverageRateChart?.refresh()
         this.$refs.historyCoverageRateChart?.refresh()
@@ -357,22 +350,15 @@
       },
 
       resetForm() {
-        if (this.isFixedPowerSupply) {
-          this.searchForm = {
-            powerSupply: this.deptId,
-            dateRange: null
-          }
-        } else if (this.isSeniorManager) {
-          this.searchForm = {
-            powerSupply: this.deptId,
-            dateRange: null
-          }
-        } else {
-          this.searchForm = {
-            powerSupply: null,
-            dateRange: null
-          }
+        console.log('🔍 [BaseStats] resetForm 被调用')
+
+        // 简化重置逻辑
+        this.searchForm = {
+          powerSupply: null,
+          dateRange: null
         }
+
+        console.log('🔍 重置后的searchForm:', this.searchForm)
 
         // 通过调用handleSearch让子组件刷新数据
         this.handleSearch()
@@ -398,17 +384,13 @@
           pageSize: this.pagination.pageSize
         }
 
-        // 检查是否是超级管理员
-        const roles = this.$store.getters && this.$store.getters.roles
-        const isAdmin = roles.includes('admin')
-
-        // 处理区域筛选参数
+        // 处理区域筛选参数，确保传递单个值
         if (this.listSearchForm.powerSupply) {
-          // 用户选择了区域筛选，将powerIdList转换为逗号分隔的字符串
-          const powerIds = Array.isArray(this.listSearchForm.powerSupply)
-            ? this.listSearchForm.powerSupply
-            : [this.listSearchForm.powerSupply]
-          params.powerIdList = powerIds.join(',')
+          // 确保传递的是单个值，不是数组
+          const powerSupply = Array.isArray(this.listSearchForm.powerSupply)
+            ? this.listSearchForm.powerSupply[0]
+            : this.listSearchForm.powerSupply
+          params.powerIdList = powerSupply.toString()
         } else {
           // 用户没有选择区域筛选，传递 powerId
           params.powerId = this.deptId
@@ -438,13 +420,8 @@
       },
 
       resetListForm() {
-        if (this.isRestrictedUser) {
-          // 受限用户重置时保持使用自己的deptId
-          this.listSearchForm.powerSupply = this.deptId
-        } else {
-          // 非受限用户可以清空选择
-          this.listSearchForm.powerSupply = null
-        }
+        // 简化重置逻辑，直接清空选择
+        this.listSearchForm.powerSupply = null
         this.pagination.currentPage = 1
         this.handleListSearch()
       },
@@ -470,9 +447,6 @@
 
       async getPowerSupplyTree() {
         try {
-          if (this.isFixedPowerSupply) {
-            return
-          }
           const res = await deptTreeSelect()
           const addParentRef = (nodes, parent = null) => {
             return nodes.map((node) => {
@@ -483,31 +457,7 @@
               return newNode
             })
           }
-          let treeData = addParentRef(res.data || [])
-
-          if (this.isSeniorManager) {
-            const findUserDept = (nodes) => {
-              for (let node of nodes) {
-                if (node.id.toString() === this.deptId.toString()) {
-                  return node
-                }
-                if (node.children && node.children.length) {
-                  const found = findUserDept(node.children)
-                  if (found) return found
-                }
-              }
-              return null
-            }
-            const userDept = findUserDept(treeData)
-            if (userDept) {
-              treeData = [userDept]
-            }
-          }
-          this.powerSupplyTree = treeData
-
-          if (this.isSeniorManager) {
-            this.searchForm.powerSupply = this.deptId
-          }
+          this.powerSupplyTree = addParentRef(res.data || [])
         } catch (error) {
           console.error('获取供电所树形数据失败:', error)
         }
@@ -523,14 +473,7 @@
       },
 
       isNodeSelectable(node) {
-        if (this.isFixedPowerSupply) {
-          return false
-        }
-        if (this.isSeniorManager) {
-          const nodeId = node.id ? node.id.toString() : ''
-          const userDeptId = this.deptId ? this.deptId.toString() : ''
-          return nodeId.startsWith(userDeptId) && nodeId.length === 7
-        }
+        // 简化节点选择逻辑，判断是否为三级节点
         let level = 1
         let parent = node.parent
         while (parent) {
@@ -541,13 +484,17 @@
       },
 
       handlePowerSupplyChange(selectedNodes) {
-        // 直接使用节点ID，不需要判断数组长度
+        console.log('🔍 [BaseStats] handlePowerSupplyChange 被调用')
+        console.log('🔍 selectedNodes:', selectedNodes)
+
+        // 确保传递的是单个值，不是数组
         this.searchForm.powerSupply = selectedNodes.length > 0 ? selectedNodes[0].id : null
+        console.log('🔍 更新后的searchForm.powerSupply:', this.searchForm.powerSupply)
         this.handleSearch()
       },
 
       handleListPowerSupplyChange(selectedNodes) {
-        // 直接使用节点ID，不需要判断数组长度
+        // 确保传递的是单个值，不是数组
         this.listSearchForm.powerSupply = selectedNodes.length > 0 ? selectedNodes[0].id : null
         this.handleListSearch()
       },
@@ -587,13 +534,13 @@
               type: this.tableActiveTab === 'visit' ? 0 : 1 // 0: 走访, 1: 巡视
             }
 
-            // 处理区域筛选参数
+            // 处理区域筛选参数，确保传递单个值
             if (this.listSearchForm.powerSupply) {
-              // 用户选择了区域筛选，将powerIdList转换为逗号分隔的字符串
-              const powerIds = Array.isArray(this.listSearchForm.powerSupply)
-                ? this.listSearchForm.powerSupply
-                : [this.listSearchForm.powerSupply]
-              queryParams.powerIdList = powerIds.join(',')
+              // 确保传递的是单个值，不是数组
+              const powerSupply = Array.isArray(this.listSearchForm.powerSupply)
+                ? this.listSearchForm.powerSupply[0]
+                : this.listSearchForm.powerSupply
+              queryParams.powerIdList = powerSupply.toString()
             } else {
               // 用户没有选择区域筛选，传递 powerId
               queryParams.powerId = this.deptId
@@ -635,7 +582,7 @@
           .catch(() => {})
       },
 
-      // 处理单次导出数量变化
+      // 单次导出数量变化
       handlePageSizeChange() {
         this.exportForm.page = 1 // 重置页码选择
       },
@@ -657,7 +604,12 @@
     },
     watch: {
       'searchForm.dateRange': {
-        handler() {
+        handler(newVal, oldVal) {
+          console.log('🔍 [BaseStats] searchForm.dateRange watch 触发')
+          console.log('🔍 oldVal:', oldVal)
+          console.log('🔍 newVal:', newVal)
+          console.log('🔍 调用堆栈:', new Error().stack)
+
           // 当日期范围变化时，触发子组件更新
           this.handleSearch()
         },
@@ -665,9 +617,9 @@
       }
     },
     created() {
-      if (this.isFixedPowerSupply) {
-        this.searchForm.powerSupply = this.deptId
-      }
+      console.log('🔍 [BaseStats] created 生命周期钩子')
+
+      // 获取树数据
       this.getPowerSupplyTree()
 
       // 页面初始化时加载表格数据

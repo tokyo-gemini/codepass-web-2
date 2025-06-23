@@ -1674,14 +1674,16 @@
           return null
         }
 
-        // 将唯一ID转换为原始ID
+        // 将唯一ID转换为原始ID，确保是单个值
         const originalId = findOriginalId(this.powerSupplyOptions, value)
         if (originalId) {
-          this.queryParams.powerId = originalId
-          console.log('已将供电所ID转换为原始ID:', originalId)
+          // 确保传递的是单个值，不是数组
+          this.queryParams.powerId = Array.isArray(originalId) ? originalId[0] : originalId
+          console.log('已将供电所ID转换为原始ID:', this.queryParams.powerId)
         } else {
           console.warn('未找到对应的原始ID:', value)
-          this.queryParams.powerId = value // 退化处理
+          // 确保传递的是单个值，不是数组
+          this.queryParams.powerId = Array.isArray(value) ? value[0] : value
         }
       }
     }

@@ -213,6 +213,12 @@
 
       // 获取历史覆盖率数据
       async getHistoryCoverageData() {
+        console.log('🔍 [HistoryCoverageRateChart] getHistoryCoverageData 被调用')
+        console.log('🔍 当前组件状态:', {
+          historyCoverageType: this.historyCoverageType,
+          searchParams: this.searchParams
+        })
+
         try {
           const params = {
             zfType: this.historyCoverageType === 'visit' ? 1 : 0 // 1: 特殊走访, 0: 日常走访
@@ -225,23 +231,14 @@
             params.endTime = this.formatDate(end)
           }
 
-          // 添加区域筛选参数
+          // 如果所属单位有值，就传cityId
           if (this.searchParams.powerSupply) {
-            params.companyId = this.searchParams.powerSupply
-          } else {
-            // 检查是否是超级管理员
-            const roles = this.$store.getters && this.$store.getters.roles
-            const isAdmin = roles.includes('admin')
-            if (!isAdmin) {
-              // 非超级管理员时才根据 deptId 添加参数
-              const deptIdStr = this.deptId.toString()
-              if (deptIdStr.length <= 5) {
-                params.cityId = this.deptId
-              } else if (deptIdStr.length >= 7) {
-                params.companyId = this.deptId
-              }
-            }
+            params.cityId = this.searchParams.powerSupply
+            console.log('🔍 使用searchParams.powerSupply作为cityId:', params.cityId)
           }
+
+          console.log('🔍 最终请求参数:', params)
+          console.log('🔍 即将调用API: /result/kan/ban/get/coverage/history')
 
           const res = await getHistoryCoverageRate(params)
 
@@ -308,15 +305,29 @@
     },
     watch: {
       searchParams: {
-        handler() {
-          // 清除之前的定时器
-          if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer)
+        handler(newVal, oldVal) {
+          console.log('🔍 [HistoryCoverageRateChart] searchParams watch 触发')
+          console.log('🔍 oldVal:', oldVal)
+          console.log('🔍 newVal:', newVal)
+
+          // 避免初始化时的无效调用：只有当oldVal存在且powerSupply有实际变化时才调用API
+          if (
+            !oldVal ||
+            oldVal.powerSupply !== newVal.powerSupply ||
+            JSON.stringify(oldVal.dateRange) !== JSON.stringify(newVal.dateRange)
+          ) {
+            // 清除之前的定时器
+            if (this.debounceTimer) {
+              clearTimeout(this.debounceTimer)
+            }
+            // 设置防抖延迟，避免短时间内重复调用
+            this.debounceTimer = setTimeout(() => {
+              console.log('🔍 防抖延迟后执行 getHistoryCoverageData')
+              this.getHistoryCoverageData()
+            }, 100) // 100ms 防抖
+          } else {
+            console.log('🔍 searchParams无实际变化，跳过API调用')
           }
-          // 设置防抖延迟，避免短时间内重复调用
-          this.debounceTimer = setTimeout(() => {
-            this.getHistoryCoverageData()
-          }, 100) // 100ms 防抖
         },
         deep: true,
         immediate: true

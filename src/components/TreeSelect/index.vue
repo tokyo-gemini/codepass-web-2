@@ -132,16 +132,6 @@
       checkStrictly: {
         type: Boolean,
         default: true // 修改默认值为true，使父子节点选择不关联
-      },
-      // 用户部门ID，用于判断可选节点
-      userDeptId: {
-        type: [String, Number],
-        default: ''
-      },
-      // 用户部门ID长度，用于判断用户类型
-      userDeptIdLength: {
-        type: Number,
-        default: 0
       }
     },
     data() {
@@ -165,12 +155,23 @@
     watch: {
       value: {
         handler(val) {
+          console.log('🔍 [TreeSelect] value watch 触发, val:', val)
           this.initSelection()
+
+          // 确保树组件的选中状态同步
+          this.$nextTick(() => {
+            if (this.$refs.tree) {
+              const keys = this.selectedNodes.map((node) => node.id)
+              console.log('🔍 设置树选中状态, keys:', keys)
+              this.$refs.tree.setCheckedKeys(keys)
+            }
+          })
         },
         immediate: true
       },
       options: {
         handler(val) {
+          console.log('🔍 [TreeSelect] options watch 触发')
           // 创建一个新的深拷贝方法，避免循环引用
           const deepClone = (obj) => {
             if (obj === null || typeof obj !== 'object') return obj
@@ -197,6 +198,11 @@
           }
 
           this.treeData = addParentRef(this.treeData)
+
+          // 当选项数据更新后，重新初始化选择状态
+          this.$nextTick(() => {
+            this.initSelection()
+          })
         },
         immediate: true
       },
@@ -252,14 +258,21 @@
         }
       },
       initSelection() {
+        console.log('🔍 [TreeSelect] initSelection 被调用')
+        console.log('🔍 当前 value:', this.value)
+        console.log('🔍 当前 treeData:', this.treeData)
+
         // 处理单值和数组两种情况
-        if (this.value) {
+        if (this.value !== null && this.value !== undefined && this.value !== '') {
           // 将单个值转换为数组处理
           const valueArray = Array.isArray(this.value) ? this.value : [this.value]
+          console.log('🔍 valueArray:', valueArray)
 
           this.selectedNodes = valueArray
             .map((id) => this.findNodeById(this.treeData, id))
             .filter(Boolean)
+
+          console.log('🔍 找到的selectedNodes:', this.selectedNodes)
 
           // 如果启用了单选模式，并且有多个选中项，则只保留第一个
           if (this.singleSelect && this.selectedNodes.length > 1) {
@@ -268,6 +281,8 @@
         } else {
           this.selectedNodes = []
         }
+
+        console.log('🔍 最终selectedNodes:', this.selectedNodes)
       },
       findNodeById(nodes, id) {
         for (const node of nodes) {
@@ -308,13 +323,11 @@
             }
           ]
 
-          // 发出事件时，如果原本传入的是单个值（非数组），则依然返回单个值
-          const outputValue = Array.isArray(this.value) ? [currentNode.id] : currentNode.id
-
-          this.$emit('input', outputValue)
+          // 发出事件时，确保返回单个值（非数组）
+          this.$emit('input', currentNode.id)
           this.$emit('change', this.selectedNodes)
         } else {
-          // 多选模式维持原有逻辑
+          // 多选模式维持原有逻辑，但确保输出是数组
           this.selectedNodes = checkedNodes
             .filter((node) => this.isNodeSelectable(node))
             .map((node) => ({
@@ -322,7 +335,7 @@
               label: node.label
             }))
 
-          // 发出事件
+          // 发出事件 - 如果是多选模式则返回数组
           this.$emit(
             'input',
             this.selectedNodes.map((node) => node.id)
@@ -347,19 +360,7 @@
         return data.label.toLowerCase().includes(value.toLowerCase())
       },
       isNodeSelectable(node) {
-        // 7位数用户不能选择任何节点
-        if (this.userDeptIdLength === 7) {
-          return false
-        }
-
-        // 5位数用户只能选择其直接子节点(7位数节点)
-        if (this.userDeptIdLength === 5) {
-          const nodeId = node.id?.toString() || ''
-          const userDeptId = this.userDeptId?.toString() || ''
-          return nodeId.startsWith(userDeptId) && nodeId.length === 7
-        }
-
-        // 其他用户使用原有的三级节点判断逻辑
+        // 简化为只判断三级节点
         let level = 1
         let parent = node.parent
         while (parent) {
@@ -372,9 +373,12 @@
         this.selectedNodes = []
         this.$refs.tree.setCheckedKeys([])
 
-        // 根据原始输入类型决定清空后的输出类型
-        const emptyValue = Array.isArray(this.value) ? [] : null
-        this.$emit('input', emptyValue)
+        // 根据单选/多选模式决定清空后的输出类型
+        if (this.singleSelect) {
+          this.$emit('input', null)
+        } else {
+          this.$emit('input', [])
+        }
         this.$emit('change', [])
       }
     }
@@ -512,6 +516,28 @@
           color: #606266;
           display: flex;
           justify-content: space-between;
+          align-items: center;
+        }
+      }
+
+      .search-box {
+        padding: 8px;
+        border-bottom: 1px solid #e4e7ed;
+      }
+
+      .el-tree {
+        padding: 8px;
+      }
+    }
+
+    .custom-tree-node {
+      &.is-disabled {
+        color: #c0c4cc;
+        cursor: not-allowed;
+      }
+    }
+  }
+</style>
           align-items: center;
         }
       }
