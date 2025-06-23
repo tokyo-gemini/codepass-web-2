@@ -89,14 +89,13 @@
           </el-form-item>
         </el-form>
       </div>
-
       <el-table
         v-loading="loading"
         :data="planList"
         @selection-change="handleSelectionChange"
         ref="planTable"
+        row-key="planId"
       >
-        <!-- 添加row-key -->
         <el-table-column type="selection" width="55" :reserve-selection="true" />
         <el-table-column label="计划名称" prop="planName" align="center" />
         <el-table-column label="类型" prop="planType" align="center">

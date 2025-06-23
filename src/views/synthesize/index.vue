@@ -559,7 +559,7 @@
           dispatchEndTime: '',
           tagIdList: [],
           formDataId: '',
-          statusDataId: '',
+          statusDatald: '',
           statusTypeId: '',
           formStatus: '',
           busiTypeId: '',
@@ -802,7 +802,7 @@
           dispatchEndTime: '',
           tagIdList: [],
           formDataId: '',
-          statusDataId: '',
+          statusDatald: '',
           formStatus: '',
           current: 1,
           size: 10
@@ -1578,13 +1578,31 @@
         this.$modal.confirm('是否确认导出数据?').then(() => {
           this.exporting = true
 
-          // 构造查询参数
+          // 构造查询参数，包含所有筛选条件
           const params = {
+            type: this.queryParams.type,
+            powerId: this.queryParams.powerId,
+            dispatchStartTime: this.queryParams.dispatchStartTime,
+            dispatchEndTime: this.queryParams.dispatchEndTime,
+            formDataId: this.queryParams.formDataId,
             formType: this.queryParams.formType,
             formId: this.queryParams.formId,
+            statusDatald: this.queryParams.statusDatald,
+            formStatus: this.queryParams.formStatus,
             page: this.exportForm.page,
             pageSize: this.exportForm.pageSize
           }
+
+          // 过滤掉空值参数
+          Object.keys(params).forEach((key) => {
+            if (params[key] === '' || params[key] === null || params[key] === undefined) {
+              delete params[key]
+            }
+            // 处理数组类型的参数
+            if (Array.isArray(params[key]) && params[key].length === 0) {
+              delete params[key]
+            }
+          })
 
           // 根据查询类型选择不同的导出接口
           const exportUrl =

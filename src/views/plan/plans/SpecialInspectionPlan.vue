@@ -101,6 +101,48 @@
                   show-overflow-tooltip
                 />
                 <el-table-column
+                  prop="sgAppNo"
+                  label="国网工单编号"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="acceptContent"
+                  label="受理内容"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="elecAddr"
+                  label="客户地址"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="threeLevelGroup"
+                  label="三级分类"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="busiSubDate"
+                  label="业务子类型"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="busiTypeCode"
+                  label="业务类型"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="tel"
+                  label="客户电话"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
                   prop="provinceName"
                   label="所属省份"
                   min-width="120"
@@ -182,6 +224,48 @@
                 <el-table-column
                   prop="towerId"
                   label="台区编号"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="sgAppNo"
+                  label="国网工单编号"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="acceptContent"
+                  label="受理内容"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="elecAddr"
+                  label="客户地址"
+                  min-width="150"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="threeLevelGroup"
+                  label="三级分类"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="busiSubDate"
+                  label="业务子类型"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="busiTypeCode"
+                  label="业务类型"
+                  min-width="120"
+                  show-overflow-tooltip
+                />
+                <el-table-column
+                  prop="tel"
+                  label="客户电话"
                   min-width="120"
                   show-overflow-tooltip
                 />

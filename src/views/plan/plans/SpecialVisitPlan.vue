@@ -90,6 +90,13 @@
               >
                 <el-table-column prop="customName" label="客户名称" show-overflow-tooltip />
                 <el-table-column prop="customId" label="客户编号" show-overflow-tooltip />
+                <el-table-column prop="sgAppNo" label="国网工单编号" show-overflow-tooltip />
+                <el-table-column prop="acceptContent" label="受理内容" show-overflow-tooltip />
+                <el-table-column prop="elecAddr" label="客户地址" show-overflow-tooltip />
+                <el-table-column prop="threeLevelGroup" label="三级分类" show-overflow-tooltip />
+                <el-table-column prop="busiSubDate" label="业务子类型" show-overflow-tooltip />
+                <el-table-column prop="busiTypeCode" label="业务类型" show-overflow-tooltip />
+                <el-table-column prop="tel" label="客户电话" show-overflow-tooltip />
                 <el-table-column prop="provinceName" label="所属省份" show-overflow-tooltip />
                 <el-table-column prop="areaName" label="所属城市" show-overflow-tooltip />
                 <el-table-column prop="companyName" label="所属单位区县" show-overflow-tooltip />
@@ -140,6 +147,13 @@
               >
                 <el-table-column prop="customName" label="客户名称" show-overflow-tooltip />
                 <el-table-column prop="customId" label="客户编号" show-overflow-tooltip />
+                <el-table-column prop="sgAppNo" label="国网工单编号" show-overflow-tooltip />
+                <el-table-column prop="acceptContent" label="受理内容" show-overflow-tooltip />
+                <el-table-column prop="elecAddr" label="客户地址" show-overflow-tooltip />
+                <el-table-column prop="threeLevelGroup" label="三级分类" show-overflow-tooltip />
+                <el-table-column prop="busiSubDate" label="业务子类型" show-overflow-tooltip />
+                <el-table-column prop="busiTypeCode" label="业务类型" show-overflow-tooltip />
+                <el-table-column prop="tel" label="客户电话" show-overflow-tooltip />
                 <el-table-column prop="provinceName" label="所属省份" show-overflow-tooltip />
                 <el-table-column prop="areaName" label="所属城市" show-overflow-tooltip />
                 <el-table-column prop="companyName" label="所属单位区县" show-overflow-tooltip />
