@@ -37,12 +37,12 @@
         coverageData: {
           visit: [], // 特殊走访覆盖率数据
           inspection: [] // 日常走访覆盖率数据
-        }
+        },
+        debounceTimer: null // 防抖定时器
       }
     },
     mounted() {
       this.initChart()
-      this.getCoverageData()
       window.addEventListener('resize', this.resizeChart)
     },
     beforeDestroy() {
@@ -51,6 +51,10 @@
         this.chart = null
       }
       window.removeEventListener('resize', this.resizeChart)
+      // 清理防抖定时器
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer)
+      }
     },
     methods: {
       initChart() {
@@ -248,9 +252,17 @@
     watch: {
       searchParams: {
         handler() {
-          this.getCoverageData()
+          // 清除之前的定时器
+          if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer)
+          }
+          // 设置防抖延迟，避免短时间内重复调用
+          this.debounceTimer = setTimeout(() => {
+            this.getCoverageData()
+          }, 100) // 100ms 防抖
         },
-        deep: true
+        deep: true,
+        immediate: true
       }
     }
   }

@@ -669,7 +669,6 @@
         this.searchForm.powerSupply = this.deptId
       }
       this.getPowerSupplyTree()
-      // 各组件在挂载时会自行加载初始数据
 
       // 页面初始化时加载表格数据
       this.$nextTick(() => {
