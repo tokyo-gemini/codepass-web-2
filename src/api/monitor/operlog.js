@@ -24,3 +24,12 @@ export function cleanOperlog() {
     method: 'delete'
   })
 }
+
+// 导入操作日志
+export function importOperlog(data) {
+  return request({
+    url: '/search/get/import',
+    method: 'post',
+    data: data
+  })
+}
