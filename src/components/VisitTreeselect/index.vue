@@ -206,9 +206,9 @@
 
         this.selectedNodes = findNodes(this.value)
       },
-      isSelectableNode() {
-        // 对于供电所选择，所有节点都可选
-        return true
+      isSelectableNode(node) {
+        // 只允许选择第5层的最底层节点（客户），类似特殊走访的限制
+        return node.level === 5 && (!node.children || node.children.length === 0)
       },
       isLeafNode(node) {
         return !node.children || !node.children.length

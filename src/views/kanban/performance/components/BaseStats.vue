@@ -306,6 +306,18 @@
       // 添加计算总页数的计算属性
       totalPages() {
         return Math.ceil(this.pagination.total / this.exportForm.pageSize)
+      },
+      // 判断是否是受限用户（部门ID为7位数）
+      isRestrictedUser() {
+        return this.deptId && this.deptId.toString().length === 7
+      },
+      // 判断是否是固定供电所（部门ID为7位数）
+      isFixedPowerSupply() {
+        return this.deptId && this.deptId.toString().length === 7
+      },
+      // 判断是否是高级管理员（部门ID小于7位数）
+      isSeniorManager() {
+        return this.deptId && this.deptId.toString().length < 7
       }
     },
     mounted() {
