@@ -53,7 +53,8 @@
             class="custom-node"
             :class="{
               'is-selectable': isSelectableNode(data),
-              'is-selected': selectedIds.includes(data.id)
+              'is-selected': selectedIds.includes(data.id),
+              'is-disabled': !isSelectableNode(data)
             }"
           >
             {{ node.label }}
@@ -82,6 +83,10 @@
       placeholder: {
         type: String,
         default: '请选择'
+      },
+      disableBranchNodes: {
+        type: Boolean,
+        default: false
       }
     },
     data() {
@@ -206,9 +211,22 @@
 
         this.selectedNodes = findNodes(this.value)
       },
-      isSelectableNode() {
-        // 对于供电所选择，所有节点都可选
+      isSelectableNode(node) {
+        // 如果启用了 disableBranchNodes，则只有供电所可选
+        if (this.disableBranchNodes) {
+          return this.isPowerStation(node)
+        }
+        // 否则所有节点都可选
         return true
+      },
+      // 判断是否是供电所（站所）
+      isPowerStation(node) {
+        // 站所的特征：ID是9位数字
+        // 包括供电所、供电服务站、大客户班等
+        const idStr = String(node.id)
+        const isNineDigitId = /^\d{9}$/.test(idStr)
+
+        return isNineDigitId
       },
       isLeafNode(node) {
         return !node.children || !node.children.length
@@ -405,6 +423,15 @@
         &.is-selected {
           color: #409eff;
           background-color: #ecf5ff;
+        }
+
+        &.is-disabled {
+          color: #c0c4cc;
+          cursor: not-allowed;
+
+          &:hover {
+            background-color: transparent;
+          }
         }
 
         .node-count {

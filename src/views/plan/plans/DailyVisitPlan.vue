@@ -35,6 +35,7 @@
                   v-model="selectedDept"
                   :options="powerSupplyTree"
                   placeholder="选择供电所"
+                  :disable-branch-nodes="true"
                   @change="handleDeptChangeWithLabel"
                 />
               </div>
