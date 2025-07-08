@@ -143,6 +143,8 @@ import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
     name: "SelfReportList",
+    // 声明需要使用的字典
+    dicts: ['form_type_option'],
     components: {
         Treeselect
     },
@@ -164,16 +166,6 @@ export default {
             imageList: [],
             previewList: [],
             baseURL: process.env.VUE_APP_BASE_API,
-            formTypeMap: {
-                '1': '日常巡视',
-                '2': '特殊巡视',
-                '3': '日常走访',
-                '4': '特殊走访',
-                '5': '工单走访',
-                '6': '工单巡视',
-                '7': '默认走访',
-                '8': '默认巡视'
-            },
             exportVisible: false,
             exporting: false,
             exportForm: {
@@ -289,7 +281,11 @@ export default {
             return statusMap[status] || '未知状态';
         },
         getFormTypeText(type) {
-            return this.formTypeMap[type] || `未知类型(${type})`;
+            // 使用字典获取表单类型文本
+            if (this.dict && this.dict.label && this.dict.label.form_type_option) {
+                return this.dict.label.form_type_option[type] || `未知类型(${type})`;
+            }
+            return `未知类型(${type})`;
         },
         filterUploadWidgets(formJson) {
             if (!formJson?.widgetList) return formJson;

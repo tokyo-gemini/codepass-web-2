@@ -524,6 +524,8 @@
   import { exportFile } from '@/utils/request'
   export default {
     name: 'SynthesizePage',
+    // 声明需要使用的字典
+    dicts: ['form_type_option'],
     components: {
       Treeselect,
       NoFormList,
@@ -586,16 +588,6 @@
         selectedColumns: [], // 已选中的列
         detailVisible: false, // 详情弹窗显示状态
         detailInfo: {}, // 详情数据
-        formTypeMap: {
-          1: '日常巡视',
-          2: '特殊巡视',
-          3: '日常走访',
-          4: '特殊走访',
-          5: '工单走访',
-          6: '工单巡视',
-          7: '默认走访',
-          8: '默认巡视'
-        },
         imageList: [], // 添加图片列表
         previewList: [], // 添加预览列表
         baseURL: process.env.VUE_APP_BASE_API, // 添加基础URL
@@ -974,10 +966,6 @@
               value: item.id,
               label: item.name
             }))
-            // 更新工单类型映射
-            res.data.forEach((item) => {
-              this.formTypeMap[item.id] = item.name
-            })
             // 默认选中第一个选项
             if (this.formTypeOptions.length > 0) {
               this.queryParams.formType = this.formTypeOptions[0].value
@@ -1422,7 +1410,11 @@
       },
       /** 获取工单类型文本 */
       getFormTypeText(type) {
-        return this.formTypeMap[type] || `未知类型(${type})`
+        // 使用字典获取表单类型文本
+        if (this.dict && this.dict.label && this.dict.label.form_type_option) {
+          return this.dict.label.form_type_option[type] || `未知类型(${type})`
+        }
+        return `未知类型(${type})`
       },
       // 添加过滤上传组件的方法
       filterUploadWidgets(formJson) {
