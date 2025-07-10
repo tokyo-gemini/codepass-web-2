@@ -6,15 +6,7 @@
       <p class="page-description">
         可以开启并启用派单策略，来提升工单派发后的客户配置的自动化派单情况。
       </p>
-      <!-- 假数据提示 -->
-      <el-alert
-        title="当前使用模拟数据"
-        description="接口暂未开发完成，页面展示的是根据业务需求生成的假数据：工单来源默认为供指2.0，计划类型和关联表单包含特殊走访、特殊巡视，默认状态为开启。"
-        type="info"
-        :closable="false"
-        show-icon
-        style="margin-top: 15px;"
-      />
+
     </div>
 
     <!-- 搜索区域 -->
