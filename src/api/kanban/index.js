@@ -81,3 +81,30 @@ export function getExceptionTableData(params) {
     params
   })
 }
+
+// 获取自动派单列表
+export function getDispatchList(params) {
+  return request({
+    url: '/dispatch/strategy/list',
+    method: 'get',
+    params
+  })
+}
+
+// 更新派单策略状态
+export function updateDispatchStatus(data) {
+  return request({
+    url: '/dispatch/strategy/update/status',
+    method: 'post',
+    data
+  })
+}
+
+// 批量更新派单策略状态
+export function batchUpdateDispatchStatus(data) {
+  return request({
+    url: '/dispatch/strategy/batch/update/status',
+    method: 'post',
+    data
+  })
+}
