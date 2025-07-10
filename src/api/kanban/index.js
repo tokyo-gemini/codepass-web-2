@@ -44,3 +44,22 @@ export function getVisitInspectionInfo(params) {
     params
   })
 }
+
+// 导出走访巡视信息表格数据
+export function exportVisitInspectionInfo(params) {
+  return request({
+    url: '/result/kan/ban/export/zfXsInfo',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+// 获取状态看板数据
+export function getStatusBoardData(params) {
+  return request({
+    url: '/status/kanban/home/page',
+    method: 'get',
+    params
+  })
+}

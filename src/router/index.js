@@ -86,6 +86,18 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/status-board',
+    component: Layout,
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/kanban/status/index'),
+        name: 'StatusBoard',
+        meta: { title: '状态看板', icon: 'monitor' }
+      }
+    ]
+  },
+  {
     path: '/user',
     component: Layout,
     hidden: true,
