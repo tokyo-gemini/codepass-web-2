@@ -98,6 +98,18 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/exception-board',
+    component: Layout,
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/kanban/exception/index'),
+        name: 'ExceptionBoard',
+        meta: { title: '异常看板', icon: 'bug' }
+      }
+    ]
+  },
+  {
     path: '/user',
     component: Layout,
     hidden: true,

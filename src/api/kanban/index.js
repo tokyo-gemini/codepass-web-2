@@ -63,3 +63,21 @@ export function getStatusBoardData(params) {
     params
   })
 }
+
+// 获取异常看板数据
+export function getExceptionBoardData(params) {
+  return request({
+    url: '/ypgt/get/code/count',
+    method: 'get',
+    params
+  })
+}
+
+// 获取异常看板表格数据
+export function getExceptionTableData(params) {
+  return request({
+    url: '/ypgt/get/page/info',
+    method: 'get',
+    params
+  })
+}
