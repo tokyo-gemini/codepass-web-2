@@ -110,6 +110,18 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/service-responsibility',
+    component: Layout,
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/service/responsibility/index'),
+        name: 'ServiceResponsibility',
+        meta: { title: '服务履责', icon: 'user' }
+      }
+    ]
+  },
+  {
     path: '/user',
     component: Layout,
     hidden: true,

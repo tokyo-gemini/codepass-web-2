@@ -22,10 +22,19 @@ export const asyncGetSourceForm = (type) => {
   })
 }
 
+
 // 查询表单控件列表
 export const asyncGetFormControls = (id) => {
   return request({
     url: `/search/get/form/widget/${id}`,
+    method: 'get'
+  })
+}
+
+// 根据类型查询服务履责表单类型数据
+export const asyncGetServiceInfo = (formType) => {
+  return request({
+    url: `/search/get/select/serviceInfo/${formType}`,
     method: 'get'
   })
 }
