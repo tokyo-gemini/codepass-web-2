@@ -38,8 +38,7 @@
       <!-- 表格顶部操作区 -->
       <div class="mb-4 w-full flex justify-end items-center">
         <el-button type="text" icon="el-icon-setting" @click="showColumnSettings">列设置</el-button>
-        <!-- <el-button type="primary" plain icon="el-icon-download" @click="handleExport"
-          v-hasPermi="['system:user:export']">导出</el-button> -->
+        <el-button type="warning" plain icon="el-icon-download" @click="handleExport">导出</el-button>
       </div>
 
       <el-row :gutter="10" class="mb-8">
@@ -116,6 +115,30 @@
           <el-button type="primary" @click="saveColumnSettings">确定</el-button>
         </div>
       </el-dialog>
+
+      <!-- 导出配置弹窗 -->
+      <el-dialog title="导出配置" :visible.sync="exportVisible" width="500px" append-to-body>
+        <div class="mb-4 text-gray-600">可导出数据总量：{{ total }}条</div>
+        <el-form :model="exportForm" label-width="120px">
+          <el-form-item label="单次导出数量">
+            <el-radio-group v-model="exportForm.pageSize" @change="handlePageSizeChange">
+              <el-radio :label="1000">1000条/次</el-radio>
+              <el-radio :label="3000">3000条/次</el-radio>
+              <el-radio :label="5000">5000条/次</el-radio>
+              <el-radio :label="10000">10000条/次</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="导出页数选择">
+            <el-select v-model="exportForm.page" placeholder="请选择要导出的页数">
+              <el-option v-for="page in totalPages" :key="page" :label="getPageRangeLabel(page)" :value="page" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="exportVisible = false">取 消</el-button>
+          <el-button type="primary" @click="handleConfirmExport" :loading="exporting">确 定</el-button>
+        </div>
+      </el-dialog>
     </template>
   </div>
 </template>
@@ -124,13 +147,12 @@
 import { deptTreeSelect } from '@/api/system/user'
 import {
   asyncGetVisitList,
-  asyncGetDetail,
   asyncGetServiceInfo,
   asyncGetFormControls
 } from '@/api/synthesize'
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
-import request, { exportFile } from '@/utils/request'
+import { exportFile } from '@/utils/request'
 import RightToolbar from '@/components/RightToolbar'
 import Pagination from '@/components/Pagination'
 
@@ -187,7 +209,26 @@ export default {
       dynamicColumns: [],
       selectedColumns: [],
       columnSettingsVisible: false, // 列设置弹窗显示状态
-      columnSearchKeyword: '' // 列搜索关键字
+      columnSearchKeyword: '', // 列搜索关键字
+      // 导出相关数据
+      exportVisible: false,
+      exporting: false,
+      exportForm: {
+        page: 1,
+        pageSize: 1000
+      }
+    }
+  },
+  computed: {
+    // 过滤后的动态列
+    filteredDynamicColumns() {
+      if (!this.columnSearchKeyword) return this.dynamicColumns
+      const keyword = this.columnSearchKeyword.toLowerCase()
+      return this.dynamicColumns.filter((column) => column.label.toLowerCase().includes(keyword))
+    },
+    // 计算总页数
+    totalPages() {
+      return Math.ceil(this.total / this.exportForm.pageSize)
     }
   },
   async created() {
@@ -197,14 +238,6 @@ export default {
     await this.getServiceInfo()
     // 3. 获取列表数据
     await this.getList()
-  },
-  computed: {
-    // 过滤后的动态列
-    filteredDynamicColumns() {
-      if (!this.columnSearchKeyword) return this.dynamicColumns
-      const keyword = this.columnSearchKeyword.toLowerCase()
-      return this.dynamicColumns.filter((column) => column.label.toLowerCase().includes(keyword))
-    }
   },
   methods: {
     /** 获取站所数据 */
@@ -396,21 +429,82 @@ export default {
       this.handleQuery()
     },
     /** 导出按钮操作 */
-    async handleExport() {
-      try {
-        this.$message.info('正在导出，请稍候...')
-        // 使用与综合查询相同的导出接口，只是传递不同的参数
-        const res = await request({
-          url: '/search/export/page',
-          method: 'get',
-          params: this.queryParams,
-          responseType: 'blob'
-        })
-        exportFile(res, '服务履责数据.xlsx')
-      } catch (error) {
-        console.error('导出失败', error)
-        this.$message.error('导出失败')
+    handleExport() {
+      if (!this.queryParams.formId) {
+        this.$modal.msgError('请先选择表单数据')
+        return
       }
+      if (this.total === 0) {
+        this.$modal.msgError('当前没有数据可供导出')
+        return
+      }
+      this.exportForm.page = 1
+      this.exportVisible = true
+    },
+
+    /** 确认导出操作 */
+    handleConfirmExport() {
+      this.$modal.confirm('是否确认导出当前页数据?').then(() => {
+        this.exporting = true
+
+        // 构建导出请求参数
+        const params = {
+          ...this.queryParams,
+          type: 'fwlz',
+          formType: this.queryParams.formType,
+          page: this.exportForm.page,
+          pageSize: this.exportForm.pageSize
+        }
+
+        // 过滤掉空值参数
+        Object.keys(params).forEach((key) => {
+          if (params[key] === '' || params[key] === null || params[key] === undefined) {
+            delete params[key]
+          }
+          // 处理数组类型的参数
+          if (Array.isArray(params[key]) && params[key].length === 0) {
+            delete params[key]
+          }
+        })
+
+        // 使用exportFile函数导出
+        exportFile(
+          '/search/serviceInfo/page/export',
+          params,
+          `服务履责数据_第${this.exportForm.page}页_${new Date().getTime()}.xlsx`,
+          {
+            method: 'get', // 显式指定使用 GET 方法
+            timeout: 300000, // 设置5分钟超时
+            params: params, // GET请求参数通过params传递
+            responseType: 'blob' // 确保响应类型为blob
+          }
+        )
+          .then(() => {
+            this.exporting = false
+            this.exportVisible = false
+            this.$modal.msgSuccess('导出成功')
+          })
+          .catch((error) => {
+            console.error('导出失败:', error)
+            this.exporting = false
+            this.$modal.msgError('导出失败')
+          })
+      })
+    },
+
+    /** 处理单次导出数量变化 */
+    handlePageSizeChange() {
+      this.exportForm.page = 1 // 重置页码选择
+    },
+
+    /** 获取页码范围标签 */
+    getPageRangeLabel(page) {
+      const start = (page - 1) * this.exportForm.pageSize
+      const remainingItems = this.total - start
+      const itemsInThisPage = Math.min(this.exportForm.pageSize, remainingItems)
+      const end = start + itemsInThisPage
+
+      return `第${page}页 (${start + 1}-${end}条)`
     },
 
     /** 显示列设置弹窗 */
